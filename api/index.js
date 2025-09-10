@@ -13,6 +13,10 @@ app.use(express.json());
 const authRoutes = require("./routes/authRoutes");
 app.use("/api/auth", authRoutes);
 
+// Use the separated profile routes
+const profileRoutes = require("./routes/profile");
+app.use("/api/profile", profileRoutes);
+
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, async () => {
