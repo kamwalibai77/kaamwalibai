@@ -1,6 +1,6 @@
 "use strict";
 
-module.exports = {
+export default {
   async up(queryInterface, Sequelize) {
     const table = await queryInterface.describeTable("Users");
 

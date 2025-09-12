@@ -9,16 +9,19 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/AppNavigator";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Login">;
 
 export default function LoginScreen({ navigation }: Props) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const router = useRouter();
 
   const handleLogin = async () => {
     if (email && password) {
@@ -30,9 +33,15 @@ export default function LoginScreen({ navigation }: Props) {
         });
         const data = await response.json();
         if (response.ok) {
-          navigation.replace("Home");
+          console.log("✅ Registration successful:", data);
+          await AsyncStorage.setItem("token", String(data.token));
+          await AsyncStorage.setItem("userRole", String(data.role));
+          await AsyncStorage.setItem("userId", String(data.id));
+
+          // ✅ Redirect to ProfileScreen
+          router.navigate("/screens/HomeScreen");
         } else {
-          alert(data.error || "Login failed");
+          alert(data.error || "Registration failed");
         }
       } catch (err) {
         alert("Network error");

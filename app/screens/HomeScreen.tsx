@@ -3,14 +3,26 @@ import React from "react";
 import { View, Text, Button, StyleSheet } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/AppNavigator";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Home">;
 
 export default function HomeScreen({ navigation }: Props) {
+  const router = useRouter();
+  const handleLogout = async () => {
+    await AsyncStorage.setItem("token", "");
+    await AsyncStorage.setItem("userRole", "");
+    await AsyncStorage.setItem("userId", "");
+
+    // ✅ Redirect to ProfileScreen
+    router.navigate("/screens/LoginScreen");
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Welcome to Maid Service App 👋</Text>
-      <Button title="Logout" onPress={() => navigation.replace("Login")} />
+      <Button title="Logout" onPress={handleLogout} />
     </View>
   );
 }

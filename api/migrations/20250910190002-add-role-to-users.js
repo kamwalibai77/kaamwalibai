@@ -1,6 +1,6 @@
 "use strict";
 
-module.exports = {
+export default {
   async up(queryInterface, Sequelize) {
     await queryInterface.addColumn("Users", "role", {
       type: Sequelize.ENUM("user", "serviceprovider", "admin"),

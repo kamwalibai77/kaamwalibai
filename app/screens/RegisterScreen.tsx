@@ -8,7 +8,7 @@ import {
   Image,
   ScrollView,
   useWindowDimensions,
-  Platform,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -19,7 +19,7 @@ export default function RegisterScreen() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"user" | "serviceprovider">("user");
+  const [role, setRole] = useState<"user" | "ServiceProvider">("user");
 
   const router = useRouter();
   const { width } = useWindowDimensions();
@@ -27,11 +27,12 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     if (!name || !email || !password) {
-      alert("Please fill all fields");
+      Alert.alert("Error", "Please fill all fields");
       return;
     }
 
     try {
+      debugger;
       const response = await fetch("http://localhost:5000/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -41,18 +42,18 @@ export default function RegisterScreen() {
       const data = await response.json();
 
       if (response.ok) {
-        // Save role and userId in AsyncStorage
-        await AsyncStorage.setItem("userRole", data.user.role);
-        await AsyncStorage.setItem("userId", String(data.user.id));
+        console.log("✅ Registration successful:", data);
+        await AsyncStorage.setItem("userRole", data.role);
+        await AsyncStorage.setItem("userId", String(data.id));
 
-        // Redirect to ProfileScreen to complete profile
-        router.replace("../screens/ProfileScreen");
+        // ✅ Redirect to ProfileScreen
+        router.navigate("/screens/ProfileScreen");
       } else {
-        alert(data.error || "Registration failed");
+        Alert.alert("Error", data.error || "Registration failed");
       }
     } catch (err) {
-      console.log(err);
-      alert("Network error");
+      console.error("❌ Network error:", err);
+      Alert.alert("Error", "Network error");
     }
   };
 
@@ -70,7 +71,6 @@ export default function RegisterScreen() {
             style={[styles.logo, isMobile && { width: 80, height: 80 }]}
             resizeMode="contain"
           />
-
           <Text style={[styles.title, isMobile && { fontSize: 28 }]}>
             Create Your Account
           </Text>
@@ -78,7 +78,7 @@ export default function RegisterScreen() {
             Sign up as a User or Service Provider
           </Text>
 
-          {/* Full Name */}
+          {/* Input Fields */}
           <View style={styles.inputContainer}>
             <Ionicons
               name="person-outline"
@@ -95,7 +95,6 @@ export default function RegisterScreen() {
             />
           </View>
 
-          {/* Email */}
           <View style={styles.inputContainer}>
             <Ionicons
               name="mail-outline"
@@ -114,7 +113,6 @@ export default function RegisterScreen() {
             />
           </View>
 
-          {/* Password */}
           <View style={styles.inputContainer}>
             <Ionicons
               name="lock-closed-outline"
@@ -161,20 +159,20 @@ export default function RegisterScreen() {
             <TouchableOpacity
               style={[
                 styles.roleButton,
-                role === "serviceprovider" && styles.roleSelected,
+                role === "ServiceProvider" && styles.roleSelected,
               ]}
-              onPress={() => setRole("serviceprovider")}
+              onPress={() => setRole("ServiceProvider")}
             >
               <Ionicons
                 name="build-outline"
                 size={20}
-                color={role === "serviceprovider" ? "#fff" : "#6366f1"}
+                color={role === "ServiceProvider" ? "#fff" : "#6366f1"}
                 style={{ marginBottom: 4 }}
               />
               <Text
                 style={[
                   styles.roleButtonText,
-                  role === "serviceprovider" && styles.roleButtonTextSelected,
+                  role === "ServiceProvider" && styles.roleButtonTextSelected,
                 ]}
               >
                 I am Service Provider
@@ -200,10 +198,8 @@ export default function RegisterScreen() {
             </LinearGradient>
           </TouchableOpacity>
 
-          {/* Login Link */}
-          <TouchableOpacity
-            onPress={() => router.push("../screens/LoginScreen")}
-          >
+          {/* Login Redirect */}
+          <TouchableOpacity onPress={() => router.push("/screens/LoginScreen")}>
             <Text style={[styles.registerText, isMobile && { fontSize: 14 }]}>
               Already have an account?{" "}
               <Text style={{ color: "#6366f1", fontWeight: "bold" }}>
@@ -235,17 +231,8 @@ const styles = StyleSheet.create({
     elevation: 10,
     alignItems: "center",
   },
-  cardWeb: {
-    width: "60%",
-    maxWidth: 800,
-    minHeight: 650,
-    padding: 50,
-  },
-  cardMobile: {
-    width: "90%",
-    padding: 24,
-    minHeight: 500,
-  },
+  cardWeb: { width: "60%", maxWidth: 800, minHeight: 650, padding: 50 },
+  cardMobile: { width: "90%", padding: 24, minHeight: 500 },
   logo: { width: 120, height: 120, marginBottom: 30 },
   title: {
     fontSize: 36,
@@ -299,18 +286,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
   },
-  roleSelected: {
-    backgroundColor: "#6366f1",
-  },
-  roleButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#6366f1",
-  },
-  roleButtonTextSelected: {
-    color: "#fff",
-    fontWeight: "700",
-  },
+  roleSelected: { backgroundColor: "#6366f1" },
+  roleButtonText: { fontSize: 15, fontWeight: "600", color: "#6366f1" },
+  roleButtonTextSelected: { color: "#fff", fontWeight: "700" },
   button: {
     width: "100%",
     borderRadius: 30,
