@@ -1,15 +1,13 @@
 // backend/config/cloudinary.js
 import { v2 as cloudinary } from "cloudinary";
+import dotenv from "dotenv";
+
+dotenv.config(); // Load .env variables
 
 cloudinary.config({
-  cloud_name: "dvjzsuy1x",
-  api_key: "849712924611974",
-  api_secret: "2cE58L1r7FGtEcA1PLwEK1heO-w",
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
-
-// ✅ default options (preset)
-export const cloudinaryOptions = {
-  upload_preset: "profile_upload", // unsigned preset name (must exist in Cloudinary dashboard)
-};
 
 export default cloudinary;

@@ -30,29 +30,21 @@ export default function RegisterScreen() {
       Alert.alert("Error", "Please fill all fields");
       return;
     }
-
     try {
-      debugger;
       const response = await fetch("http://localhost:5000/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password, role }),
       });
-
       const data = await response.json();
-
       if (response.ok) {
-        console.log("✅ Registration successful:", data);
         await AsyncStorage.setItem("userRole", data.role);
         await AsyncStorage.setItem("userId", String(data.id));
-
-        // ✅ Redirect to ProfileScreen
         router.navigate("/screens/ProfileScreen");
       } else {
         Alert.alert("Error", data.error || "Registration failed");
       }
     } catch (err) {
-      console.error("❌ Network error:", err);
       Alert.alert("Error", "Network error");
     }
   };

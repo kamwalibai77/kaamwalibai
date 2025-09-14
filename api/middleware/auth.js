@@ -1,22 +1,31 @@
 import jwt from "jsonwebtoken";
-const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret";
+import db from "../models/index.js";
 
-export const authMiddleware = (req, res, next) => {
-  const header = req.header("Authorization") || "";
-  const token = header.startsWith("Bearer ") ? header.split(" ")[1] : null;
-  if (!token) return res.status(401).json({ error: "No token provided" });
+const User = db.User;
+
+export const authMiddleware = async (req, res, next) => {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch (e) {
-    res.status(401).json({ error: "Invalid token" });
-  }
-};
+    const authHeader = req.headers["authorization"];
+    if (!authHeader) {
+      return res.status(401).json({ error: "No token provided" });
+    }
 
-export const roleCheck = (roles) => (req, res, next) => {
-  if (!req.user) return res.status(401).json({ error: "Unauthorized" });
-  if (!roles.includes(req.user.role))
-    return res.status(403).json({ error: "Access denied" });
-  next();
+    const token = authHeader.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ error: "Invalid token format" });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    const user = await User.findByPk(decoded.id);
+    if (!user) {
+      return res.status(401).json({ error: "User not found" });
+    }
+
+    req.user = { id: user.id, role: user.role };
+    next();
+  } catch (err) {
+    console.error("Auth Error:", err);
+    res.status(401).json({ error: "Unauthorized" });
+  }
 };

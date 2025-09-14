@@ -17,7 +17,38 @@ export default (sequelize, DataTypes) => {
       type: DataTypes.ENUM("user", "ServiceProvider", "superadmin"), // ✅ role column
       defaultValue: "user", // default role
     },
+    mobile: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    address: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    gender: {
+      type: DataTypes.ENUM("male", "female", "other"),
+      allowNull: true,
+    },
+    age: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    adhar: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    pan: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    profilePhoto: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    isSubscribed: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
   });
-
   return User;
 };

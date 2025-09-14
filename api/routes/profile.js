@@ -1,71 +1,75 @@
 import express from "express";
-import cloudinary, { cloudinaryOptions } from "../config/cloudinary.js";
-import { authMiddleware } from "../middleware/auth.js"; // JWT middleware
-import upload from "../middleware/multer.js";
-import db from "../models/index.js"; // your user model
+import fs from "fs";
+import cloudinary from "../config/cloudinary.js";
+import { upload } from "../middleware/multer.js";
+import { authMiddleware } from "../middleware/auth.js";
+import db from "../models/index.js";
 
 const router = express.Router();
+const User = db.User;
 
-// ✅ Update profile
 router.put(
   "/update",
   authMiddleware,
-  upload.fields([
-    { name: "profilePhoto", maxCount: 1 },
-    { name: "aadharPhoto", maxCount: 1 },
-    { name: "panPhoto", maxCount: 1 },
-  ]),
+  upload.single("profilePhoto"), // save to local first
   async (req, res) => {
+    const transaction = await db.sequelize.transaction();
+    let localFilePath;
+
     try {
       const userId = req.user.id;
+      const { mobile, address, gender, age } = req.body;
 
-      // form data
-      const { mobile, address, gender, age, isSubscribed } = req.body;
+      // save local path for cleanup
+      localFilePath = req.file?.path;
 
-      let profilePhotoUrl = null;
-      let aadharPhotoUrl = null;
-      let panPhotoUrl = null;
-
-      // ✅ Upload to Cloudinary if new file exists
-      if (req.files.profilePhoto) {
-        const result = await cloudinary.uploader.upload(
-          req.files.profilePhoto[0].path,
-          { ...cloudinaryOptions, folder: "maid-service/profiles" }
-        );
-        profilePhotoUrl = result.secure_url;
+      // ✅ Example eligibility check
+      if (!mobile || !address) {
+        if (localFilePath && fs.existsSync(localFilePath)) {
+          fs.unlinkSync(localFilePath); // delete local file if not eligible
+        }
+        return res
+          .status(400)
+          .json({ success: false, message: "Mobile and Address required" });
       }
 
-      if (req.files.aadharPhoto) {
-        const result = await cloudinary.uploader.upload(
-          req.files.aadharPhoto[0].path,
-          { ...cloudinaryOptions, folder: "maid-service/aadhar" }
-        );
-        aadharPhotoUrl = result.secure_url;
-      }
-
-      if (req.files.panPhoto) {
-        const result = await cloudinary.uploader.upload(
-          req.files.panPhoto[0].path,
-          { ...cloudinaryOptions, folder: "maid-service/pan" }
-        );
-        panPhotoUrl = result.secure_url;
-      }
-
-      // ✅ Update DB
-      const updatedUser = await db.User.findByIdAndUpdate(
-        userId,
+      // ✅ Save user to DB first
+      const [rowsUpdated, [updatedUser]] = await User.update(
+        { mobile, address, gender, age },
         {
-          mobile,
-          address,
-          gender,
-          age,
-          isSubscribed: isSubscribed === "true", // flag
-          ...(profilePhotoUrl && { profilePhoto: profilePhotoUrl }),
-          ...(aadharPhotoUrl && { aadharPhoto: aadharPhotoUrl }),
-          ...(panPhotoUrl && { panPhoto: panPhotoUrl }),
-        },
-        { new: true }
+          where: { id: userId },
+          returning: true,
+          transaction,
+        }
       );
+
+      if (rowsUpdated === 0) {
+        if (localFilePath && fs.existsSync(localFilePath)) {
+          fs.unlinkSync(localFilePath); // delete unused file
+        }
+        await transaction.rollback();
+        return res
+          .status(404)
+          .json({ success: false, message: "User not found" });
+      }
+
+      // ✅ Upload to Cloudinary after DB success
+      let cloudinaryUrl = null;
+      if (localFilePath) {
+        const uploadRes = await cloudinary.uploader.upload(localFilePath, {
+          folder: "maid-service",
+        });
+        cloudinaryUrl = uploadRes.secure_url;
+
+        // update user with Cloudinary URL
+        updatedUser.profilePhoto = cloudinaryUrl;
+        await updatedUser.save({ transaction });
+
+        // remove local file
+        fs.unlinkSync(localFilePath);
+      }
+
+      await transaction.commit();
 
       res.json({
         success: true,
@@ -73,7 +77,15 @@ router.put(
         user: updatedUser,
       });
     } catch (err) {
-      console.error(err);
+      console.error("Profile Update Error:", err);
+
+      // rollback if something fails
+      await transaction.rollback();
+
+      if (localFilePath && fs.existsSync(localFilePath)) {
+        fs.unlinkSync(localFilePath); // cleanup
+      }
+
       res.status(500).json({ success: false, error: "Server error" });
     }
   }

@@ -1,311 +1,109 @@
-import { Ionicons } from "@expo/vector-icons"; // For pencil icon
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Picker } from "@react-native-picker/picker"; // For dropdown
-import * as ImagePicker from "expo-image-picker";
+// screens/ProfileScreen.tsx
+import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  Alert,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
+  View,
+  Image,
   TouchableOpacity,
   useWindowDimensions,
-  View,
+  ActivityIndicator,
 } from "react-native";
-import { RootStackParamList } from "../navigation/AppNavigator";
-import { NativeStackScreenProps } from "@react-navigation/native-stack";
-
-type Props = NativeStackScreenProps<RootStackParamList, "Profile">;
-
-// ✅ Cloudinary details
-const CLOUD_NAME = "dvjzsuy1x";
-const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
-const CLOUDINARY_UPLOAD_PRESET = "profile_upload"; // unsigned preset
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function ProfileScreen() {
-  const [role, setRole] = useState<string>("user");
-  const [mobile, setMobile] = useState("");
-  const [address, setAddress] = useState("");
-  const [gender, setGender] = useState("");
-  const [age, setAge] = useState("18");
-
-  const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
-  const [aadharPhoto, setAadharPhoto] = useState<string | null>(null);
-  const [panPhoto, setPanPhoto] = useState<string | null>(null);
-
   const router = useRouter();
   const { width } = useWindowDimensions();
   const isMobile = width < 600;
 
-  // Fetch role from AsyncStorage
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    const fetchRole = async () => {
+    const fetchUser = async () => {
       try {
-        const storedRole = await AsyncStorage.getItem("userRole");
-        if (storedRole) setRole(storedRole);
+        const userId = await AsyncStorage.getItem("userId");
+        if (!userId) return;
+
+        const response = await fetch(
+          `http://localhost:5000/api/users/${userId}`
+        );
+        const data = await response.json();
+        setUser(data);
       } catch (err) {
         console.log(err);
+      } finally {
+        setLoading(false);
       }
     };
-    fetchRole();
+    fetchUser();
   }, []);
 
-  // Pick image and upload to Cloudinary
-  const pickImage = async (
-    setImage: React.Dispatch<React.SetStateAction<string | null>>
-  ) => {
-    const permissionResult =
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permissionResult.granted) {
-      Alert.alert(
-        "Permission Required",
-        "Please allow photo access to upload images."
-      );
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.7,
-    });
-    if (!result.canceled) {
-      const uri = result.assets[0].uri;
-      const uploadedUrl = await uploadToCloudinary(uri);
-      if (uploadedUrl) setImage(uploadedUrl);
-    }
-  };
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color="#6366f1" />
+      </View>
+    );
+  }
 
-  // ✅ Upload image to Cloudinary
-  // Upload image to Cloudinary
-  // Upload image to Cloudinary
-  const uploadToCloudinary = async (uri: string) => {
-    try {
-      const formData = new FormData();
-
-      formData.append("file", {
-        uri: uri, // ✅ must be string
-        type: "image/jpeg",
-        name: "upload.jpg",
-      } as any);
-
-      formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
-
-      const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
-        {
-          method: "POST",
-          body: formData,
-          headers: {
-            Accept: "application/json",
-          },
-        }
-      );
-
-      const result = await response.json();
-      console.log("Cloudinary Response:", result);
-
-      if (result.secure_url) {
-        return result.secure_url;
-      } else {
-        Alert.alert("Upload Error", result.error?.message || "Upload failed");
-        return null;
-      }
-    } catch (err) {
-      console.error("Cloudinary Upload Error:", err);
-      Alert.alert("Error", "Cloudinary upload failed");
-      return null;
-    }
-  };
-
-  // Save Profile
-  const handleSave = async () => {
-    if (!mobile || !address || !gender || !age) {
-      Alert.alert("Error", "Please fill all required fields");
-      return;
-    }
-
-    if (role === "ServiceProvider" && (!aadharPhoto || !panPhoto)) {
-      Alert.alert("Error", "Please upload Aadhaar and PAN card photos");
-      return;
-    }
-
-    try {
-      const token = await AsyncStorage.getItem("userToken");
-
-      const payload = {
-        mobile,
-        address,
-        gender,
-        age,
-        profilePhoto,
-        aadharPhoto,
-        panPhoto,
-      };
-
-      const response = await fetch(
-        "http://192.168.1.10:5000/api/profile/update",
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(payload),
-        }
-      );
-
-      const data = await response.json();
-      if (response.ok) {
-        Alert.alert("Success", "Profile updated successfully!");
-      } else {
-        Alert.alert("Error", data.error || "Update failed");
-      }
-    } catch (err) {
-      Alert.alert("Error", "Network error");
-    }
-  };
+  if (!user) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <Text>No user found</Text>
+      </View>
+    );
+  }
 
   return (
     <LinearGradient colors={["#eef2ff", "#e0e7ff"]} style={styles.gradient}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={{ flex: 1 }}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContainer}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View
-            style={[styles.card, isMobile ? styles.cardMobile : styles.cardWeb]}
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        {/* Profile Header */}
+        <View style={styles.profileHeader}>
+          <Image
+            source={{
+              uri: user.profilePhoto || "https://via.placeholder.com/150",
+            }}
+            style={styles.profileImage}
+          />
+          <Text style={styles.userName}>{user.name}</Text>
+          <Text style={styles.userRole}>{user.role}</Text>
+          <Text style={styles.userLocation}>
+            {user.location || "Not updated"}
+          </Text>
+
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() => router.push("/screens/ProfileEditScreen")}
           >
-            <Text style={[styles.title, isMobile && { fontSize: 28 }]}>
-              Update Profile
-            </Text>
+            <Ionicons name="pencil-outline" size={20} color="#fff" />
+            <Text style={styles.editButtonText}>Edit Profile</Text>
+          </TouchableOpacity>
+        </View>
 
-            {/* Profile Photo Circle with Edit */}
-            <View style={styles.profileWrapper}>
-              <TouchableOpacity onPress={() => pickImage(setProfilePhoto)}>
-                {profilePhoto ? (
-                  <Image
-                    source={{ uri: profilePhoto }}
-                    style={styles.profileImage}
-                  />
-                ) : (
-                  <View style={styles.profilePlaceholder}>
-                    <Ionicons name="person" size={64} color="#6366f1" />
-                  </View>
-                )}
-                <View style={styles.editIcon}>
-                  <Ionicons name="pencil" size={18} color="#fff" />
-                </View>
-              </TouchableOpacity>
-            </View>
-
-            {/* Mobile */}
-            <Text style={styles.label}>Mobile Number</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter Mobile Number"
-              value={mobile}
-              onChangeText={setMobile}
-              keyboardType="phone-pad"
-            />
-
-            {/* Address */}
-            <Text style={styles.label}>Address</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter Address"
-              value={address}
-              onChangeText={setAddress}
-            />
-
-            {/* Gender */}
-            <Text style={styles.label}>Gender</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter Gender"
-              value={gender}
-              onChangeText={setGender}
-            />
-
-            {/* Age Dropdown */}
-            <Text style={styles.label}>Age</Text>
-            <View style={styles.pickerBox}>
-              <Picker
-                selectedValue={age}
-                onValueChange={(itemValue) => setAge(itemValue)}
-                style={{ width: "100%" }}
-              >
-                {Array.from({ length: 63 }, (_, i) => i + 18).map((val) => (
-                  <Picker.Item
-                    key={val}
-                    label={val.toString()}
-                    value={val.toString()}
-                  />
-                ))}
-              </Picker>
-            </View>
-
-            {/* Aadhaar & PAN for ServiceProvider */}
-            {role === "ServiceProvider" && (
-              <>
-                <Text style={styles.label}>Aadhaar Card Photo</Text>
-                <TouchableOpacity
-                  style={styles.uploadBox}
-                  onPress={() => pickImage(setAadharPhoto)}
-                >
-                  {aadharPhoto ? (
-                    <Image
-                      source={{ uri: aadharPhoto }}
-                      style={styles.imagePreview}
-                    />
-                  ) : (
-                    <Text style={styles.uploadText}>Upload Aadhaar</Text>
-                  )}
-                </TouchableOpacity>
-
-                <Text style={styles.label}>PAN Card Photo</Text>
-                <TouchableOpacity
-                  style={styles.uploadBox}
-                  onPress={() => pickImage(setPanPhoto)}
-                >
-                  {panPhoto ? (
-                    <Image
-                      source={{ uri: panPhoto }}
-                      style={styles.imagePreview}
-                    />
-                  ) : (
-                    <Text style={styles.uploadText}>Upload PAN</Text>
-                  )}
-                </TouchableOpacity>
-              </>
-            )}
-
-            {/* Save Button */}
-            <TouchableOpacity style={styles.button} onPress={handleSave}>
-              <LinearGradient
-                colors={["#6366f1", "#4f46e5"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.buttonGradient}
-              >
-                {role === "ServiceProvider" ? (
-                  <Text style={styles.buttonText}>Submit for KYC</Text>
-                ) : (
-                  <Text style={styles.buttonText}>Save Profile</Text>
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
+        {/* About Section */}
+        <View style={styles.infoSection}>
+          <Text style={styles.sectionTitle}>About</Text>
+          <View style={styles.infoRow}>
+            <Ionicons name="call-outline" size={20} color="#6366f1" />
+            <Text style={styles.infoText}>{user.mobile || "NA"}</Text>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+          <View style={styles.infoRow}>
+            <Ionicons name="home-outline" size={20} color="#6366f1" />
+            <Text style={styles.infoText}>{user.address || "NA"}</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Ionicons name="male-female-outline" size={20} color="#6366f1" />
+            <Text style={styles.infoText}>
+              {user.gender || "NA"}, {user.age || "NA"} yrs
+            </Text>
+          </View>
+        </View>
+      </ScrollView>
     </LinearGradient>
   );
 }
@@ -313,123 +111,41 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   gradient: { flex: 1 },
   scrollContainer: {
-    flexGrow: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: 40,
-  },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    shadowColor: "#6366f1",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 10,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
     alignItems: "center",
   },
-  cardWeb: { width: "50%", maxWidth: 800, minHeight: 600, padding: 40 },
-  cardMobile: { width: "90%", minHeight: 500, padding: 24 },
-  title: {
-    fontSize: 34,
-    fontWeight: "bold",
-    color: "#6366f1",
-    marginBottom: 24,
-    textAlign: "center",
-  },
-
-  profileWrapper: { marginBottom: 20, position: "relative" },
+  profileHeader: { alignItems: "center", marginBottom: 24 },
   profileImage: {
     width: 120,
     height: 120,
     borderRadius: 60,
     borderWidth: 3,
     borderColor: "#6366f1",
+    marginBottom: 12,
   },
-  profilePlaceholder: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 2,
-    borderColor: "#cbd5e1",
-    backgroundColor: "#f1f5f9",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  editIcon: {
-    position: "absolute",
-    bottom: 5,
-    right: 5,
+  userName: { fontSize: 24, fontWeight: "700", color: "#1e293b" },
+  userRole: { fontSize: 16, color: "#6366f1", marginBottom: 4 },
+  userLocation: { fontSize: 14, color: "#64748b" },
+  editButton: {
+    flexDirection: "row",
     backgroundColor: "#6366f1",
-    padding: 6,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: "#fff",
-  },
-
-  label: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#334155",
-    alignSelf: "flex-start",
-    marginBottom: 6,
-  },
-  input: {
-    width: "100%",
-    height: 48,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#cbd5e1",
-    paddingHorizontal: 12,
-    marginBottom: 16,
-    backgroundColor: "#f1f5f9",
-    color: "#334155",
-  },
-  pickerBox: {
-    width: "100%",
-    borderWidth: 1,
-    borderColor: "#cbd5e1",
-    borderRadius: 12,
-    marginBottom: 16,
-    backgroundColor: "#f1f5f9",
-  },
-
-  uploadBox: {
-    width: "100%",
-    height: 150,
-    borderWidth: 1,
-    borderColor: "#cbd5e1",
-    borderRadius: 12,
-    marginBottom: 16,
-    backgroundColor: "#f8fafc",
-    justifyContent: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 30,
     alignItems: "center",
-  },
-  uploadText: { color: "#6366f1", fontWeight: "600" },
-  imagePreview: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 12,
-    resizeMode: "cover",
-  },
-
-  button: {
-    width: "100%",
-    borderRadius: 25,
-    overflow: "hidden",
     marginTop: 10,
   },
-  buttonGradient: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 14,
-    borderRadius: 25,
+  editButtonText: { color: "#fff", fontWeight: "600", marginLeft: 8 },
+  infoSection: {
+    width: "100%",
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+    elevation: 5,
   },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 18,
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
-  },
+  sectionTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12 },
+  infoRow: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
+  infoText: { marginLeft: 12, fontSize: 14, color: "#334155" },
 });
