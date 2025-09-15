@@ -131,7 +131,7 @@ export default function HomeScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Banner Carousel */}
-        <ScrollView
+        {/* <ScrollView
           horizontal
           pagingEnabled
           showsHorizontalScrollIndicator={false}
@@ -140,7 +140,7 @@ export default function HomeScreen() {
           {banners.map((b, i) => (
             <Image key={i} source={{ uri: b }} style={styles.bannerImage} />
           ))}
-        </ScrollView>
+        </ScrollView> */}
 
         {/* Services Section */}
         <Text style={styles.sectionTitle}>Services</Text>
