@@ -7,6 +7,7 @@ import RegisterScreen from "../screens/RegisterScreen";
 import HomeScreen from "../screens/HomeScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import ProfileEditScreen from "../screens/ProfileEditScreen";
+import AddServiceScreen from "../screens/AddServiceScreen";
 import IndexScreen from "../(tabs)/index";
 
 export type RootStackParamList = {
@@ -16,6 +17,7 @@ export type RootStackParamList = {
   Home: undefined;
   Profile: undefined;
   EditProfile: undefined;
+  AddService: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -33,6 +35,7 @@ export default function AppNavigator() {
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="Profile" component={ProfileScreen} />
         <Stack.Screen name="EditProfile" component={ProfileEditScreen} />
+        <Stack.Screen name="AddService" component={AddServiceScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import BottomTab from "../../components/BottomTabs";
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -104,6 +105,8 @@ export default function ProfileScreen() {
           </View>
         </View>
       </ScrollView>
+      {/* Bottom Tabs (same as before) */}
+      <BottomTab />
     </LinearGradient>
   );
 }

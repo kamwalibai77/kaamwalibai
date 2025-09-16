@@ -15,6 +15,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import BottomTab from "../../components/BottomTabs";
 
 export default function ChatScreen() {
   const [messages, setMessages] = useState([
@@ -79,41 +80,47 @@ export default function ChatScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={90}
-    >
-      {/* Header */}
-      <LinearGradient colors={["#6366f1", "#4f46e5"]} style={styles.header}>
-        <TouchableOpacity onPress={() => router.replace("/screens/HomeScreen")}>
-          <Ionicons name="arrow-back-outline" size={28} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Anita Sharma</Text>
-      </LinearGradient>
+    <>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={90}
+      >
+        {/* Header */}
+        <LinearGradient colors={["#6366f1", "#4f46e5"]} style={styles.header}>
+          <TouchableOpacity
+            onPress={() => router.replace("/screens/HomeScreen")}
+          >
+            <Ionicons name="arrow-back-outline" size={28} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Anita Sharma</Text>
+        </LinearGradient>
 
-      {/* Messages */}
-      <FlatList
-        ref={flatListRef}
-        data={messages}
-        keyExtractor={(item) => item.id}
-        renderItem={renderMessage}
-        contentContainerStyle={styles.messagesContainer}
-      />
-
-      {/* Input Box */}
-      <View style={styles.inputWrapper}>
-        <TextInput
-          style={[styles.input, { width: width * 0.75 }]}
-          placeholder="Type a message..."
-          value={input}
-          onChangeText={setInput}
+        {/* Messages */}
+        <FlatList
+          ref={flatListRef}
+          data={messages}
+          keyExtractor={(item) => item.id}
+          renderItem={renderMessage}
+          contentContainerStyle={styles.messagesContainer}
         />
-        <TouchableOpacity onPress={handleSend} style={styles.sendButton}>
-          <Ionicons name="send" size={24} color="#fff" />
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+
+        {/* Input Box */}
+        <View style={styles.inputWrapper}>
+          <TextInput
+            style={[styles.input, { width: width * 0.75 }]}
+            placeholder="Type a message..."
+            value={input}
+            onChangeText={setInput}
+          />
+          <TouchableOpacity onPress={handleSend} style={styles.sendButton}>
+            <Ionicons name="send" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+      {/* Bottom Tabs (same as before) */}
+      <BottomTab />
+    </>
   );
 }
 

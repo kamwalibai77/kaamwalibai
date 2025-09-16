@@ -8,10 +8,15 @@ import {
   TouchableOpacity,
   Dimensions,
   ScrollView,
+  Modal,
+  SafeAreaView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import BottomTab from "@/components/BottomTabs";
+import FloatingAddButton from "@/components/FloatingAddButton";
+import AddService from "./AddServiceScreen";
 
 const { width } = Dimensions.get("window");
 
@@ -50,6 +55,7 @@ const jobs = [
 export default function FindJobScreen() {
   const router = useRouter();
   const [jobList, setJobList] = useState(jobs);
+  const [open, setOpen] = useState(false);
 
   const renderJob = ({ item }: { item: (typeof jobs)[0] }) => (
     <LinearGradient colors={["#eef2ff", "#e0e7ff"]} style={styles.jobCard}>
@@ -74,16 +80,38 @@ export default function FindJobScreen() {
   );
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.headerTitle}>Find Jobs Nearby</Text>
-      <FlatList
-        data={jobList}
-        keyExtractor={(item) => item.id}
-        renderItem={renderJob}
-        contentContainerStyle={{ paddingHorizontal: 15, paddingBottom: 20 }}
-        showsVerticalScrollIndicator={false}
-      />
-    </View>
+    <>
+      <View style={styles.container}>
+        <Text style={styles.headerTitle}>Find Jobs Nearby</Text>
+        <FlatList
+          data={jobList}
+          keyExtractor={(item) => item.id}
+          renderItem={renderJob}
+          contentContainerStyle={{ paddingHorizontal: 15, paddingBottom: 20 }}
+          showsVerticalScrollIndicator={false}
+        />
+        <FloatingAddButton onPress={() => setOpen(true)} />
+        {/* ✅ Popup Modal */}
+        <Modal visible={open} transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              {/* Header */}
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}></Text>
+                <TouchableOpacity onPress={() => setOpen(false)}>
+                  <Ionicons name="close" size={24} color="#1e293b" />
+                </TouchableOpacity>
+              </View>
+
+              {/* PostServicePage inside modal */}
+              <AddService />
+            </View>
+          </View>
+        </Modal>
+      </View>
+      {/* Bottom Tabs (same as before) */}
+      <BottomTab />
+    </>
   );
 }
 
@@ -155,5 +183,30 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "700",
     fontSize: 14,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  modalContent: {
+    width: "100%",
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 20,
+    maxHeight: "80%",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 15,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#1e293b",
   },
 });
