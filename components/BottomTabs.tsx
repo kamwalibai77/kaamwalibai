@@ -50,22 +50,24 @@ export default function BottomTabs() {
 
       <TouchableOpacity
         style={styles.tabItem}
-        onPress={() => router.replace("/screens/FindJobScreen")}
+        onPress={() => router.replace("/screens/MyServicesScreen")}
       >
         <Ionicons
           name="briefcase"
           size={24}
-          color={pathname.includes("FindJobScreen") ? "#6366f1" : "#64748b"}
+          color={pathname.includes("MyServicesScreen") ? "#6366f1" : "#64748b"}
         />
         <Text
           style={[
             styles.tabText,
             {
-              color: pathname.includes("FindJobScreen") ? "#6366f1" : "#64748b",
+              color: pathname.includes("MyServicesScreen")
+                ? "#6366f1"
+                : "#64748b",
             },
           ]}
         >
-          Find Job
+          My Services
         </Text>
       </TouchableOpacity>
 

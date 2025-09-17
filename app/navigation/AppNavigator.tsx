@@ -8,6 +8,7 @@ import HomeScreen from "../screens/HomeScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import ProfileEditScreen from "../screens/ProfileEditScreen";
 import AddServiceScreen from "../screens/AddServiceScreen";
+import MyServicesScreen from "../screens/MyServicesScreen";
 import IndexScreen from "../(tabs)/index";
 
 export type RootStackParamList = {
@@ -18,6 +19,7 @@ export type RootStackParamList = {
   Profile: undefined;
   EditProfile: undefined;
   AddService: undefined;
+  MyServices: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -36,6 +38,7 @@ export default function AppNavigator() {
         <Stack.Screen name="Profile" component={ProfileScreen} />
         <Stack.Screen name="EditProfile" component={ProfileEditScreen} />
         <Stack.Screen name="AddService" component={AddServiceScreen} />
+        <Stack.Screen name="MyServices" component={MyServicesScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

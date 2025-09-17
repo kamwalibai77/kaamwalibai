@@ -2,7 +2,11 @@ import React from "react";
 import { View, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
-export default function FloatingAddButton({ onPress }) {
+export default function FloatingAddButton({
+  onPress,
+}: {
+  onPress: () => void;
+}) {
   return (
     <TouchableOpacity
       style={styles.fab}

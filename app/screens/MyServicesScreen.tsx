@@ -82,7 +82,7 @@ export default function FindJobScreen() {
   return (
     <>
       <View style={styles.container}>
-        <Text style={styles.headerTitle}>Find Jobs Nearby</Text>
+        <Text style={styles.headerTitle}>My Services</Text>
         <FlatList
           data={jobList}
           keyExtractor={(item) => item.id}
