@@ -14,6 +14,9 @@ const getAllServices = async ({
 const getAllProviderPostedServices = (id: string) =>
   api.get(`/service-provider/${id}/services`);
 
+const removeProviderService = (id: string) =>
+  api.delete(`/service-provider/${id}`);
+
 const createService = (payload: {
   providerId: number;
   serviceTypeIds: number[];
@@ -23,4 +26,22 @@ const createService = (payload: {
   contactNumber: string;
 }) => api.post("/service-provider", payload);
 
-export default { getAllServices, createService, getAllProviderPostedServices };
+const editService = (
+  id: number,
+  payload: {
+    providerId: number;
+    serviceTypeIds: number[];
+    amount: number;
+    rateType: string;
+    currency: string;
+    contactNumber: string;
+  }
+) => api.put(`/service-provider/${id}`, payload);
+
+export default {
+  getAllServices,
+  createService,
+  getAllProviderPostedServices,
+  removeProviderService,
+  editService,
+};

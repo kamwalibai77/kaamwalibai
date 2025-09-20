@@ -1,7 +1,6 @@
 export default (sequelize, DataTypes) => {
   const UserService = sequelize.define("UserService", {
     providerId: { type: DataTypes.INTEGER, allowNull: false },
-    serviceTypeIds: { type: DataTypes.JSON }, // array of service type IDs
     amount: { type: DataTypes.FLOAT, allowNull: false },
     rateType: DataTypes.ENUM("hourly", "daily", "weekly", "monthly"), // ✅ role column
     currency: { type: DataTypes.STRING, defaultValue: "INR" },
@@ -12,6 +11,12 @@ export default (sequelize, DataTypes) => {
     UserService.belongsTo(models.User, {
       foreignKey: "providerId",
       as: "provider",
+    });
+    UserService.belongsToMany(models.ServiceType, {
+      through: models.ServiceTypeUserServiceMap,
+      foreignKey: "userServiceId",
+      otherKey: "serviceTypeId",
+      as: "serviceTypes",
     });
   };
 

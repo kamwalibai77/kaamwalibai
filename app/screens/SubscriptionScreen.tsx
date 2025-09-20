@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import BottomTabs from "@/components/BottomTabs";
 
 const { width } = Dimensions.get("window");
 
@@ -115,6 +116,8 @@ export default function SubscriptionScreen() {
           </View>
         ))}
       </ScrollView>
+      {/* BOTTOM TABS */}
+      <BottomTabs />
     </LinearGradient>
   );
 }

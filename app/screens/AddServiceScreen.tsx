@@ -25,8 +25,10 @@ const RATE_OPTIONS = [
 ];
 
 export default function AddServiceScreen({
+  serviceData,
   afterSubmit,
 }: {
+  serviceData: any;
   afterSubmit: () => void;
 }) {
   const [servicesOpen, setServicesOpen] = useState(false);
@@ -59,6 +61,14 @@ export default function AddServiceScreen({
   useEffect(() => {
     setLoading(true);
     fetchServiceTypes();
+    if (serviceData) {
+      setSelectedServices(
+        serviceData.serviceTypes.map((st: any) => st.id) || []
+      );
+      setSelectedRate(serviceData.rateType || null);
+      setCost(serviceData.amount ? serviceData.amount.toString() : "");
+      setContactNumber(serviceData.contactNumber || "");
+    }
   }, []);
 
   const onOpenServices = () => setRateOpen(false);
@@ -100,7 +110,9 @@ export default function AddServiceScreen({
         currency: "INR",
       };
 
-      const response = await serviceprovidersApi.createService(payload);
+      const response = serviceData
+        ? await serviceprovidersApi.editService(serviceData.id, payload)
+        : await serviceprovidersApi.createService(payload);
 
       Alert.alert("Success", "Your service has been posted!");
       afterSubmit();
@@ -181,7 +193,10 @@ export default function AddServiceScreen({
             placeholderTextColor="#888"
             keyboardType="numeric"
             value={cost}
-            onChangeText={setCost}
+            onChangeText={(text) => {
+              const numericText = text.replace(/[^0-9]/g, "");
+              setCost(numericText);
+            }}
           />
           {errCost && <Text style={styles.errText}>{errCost}</Text>}
 
@@ -192,7 +207,10 @@ export default function AddServiceScreen({
             placeholderTextColor="#888"
             keyboardType="phone-pad"
             value={contactNumber}
-            onChangeText={setContactNumber}
+            onChangeText={(text) => {
+              const numericText = text.replace(/[^0-9]/g, "").slice(0, 10);
+              setContactNumber(numericText);
+            }}
             maxLength={15}
           />
           {errContact && <Text style={styles.errText}>{errContact}</Text>}
@@ -206,7 +224,9 @@ export default function AddServiceScreen({
           {posting ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.buttonText}>🚀 Post Service</Text>
+            <Text style={styles.buttonText}>
+              🚀 {(serviceData && "Update") || "Post"} Service
+            </Text>
           )}
         </TouchableOpacity>
 

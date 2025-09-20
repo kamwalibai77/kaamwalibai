@@ -8,6 +8,8 @@ import {
   TouchableOpacity,
   Dimensions,
   Modal,
+  Platform,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -23,8 +25,15 @@ const { width } = Dimensions.get("window");
 export default function MyserviceScreen() {
   const router = useRouter();
   const [jobList, setJobList] = useState([]);
-  const [open, setOpen] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [editingService, setEditingService] = useState<any>(null);
+
+  // Web-only confirmation modal
+  const [confirmVisible, setConfirmVisible] = useState(false);
+  const [selectedServiceId, setSelectedServiceId] = useState<string | null>(
+    null
+  );
 
   const fetchProviderPostedServices = async () => {
     try {
@@ -43,16 +52,51 @@ export default function MyserviceScreen() {
     }
   };
 
+  const removeProviderService = async (serviceId: string) => {
+    try {
+      await serviceProviders.removeProviderService(serviceId);
+      fetchProviderPostedServices();
+    } catch (err) {
+      console.log(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = (serviceId: string) => {
+    if (Platform.OS === "web") {
+      setSelectedServiceId(serviceId);
+      setConfirmVisible(true);
+    } else {
+      Alert.alert(
+        "Confirm Delete",
+        "Are you sure you want to delete this service?",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: () => removeProviderService(serviceId),
+          },
+        ]
+      );
+    }
+  };
+
+  const handleEdit = (service: any) => {
+    setEditingService(service);
+    setModalOpen(true);
+  };
+
   useEffect(() => {
     fetchProviderPostedServices();
   }, []);
 
   const renderJob = ({ item }: { item: any }) => (
     <LinearGradient colors={["#eef2ff", "#e0e7ff"]} style={styles.jobCard}>
-      {/* Left side info */}
       <View style={styles.jobInfo}>
         <Text style={styles.jobServiceTypesIds}>
-          {item.serviceTypeIds.join(", ")}
+          {item.serviceTypes.map((st: any) => st.name).join(", ")}
         </Text>
         <Text
           style={styles.jobAmount}
@@ -60,12 +104,17 @@ export default function MyserviceScreen() {
         <Text style={styles.jobContactNumber}>{item.contactNumber}</Text>
       </View>
 
-      {/* Right side action buttons */}
       <View style={styles.actionButtons}>
-        <TouchableOpacity style={styles.iconButton}>
+        <TouchableOpacity
+          style={styles.iconButton}
+          onPress={() => handleEdit(item)}
+        >
           <Ionicons name="pencil" size={22} color="#4f46e5" />
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.iconButton, { marginLeft: 12 }]}>
+        <TouchableOpacity
+          style={[styles.iconButton, { marginLeft: 12 }]}
+          onPress={() => handleDelete(item.id)}
+        >
           <Ionicons name="trash" size={22} color="#ef4444" />
         </TouchableOpacity>
       </View>
@@ -83,27 +132,72 @@ export default function MyserviceScreen() {
           contentContainerStyle={{ paddingHorizontal: 15, paddingBottom: 20 }}
           showsVerticalScrollIndicator={false}
         />
-        <FloatingAddButton onPress={() => setOpen(true)} />
+        <FloatingAddButton
+          onPress={() => {
+            setEditingService(null);
+            setModalOpen(true);
+          }}
+        />
 
-        {/* ✅ Popup Modal */}
-        <Modal visible={open} transparent animationType="fade">
+        {/* ✅ Add/Edit Service Modal */}
+        <Modal visible={modalOpen} transparent animationType="fade">
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}></Text>
-                <TouchableOpacity onPress={() => setOpen(false)}>
+                <Text style={styles.modalTitle}>
+                  {editingService ? "Edit Service" : "Add Service"}
+                </Text>
+                <TouchableOpacity onPress={() => setModalOpen(false)}>
                   <Ionicons name="close" size={24} color="#1e293b" />
                 </TouchableOpacity>
               </View>
               <AddService
+                serviceData={editingService} // ✅ Pass service data for editing
                 afterSubmit={() => {
-                  setOpen(false);
+                  setModalOpen(false);
+                  setEditingService(null);
                   fetchProviderPostedServices();
                 }}
               />
             </View>
           </View>
         </Modal>
+
+        {/* ✅ Web-only Delete Confirmation Modal */}
+        {Platform.OS === "web" && (
+          <Modal
+            visible={confirmVisible}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setConfirmVisible(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.confirmBox}>
+                <Text style={styles.confirmText}>
+                  Are you sure you want to delete this service?
+                </Text>
+                <View style={styles.confirmButtons}>
+                  <TouchableOpacity
+                    style={[styles.confirmBtn, { backgroundColor: "#ef4444" }]}
+                    onPress={() => {
+                      if (selectedServiceId)
+                        removeProviderService(selectedServiceId);
+                      setConfirmVisible(false);
+                    }}
+                  >
+                    <Text style={styles.confirmBtnText}>Yes</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.confirmBtn, { backgroundColor: "#6b7280" }]}
+                    onPress={() => setConfirmVisible(false)}
+                  >
+                    <Text style={styles.confirmBtnText}>No</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
+        )}
       </View>
       <BottomTab />
     </>
@@ -111,11 +205,7 @@ export default function MyserviceScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f8fafc",
-    paddingTop: 10,
-  },
+  container: { flex: 1, backgroundColor: "#f8fafc", paddingTop: 10 },
   headerTitle: {
     fontSize: 22,
     fontWeight: "bold",
@@ -137,10 +227,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 3,
   },
-  jobInfo: {
-    flex: 1,
-    paddingRight: 10,
-  },
+  jobInfo: { flex: 1, paddingRight: 10 },
   jobServiceTypesIds: {
     fontSize: 16,
     fontWeight: "600",
@@ -153,15 +240,8 @@ const styles = StyleSheet.create({
     color: "#10b981",
     marginBottom: 4,
   },
-  jobContactNumber: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#374151",
-  },
-  actionButtons: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
+  jobContactNumber: { fontSize: 14, fontWeight: "500", color: "#374151" },
+  actionButtons: { flexDirection: "row", alignItems: "center" },
   iconButton: {
     backgroundColor: "#fff",
     borderRadius: 50,
@@ -191,5 +271,31 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 15,
   },
-  modalTitle: {},
+  modalTitle: { fontSize: 18, fontWeight: "600" },
+  confirmBox: {
+    width: "90%",
+    backgroundColor: "#fff",
+    borderRadius: 15,
+    padding: 20,
+    alignItems: "center",
+  },
+  confirmText: {
+    fontSize: 16,
+    color: "#1e293b",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  confirmButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+  },
+  confirmBtn: {
+    flex: 1,
+    marginHorizontal: 5,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  confirmBtnText: { color: "#fff", fontWeight: "bold", fontSize: 15 },
 });

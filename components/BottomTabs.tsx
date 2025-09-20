@@ -1,5 +1,6 @@
 // app/components/BottomTabs.tsx
-import React from "react";
+import React, { useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import {
   Ionicons,
@@ -14,6 +15,25 @@ export default function BottomTabs() {
 
   const activeColor = "#4f46e5"; // stylish purple-blue
   const inactiveColor = "#94a3b8"; // soft gray
+
+  const [role, setRole] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchRole = async () => {
+      try {
+        const storedRole = await AsyncStorage.getItem("userRole");
+        setRole(storedRole);
+      } catch (err) {
+        console.log("Error fetching role:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchRole();
+  }, []);
+
+  if (loading) return null; // optional: show loader/spinner here
 
   return (
     <View style={styles.tabBar}>
@@ -94,31 +114,34 @@ export default function BottomTabs() {
       </TouchableOpacity>
 
       {/* My Services */}
-      <TouchableOpacity
-        style={styles.tabItem}
-        onPress={() => router.replace("/screens/MyServicesScreen")}
-      >
-        <FontAwesome5
-          name="briefcase"
-          size={26}
-          color={
-            pathname.includes("MyServicesScreen") ? activeColor : inactiveColor
-          }
-        />
-        <Text
-          style={[
-            styles.tabText,
-            {
-              color: pathname.includes("MyServicesScreen")
-                ? activeColor
-                : inactiveColor,
-            },
-          ]}
+      {role === "ServiceProvider" && (
+        <TouchableOpacity
+          style={styles.tabItem}
+          onPress={() => router.replace("/screens/MyServicesScreen")}
         >
-          My Services
-        </Text>
-      </TouchableOpacity>
-
+          <FontAwesome5
+            name="briefcase"
+            size={26}
+            color={
+              pathname.includes("MyServicesScreen")
+                ? activeColor
+                : inactiveColor
+            }
+          />
+          <Text
+            style={[
+              styles.tabText,
+              {
+                color: pathname.includes("MyServicesScreen")
+                  ? activeColor
+                  : inactiveColor,
+              },
+            ]}
+          >
+            My Services
+          </Text>
+        </TouchableOpacity>
+      )}
       {/* Profile */}
       <TouchableOpacity
         style={styles.tabItem}

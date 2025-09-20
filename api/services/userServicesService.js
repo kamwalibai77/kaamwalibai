@@ -3,12 +3,24 @@ import { Op } from "sequelize";
 
 const UserServices = db.UserService;
 
-// Create
+// Create UserService with associated Service Types
 export const create = async (data) => {
-  return await UserServices.create(data);
+  return await db.sequelize.transaction(async (t) => {
+    const { serviceTypeIds = [], ...userServiceData } = data;
+
+    const userService = await UserServices.create(userServiceData, {
+      transaction: t,
+    });
+
+    if (serviceTypeIds.length > 0) {
+      await userService.setServiceTypes(serviceTypeIds, { transaction: t });
+    }
+
+    return userService;
+  });
 };
 
-// Get All with pagination + search
+// Get all UserServices with pagination + search + include service types
 export const getAll = async ({ page = 1, limit = 10, searchText = "" }) => {
   const offset = (page - 1) * limit;
 
@@ -16,8 +28,8 @@ export const getAll = async ({ page = 1, limit = 10, searchText = "" }) => {
   if (searchText) {
     where = {
       [Op.or]: [
-        { serviceNameIds: { [Op.iLike]: `%${searchText}%` } }, // example field
-        { description: { [Op.iLike]: `%${searchText}%` } }, // adapt fields as per your model
+        { serviceName: { [Op.iLike]: `%${searchText}%` } },
+        { description: { [Op.iLike]: `%${searchText}%` } },
       ],
     };
   }
@@ -27,7 +39,14 @@ export const getAll = async ({ page = 1, limit = 10, searchText = "" }) => {
     limit,
     offset,
     order: [["createdAt", "DESC"]],
-    include: [{ model: db.User, as: "provider" }],
+    include: [
+      { model: db.User, as: "provider" },
+      {
+        model: db.ServiceType,
+        as: "serviceTypes",
+        through: { attributes: [] },
+      },
+    ],
   });
 
   return {
@@ -40,30 +59,56 @@ export const getAll = async ({ page = 1, limit = 10, searchText = "" }) => {
   };
 };
 
-// Get by ID
+// Get by ID with associated service types
 export const getById = async (id) => {
-  return await UserServices.findById(id);
-};
-
-// Get by ID
-export const getByProviderId = async (id) => {
-  return await UserServices.findAll({
-    where: { providerId: id },
-    order: [["createdAt", "DESC"]],
+  return await UserServices.findByPk(id, {
+    include: [
+      { model: db.User, as: "provider" },
+      {
+        model: db.ServiceType,
+        as: "serviceTypes",
+        through: { attributes: [] },
+      },
+    ],
   });
 };
 
-// Update
-export const update = async (id, data) => {
-  const userService = await UserServices.findByPk(id);
-  if (!userService) return null;
-  return await userService.update(data);
+// Get by Provider ID
+export const getByProviderId = async (providerId) => {
+  return await UserServices.findAll({
+    where: { providerId },
+    order: [["createdAt", "DESC"]],
+    include: [
+      {
+        model: db.ServiceType,
+        as: "serviceTypes",
+        through: { attributes: [] },
+      },
+    ],
+  });
 };
 
-// Delete
+// Update UserService and associated service types
+export const update = async (id, data) => {
+  return await db.sequelize.transaction(async (t) => {
+    const { serviceTypeIds = [], ...userServiceData } = data;
+    const userService = await UserServices.findByPk(id, { transaction: t });
+    if (!userService) return null;
+    await userService.update(userServiceData, { transaction: t });
+    await userService.setServiceTypes(serviceTypeIds, { transaction: t });
+    return userService;
+  });
+};
+
+// Delete UserService and associated mappings
 export const remove = async (id) => {
-  const userService = await UserServices.findByPk(id);
-  if (!userService) return null;
-  await userService.destroy();
-  return true;
+  return await db.sequelize.transaction(async (t) => {
+    const userService = await UserServices.findByPk(id, { transaction: t });
+    if (!userService) return null;
+
+    await userService.setServiceTypes([], { transaction: t }); // clear associations
+    await userService.destroy({ transaction: t });
+
+    return true;
+  });
 };

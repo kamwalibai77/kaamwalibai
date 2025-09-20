@@ -165,7 +165,7 @@ export default function HomeScreen() {
         {item.provider.name}
       </Text>
       <Text style={styles.providerService} numberOfLines={1}>
-        {item.serviceTypeIds.join(", ")}
+        {item.serviceTypes.map((st: any) => st.name).join(", ")}
       </Text>
       <Text style={styles.providerArea} numberOfLines={1}>
         {item.address}
@@ -186,7 +186,7 @@ export default function HomeScreen() {
     <View style={styles.container}>
       {/* HEADER */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Kaamwalibai</Text>
+        <Text style={styles.headerTitle}>कामवाली बाई</Text>
         <TouchableOpacity onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={28} color="#6366f1" />
         </TouchableOpacity>
@@ -217,7 +217,7 @@ export default function HomeScreen() {
         />
       </View>
 
-      {/* PROVIDERS LIST */}
+      {/* Service Type LIST */}
       <ScrollView showsVerticalScrollIndicator={false}>
         <Text style={styles.sectionTitle}>Services</Text>
         <FlatList
@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 25,
     borderBottomRightRadius: 25,
   },
-  headerTitle: { fontSize: 20, fontWeight: "bold", color: "#1e293b" },
+  headerTitle: { fontSize: 20, fontWeight: "bold", color: "#6a1010ff" },
   filterContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -428,9 +428,9 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   providerImage: {
-    width: "100%",
+    width: "80%",
     height: "65%",
-    borderRadius: 12,
+    borderRadius: "50%",
     marginBottom: 8,
   },
   providerName: {

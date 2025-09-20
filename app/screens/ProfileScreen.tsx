@@ -84,7 +84,7 @@ export default function ProfileScreen() {
 
         {/* Info Section */}
         <View style={styles.infoCard}>
-          <Text style={styles.sectionTitle}>About</Text>
+          <Text style={styles.sectionTitle}>Personal Information</Text>
 
           <View style={styles.infoRow}>
             <Ionicons name="call-outline" size={18} color="#6366f1" />
