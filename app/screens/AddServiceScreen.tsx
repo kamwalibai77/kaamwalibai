@@ -1,5 +1,4 @@
-// app/screens/PostServiceScreen.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -11,100 +10,106 @@ import {
   Platform,
   Keyboard,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import DropDownPicker from "react-native-dropdown-picker";
+import serviceTypesApi from "../services/serviceTypes";
+import serviceprovidersApi from "../services/serviceProviders";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const SERVICE_TYPES = [
-  "Cooking",
-  "Cleaning",
-  "Laundry",
-  "Utensils",
-  "Home Care",
-  "Baby Care",
-  "Massage",
-  "Care Taker",
-  "Gardener",
-  "Driver",
-  "Electrician",
-  "Plumber",
-  "Security Guard",
-  "Beautician",
+const RATE_OPTIONS = [
+  { label: "Per Hour", value: "hourly" },
+  { label: "Per Day", value: "daily" },
+  { label: "Per Week", value: "weekly" },
+  { label: "Per Month", value: "monthly" },
 ];
 
-const RATE_OPTIONS = ["Per Hour", "Per Day", "Per Week", "Per Month"];
-
-export default function AddServiceScreen() {
-  // open states (important to manage overlap)
+export default function AddServiceScreen({
+  afterSubmit,
+}: {
+  afterSubmit: () => void;
+}) {
   const [servicesOpen, setServicesOpen] = useState(false);
   const [rateOpen, setRateOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [posting, setPosting] = useState(false);
+  const [serviceItems, setServiceItems] = useState([] as any[]);
+  const [rateItems, setRateItems] = useState(RATE_OPTIONS);
 
-  // items (DropDownPicker expects items + setItems if dynamic)
-  const [serviceItems, setServiceItems] = useState(
-    SERVICE_TYPES.map((s) => ({ label: s, value: s }))
-  );
-  const [rateItems, setRateItems] = useState(
-    RATE_OPTIONS.map((r) => ({ label: r, value: r }))
-  );
-
-  // values
-  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [selectedServices, setSelectedServices] = useState<number[]>([]);
   const [selectedRate, setSelectedRate] = useState<string | null>(null);
   const [cost, setCost] = useState("");
   const [contactNumber, setContactNumber] = useState("");
 
-  // validation errors
   const [errCost, setErrCost] = useState<string | null>(null);
   const [errContact, setErrContact] = useState<string | null>(null);
 
-  // When one dropdown opens, close the other to avoid overlap/touch issues
-  const onOpenServices = () => {
-    setRateOpen(false);
-  };
-  const onOpenRate = () => {
-    setServicesOpen(false);
-  };
-
-  const closeDropdowns = () => {
-    if (servicesOpen) setServicesOpen(false);
-    if (rateOpen) setRateOpen(false);
-    Keyboard.dismiss(); // also closes keyboard when tapping outside
+  const fetchServiceTypes = async () => {
+    try {
+      const response = await serviceTypesApi.getAll();
+      const data = await response.data;
+      setServiceItems(data.map((s: any) => ({ label: s.name, value: s.id })));
+    } catch (err) {
+      console.log(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const validateAndSubmit = () => {
+  useEffect(() => {
+    setLoading(true);
+    fetchServiceTypes();
+  }, []);
+
+  const onOpenServices = () => setRateOpen(false);
+  const onOpenRate = () => setServicesOpen(false);
+
+  const validateAndSubmit = async () => {
     Keyboard.dismiss();
     let valid = true;
     setErrCost(null);
     setErrContact(null);
 
-    // cost must be a positive number
     const costVal = parseFloat(cost);
     if (!cost || isNaN(costVal) || costVal <= 0) {
       setErrCost("Enter a valid cost (numeric, > 0).");
       valid = false;
     }
 
-    // contact number basic validation (10 digits)
     const phoneOnly = contactNumber.replace(/\D/g, "");
     if (phoneOnly.length !== 10) {
       setErrContact("Enter a valid 10-digit phone number.");
       valid = false;
     }
 
-    if (!valid) {
-      return;
+    if (selectedServices.length === 0) {
+      Alert.alert("Missing Info", "Please select at least one service.");
+      valid = false;
     }
 
-    // prepare payload
-    const payload = {
-      services: selectedServices,
-      rateType: selectedRate,
-      cost: costVal,
-      contactNumber: phoneOnly,
-    };
+    if (!valid) return;
 
-    // replace with API call if required
-    console.log("Post Service payload:", payload);
-    Alert.alert("Success", "Service posted (mock). Check console for payload.");
+    try {
+      setPosting(true);
+      const payload = {
+        providerId: await AsyncStorage.getItem("userId"),
+        serviceTypeIds: selectedServices,
+        rateType: selectedRate,
+        amount: costVal,
+        contactNumber: phoneOnly,
+        currency: "INR",
+      };
+
+      const response = await serviceprovidersApi.createService(payload);
+
+      Alert.alert("Success", "Your service has been posted!");
+      afterSubmit();
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Error", "Failed to post service. Please try again.");
+    } finally {
+      setPosting(false);
+    }
   };
 
   return (
@@ -117,94 +122,94 @@ export default function AddServiceScreen() {
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.title}>Post Your Services</Text>
+        <View style={styles.card}>
+          <Text style={styles.sectionLabel}>Service Type</Text>
+          <View
+            style={[
+              styles.dropdownWrapper,
+              { zIndex: servicesOpen ? 5000 : 3000 },
+            ]}
+          >
+            <DropDownPicker
+              open={servicesOpen}
+              setOpen={setServicesOpen}
+              onOpen={onOpenServices}
+              mode="BADGE"
+              multiple={true}
+              min={1}
+              max={serviceItems.length}
+              value={selectedServices}
+              setValue={setSelectedServices}
+              items={serviceItems}
+              setItems={setServiceItems}
+              placeholder="Select Services"
+              listMode="SCROLLVIEW"
+              dropDownDirection="AUTO"
+              dropDownContainerStyle={styles.dropDownContainer}
+              style={styles.dropdown}
+              textStyle={styles.dropdownText}
+              scrollViewProps={{ nestedScrollEnabled: true }}
+            />
+          </View>
 
-        {/* Services dropdown wrapper: set high zIndex so the dropdown appears above other elements */}
-        <View
-          style={[
-            styles.dropdownWrapper,
-            { zIndex: servicesOpen ? 5000 : 3000 },
-          ]}
-        >
-          <DropDownPicker
-            open={servicesOpen}
-            setOpen={setServicesOpen}
-            onOpen={onOpenServices}
-            multiple={true}
-            min={1}
-            max={SERVICE_TYPES.length}
-            value={selectedServices}
-            setValue={setSelectedServices}
-            items={serviceItems}
-            setItems={setServiceItems}
-            placeholder="Select Services"
-            listMode="SCROLLVIEW"
-            dropDownDirection="AUTO"
-            // dropDown container must have elevation for Android + zIndex for iOS
-            dropDownContainerStyle={styles.dropDownContainer}
-            style={styles.dropdown}
-            textStyle={styles.dropdownText}
-            scrollViewProps={{ nestedScrollEnabled: true }}
-          />
-        </View>
+          <Text style={styles.sectionLabel}>Rate Type</Text>
+          <View
+            style={[styles.dropdownWrapper, { zIndex: rateOpen ? 4000 : 2000 }]}
+          >
+            <DropDownPicker
+              open={rateOpen}
+              setOpen={setRateOpen}
+              onOpen={onOpenRate}
+              multiple={false}
+              value={selectedRate}
+              setValue={setSelectedRate}
+              items={rateItems}
+              setItems={setRateItems}
+              placeholder="Select Rate Type"
+              listMode="SCROLLVIEW"
+              dropDownDirection="AUTO"
+              dropDownContainerStyle={styles.dropDownContainer}
+              style={styles.dropdown}
+              textStyle={styles.dropdownText}
+            />
+          </View>
 
-        {/* Rate dropdown wrapper (lower zIndex than services) */}
-        <View
-          style={[styles.dropdownWrapper, { zIndex: rateOpen ? 4000 : 2000 }]}
-        >
-          <DropDownPicker
-            open={rateOpen}
-            setOpen={setRateOpen}
-            onOpen={onOpenRate}
-            multiple={false}
-            value={selectedRate}
-            setValue={setSelectedRate}
-            items={rateItems}
-            setItems={setRateItems}
-            placeholder="Select Rate Type"
-            listMode="SCROLLVIEW"
-            dropDownDirection="AUTO"
-            dropDownContainerStyle={styles.dropDownContainer}
-            style={styles.dropdown}
-            textStyle={styles.dropdownText}
-          />
-        </View>
-
-        {/* Cost */}
-        <View style={styles.inputWrap}>
+          <Text style={styles.sectionLabel}>Cost</Text>
           <TextInput
             style={styles.input}
             placeholder="Enter Cost"
             placeholderTextColor="#888"
             keyboardType="numeric"
             value={cost}
-            onChangeText={(t) => setCost(t)}
-            returnKeyType="done"
+            onChangeText={setCost}
           />
-          {errCost ? <Text style={styles.errText}>{errCost}</Text> : null}
-        </View>
+          {errCost && <Text style={styles.errText}>{errCost}</Text>}
 
-        {/* Contact Number */}
-        <View style={styles.inputWrap}>
+          <Text style={styles.sectionLabel}>Contact Number</Text>
           <TextInput
             style={styles.input}
             placeholder="Active Contact Number"
             placeholderTextColor="#888"
             keyboardType="phone-pad"
             value={contactNumber}
-            onChangeText={(t) => setContactNumber(t)}
-            maxLength={15} // allow international formatting but validated to 10 digits
-            returnKeyType="done"
+            onChangeText={setContactNumber}
+            maxLength={15}
           />
-          {errContact ? <Text style={styles.errText}>{errContact}</Text> : null}
+          {errContact && <Text style={styles.errText}>{errContact}</Text>}
         </View>
 
-        {/* Submit */}
-        <TouchableOpacity style={styles.button} onPress={validateAndSubmit}>
-          <Text style={styles.buttonText}>Post Service</Text>
+        <TouchableOpacity
+          style={[styles.button, posting && { opacity: 0.7 }]}
+          onPress={validateAndSubmit}
+          disabled={posting}
+        >
+          {posting ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>🚀 Post Service</Text>
+          )}
         </TouchableOpacity>
 
-        {/* Extra bottom space so dropdowns can expand without being cut off */}
         <View style={{ height: 120 }} />
       </ScrollView>
     </KeyboardAvoidingView>
@@ -213,27 +218,36 @@ export default function AddServiceScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
-    backgroundColor: "#fff",
-    paddingBottom: 30,
+    padding: 20,
+    backgroundColor: "#f3f4f6",
   },
-  title: {
-    fontSize: 22,
-    fontWeight: "700",
-    marginBottom: 18,
-    color: "#111827",
-    textAlign: "center",
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 18,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 6,
+    elevation: 4,
+    marginBottom: 20,
+  },
+  sectionLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#374151",
+    marginBottom: 8,
+    marginTop: 12,
   },
   dropdownWrapper: {
     marginBottom: 14,
-    // relative positioning helps zIndex behave as expected on iOS
     position: "relative",
   },
   dropdown: {
     borderColor: "#e5e7eb",
-    borderRadius: 10,
-    paddingVertical: 8,
-    backgroundColor: "#fff",
+    borderRadius: 12,
+    paddingVertical: 10,
+    backgroundColor: "#f9fafb",
   },
   dropdownText: {
     fontSize: 14,
@@ -241,44 +255,43 @@ const styles = StyleSheet.create({
   },
   dropDownContainer: {
     borderColor: "#e5e7eb",
-    borderRadius: 10,
+    borderRadius: 12,
     maxHeight: 200,
-    // Android elevation for the list overlay
     elevation: 8,
-    // iOS zIndex is handled by wrapper above
     shadowColor: "#000",
-    shadowOpacity: 0.12,
+    shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 6,
-  },
-  inputWrap: {
-    marginBottom: 14,
   },
   input: {
     borderWidth: 1,
     borderColor: "#e5e7eb",
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 12,
     fontSize: 15,
     color: "#111827",
-    backgroundColor: "#fff",
+    backgroundColor: "#f9fafb",
+    marginBottom: 6,
   },
   errText: {
     color: "#dc2626",
-    marginTop: 6,
+    marginBottom: 6,
     fontSize: 13,
   },
   button: {
     backgroundColor: "#6366f1",
-    padding: 14,
-    borderRadius: 10,
+    padding: 16,
+    borderRadius: 14,
     alignItems: "center",
-    marginTop: 8,
-    elevation: 3,
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 6,
   },
   buttonText: {
     color: "#fff",
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
   },
 });

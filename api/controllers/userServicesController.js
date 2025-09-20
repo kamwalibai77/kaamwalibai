@@ -11,7 +11,7 @@ export const create = async (req, res) => {
 
 export const getAll = async (req, res) => {
   try {
-    const serviceTypes = await services.getAll();
+    const serviceTypes = await services.getAll(req.params);
     res.json(serviceTypes);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -22,6 +22,15 @@ export const getOne = async (req, res) => {
   try {
     const serviceType = await services.getById(req.params.id);
     if (!serviceType) return res.status(404).json({ error: "Not found" });
+    res.json(serviceType);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+export const getProviderPostedServices = async (req, res) => {
+  try {
+    const serviceType = await services.getByProviderId(req.params.id);
     res.json(serviceType);
   } catch (err) {
     res.status(500).json({ error: err.message });

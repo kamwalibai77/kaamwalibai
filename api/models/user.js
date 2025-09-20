@@ -49,6 +49,19 @@ export default (sequelize, DataTypes) => {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
+    trialCount: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0, // user gets 0 trial connections by default until they accept free trial
+    },
   });
+
+  User.associate = (models) => {
+    User.hasMany(models.UserService, {
+      foreignKey: "providerId",
+      as: "services",
+      onDelete: "CASCADE",
+    });
+  };
+
   return User;
 };

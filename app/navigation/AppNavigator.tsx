@@ -10,6 +10,7 @@ import ProfileEditScreen from "../screens/ProfileEditScreen";
 import AddServiceScreen from "../screens/AddServiceScreen";
 import MyServicesScreen from "../screens/MyServicesScreen";
 import IndexScreen from "../(tabs)/index";
+import SubscriptionScreen from "../screens/SubscriptionScreen";
 
 export type RootStackParamList = {
   Index: undefined;
@@ -39,6 +40,7 @@ export default function AppNavigator() {
         <Stack.Screen name="EditProfile" component={ProfileEditScreen} />
         <Stack.Screen name="AddService" component={AddServiceScreen} />
         <Stack.Screen name="MyServices" component={MyServicesScreen} />
+        <Stack.Screen name="Subscription" component={SubscriptionScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

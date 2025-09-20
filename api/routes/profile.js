@@ -8,6 +8,9 @@ import db from "../models/index.js";
 const router = express.Router();
 const User = db.User;
 
+/**
+ * Update profile with photo
+ */
 router.put(
   "/update",
   authMiddleware,
@@ -18,24 +21,23 @@ router.put(
 
     try {
       const userId = req.user.id;
-      const { mobile, address, gender, age } = req.body;
+      const { name, mobile, address, gender, age } = req.body;
 
       // save local path for cleanup
       localFilePath = req.file?.path;
 
-      // ✅ Example eligibility check
       if (!mobile || !address) {
         if (localFilePath && fs.existsSync(localFilePath)) {
-          fs.unlinkSync(localFilePath); // delete local file if not eligible
+          fs.unlinkSync(localFilePath);
         }
         return res
           .status(400)
           .json({ success: false, message: "Mobile and Address required" });
       }
 
-      // ✅ Save user to DB first
+      // Save user to DB
       const [rowsUpdated, [updatedUser]] = await User.update(
-        { mobile, address, gender, age },
+        { name, mobile, address, gender, age },
         {
           where: { id: userId },
           returning: true,
@@ -45,7 +47,7 @@ router.put(
 
       if (rowsUpdated === 0) {
         if (localFilePath && fs.existsSync(localFilePath)) {
-          fs.unlinkSync(localFilePath); // delete unused file
+          fs.unlinkSync(localFilePath);
         }
         await transaction.rollback();
         return res
@@ -53,7 +55,7 @@ router.put(
           .json({ success: false, message: "User not found" });
       }
 
-      // ✅ Upload to Cloudinary after DB success
+      // Upload to Cloudinary if file present
       let cloudinaryUrl = null;
       if (localFilePath) {
         const uploadRes = await cloudinary.uploader.upload(localFilePath, {
@@ -61,11 +63,9 @@ router.put(
         });
         cloudinaryUrl = uploadRes.secure_url;
 
-        // update user with Cloudinary URL
         updatedUser.profilePhoto = cloudinaryUrl;
         await updatedUser.save({ transaction });
 
-        // remove local file
         fs.unlinkSync(localFilePath);
       }
 
@@ -79,16 +79,48 @@ router.put(
     } catch (err) {
       console.error("Profile Update Error:", err);
 
-      // rollback if something fails
       await transaction.rollback();
 
       if (localFilePath && fs.existsSync(localFilePath)) {
-        fs.unlinkSync(localFilePath); // cleanup
+        fs.unlinkSync(localFilePath);
       }
 
       res.status(500).json({ success: false, error: "Server error" });
     }
   }
 );
+
+/**
+ * Subscribe / Start free trial
+ */
+router.put("/subscribe", authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // update isSubscribed + trial count (3 connections)
+    const [rowsUpdated, [updatedUser]] = await User.update(
+      { isSubscribed: true, trialCount: 3 },
+      {
+        where: { id: userId },
+        returning: true,
+      }
+    );
+
+    if (rowsUpdated === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    res.json({
+      success: true,
+      message: "Subscription activated (Free Trial)",
+      user: updatedUser,
+    });
+  } catch (err) {
+    console.error("Subscription Error:", err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+});
 
 export default router;

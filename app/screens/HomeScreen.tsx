@@ -1,3 +1,4 @@
+// app/screens/HomeScreen.tsx
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -10,17 +11,21 @@ import {
   Dimensions,
   TextInput,
   ActivityIndicator,
+  Modal,
+  Linking,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Picker } from "@react-native-picker/picker"; // dropdown
+import { Picker } from "@react-native-picker/picker";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import BottomTab from "@/components/BottomTabs";
-import serviceTypes from "../services/serviceTypes";
+import serviceTypesApi from "../services/serviceTypes";
+import providersApi from "../services/serviceProviders";
+import userApi from "../services/user"; // ✅ NEW API for subscription
 
 const { width } = Dimensions.get("window");
 
-// Sample areas of Nagpur
 const nagpurAreas = [
   "Trimurti Nagar",
   "Dharampeth",
@@ -34,79 +39,140 @@ const nagpurAreas = [
   "Jaripatka",
 ];
 
-// HomeScreen.tsx
-// ... (imports stay same)
-
-const providers = [
-  {
-    id: "1",
-    name: "Sita Bai",
-    service: "Cooking",
-    area: "Trimurti Nagar",
-    rating: 4.5,
-    image: "https://cdn-icons-png.flaticon.com/128/1999/1999625.png",
-  },
-  {
-    id: "2",
-    name: "Ganga Bai",
-    service: "Cleaning",
-    area: "Pratap Nagar",
-    rating: 4.7,
-    image: "https://cdn-icons-png.flaticon.com/128/1999/1999625.png",
-  },
-  {
-    id: "3",
-    name: "Radha Bai",
-    service: "Laundry",
-    area: "Dharampeth",
-    rating: 4.3,
-    image: "https://cdn-icons-png.flaticon.com/128/1999/1999625.png",
-  },
-  {
-    id: "4",
-    name: "Meera Bai",
-    service: "Baby Care",
-    area: "Sitabuldi",
-    rating: 4.8,
-    image: "https://cdn-icons-png.flaticon.com/128/1999/1999625.png",
-  },
-];
-
-// services array (same as before)
-
 export default function HomeScreen() {
   const router = useRouter();
+
   const [selectedArea, setSelectedArea] = useState("Trimurti Nagar");
   const [searchQuery, setSearchQuery] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [services, setServices] = useState([{ name: "", icon: "" }]);
+  const [providers, setProviders] = useState([] as any[]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [serviceTypes, setServiceTypes] = useState([{ name: "", icon: "" }]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<any>(null);
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [subscriptionModalVisible, setSubscriptionModalVisible] =
+    useState(false);
 
   const handleLogout = async () => {
     await AsyncStorage.clear();
     router.replace("/screens/LoginScreen");
   };
 
-  const filteredProviders = providers.filter(
-    (p) =>
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.service.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.area.toLowerCase().includes(searchQuery.toLowerCase())
+  const fetchServiceTypes = async () => {
+    try {
+      const response = await serviceTypesApi.getAll();
+      const data = await response.data;
+      setServiceTypes(data);
+    } catch (err) {
+      console.log(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchProviders = async (reset = false) => {
+    try {
+      setLoading(true);
+
+      const response = await providersApi.getAllServices({
+        page: reset ? 1 : page,
+        limit: 6,
+        search: searchQuery,
+        area: selectedArea,
+      });
+
+      const data = response.data;
+
+      if (reset) {
+        setProviders(data.data);
+      } else {
+        setProviders((prev) => [...prev, ...data.data]);
+      }
+
+      setHasMore(data.pagination.page < data.pagination.pages);
+    } catch (err) {
+      console.log("❌ Error fetching providers:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredServices = serviceTypes.filter((s) =>
+    s.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   useEffect(() => {
-    const fetchServiceTypes = async () => {
-      try {
-        const response = await serviceTypes.getAll();
-        const data = await response.data;
-        setServices(data);
-      } catch (err) {
-        console.log(err);
-      } finally {
-        setLoading(false);
-      }
-    };
+    fetchProviders(true);
     fetchServiceTypes();
+
+    // fetch subscription status
+    AsyncStorage.getItem("isSubscribed").then((res) => {
+      setIsSubscribed(res === "true");
+    });
   }, []);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      fetchProviders(true);
+    }, 400);
+    return () => clearTimeout(timeout);
+  }, [searchQuery, selectedArea]);
+
+  useEffect(() => {
+    if (page > 1) fetchProviders();
+  }, [page]);
+
+  const openProviderModal = (provider: any) => {
+    setSelectedProvider(provider);
+
+    if (isSubscribed) {
+      setModalVisible(true);
+    } else {
+      setSubscriptionModalVisible(true); // show subscription warning modal
+    }
+  };
+
+  // ✅ Handle Subscribe / Free Trial
+  const handleSubscribe = async () => {
+    try {
+      const res = await userApi.subscribe(); // ✅ no ID here
+      if (res.success) {
+        await AsyncStorage.setItem("isSubscribed", "true");
+        setIsSubscribed(true);
+        setSubscriptionModalVisible(false);
+        Alert.alert("✅ Success", "You are now subscribed!");
+        setModalVisible(true);
+      }
+    } catch (err) {
+      console.log("❌ Subscription error:", err);
+      Alert.alert("Error", "Unable to subscribe. Please try again.");
+    }
+  };
+
+  const renderProvider = ({ item }: { item: any }) => (
+    <TouchableOpacity
+      style={styles.providerCard}
+      onPress={() => openProviderModal(item)}
+    >
+      <Image
+        source={{ uri: item.provider.profilePhoto }}
+        style={styles.providerImage}
+        resizeMode="cover"
+      />
+      <Text style={styles.providerName} numberOfLines={1}>
+        {item.provider.name}
+      </Text>
+      <Text style={styles.providerService} numberOfLines={1}>
+        {item.serviceTypeIds.join(", ")}
+      </Text>
+      <Text style={styles.providerArea} numberOfLines={1}>
+        {item.address}
+      </Text>
+      <Text>{`${item.amount} ${item.currency}/${item.rateType}`}</Text>
+    </TouchableOpacity>
+  );
 
   if (loading) {
     return (
@@ -116,14 +182,9 @@ export default function HomeScreen() {
     );
   }
 
-  // 🔥 filter both services + providers
-  const filteredServices = services.filter((s) =>
-    s.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   return (
     <View style={styles.container}>
-      {/* Header */}
+      {/* HEADER */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Kaamwalibai</Text>
         <TouchableOpacity onPress={handleLogout}>
@@ -131,7 +192,7 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* 🔎 Location Filter */}
+      {/* AREA FILTER */}
       <View style={styles.filterContainer}>
         <Ionicons name="location-outline" size={20} color="#6366f1" />
         <Picker
@@ -145,19 +206,19 @@ export default function HomeScreen() {
         </Picker>
       </View>
 
-      {/* 🔎 Search Bar */}
+      {/* SEARCH */}
       <View style={styles.searchContainer}>
         <Ionicons name="search" size={20} color="#94a3b8" />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search Services or Providers..."
+          placeholder="Find Services"
           value={searchQuery}
           onChangeText={(text) => setSearchQuery(text)}
         />
       </View>
 
+      {/* PROVIDERS LIST */}
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Services */}
         <Text style={styles.sectionTitle}>Services</Text>
         <FlatList
           data={filteredServices}
@@ -174,44 +235,130 @@ export default function HomeScreen() {
         />
 
         <Text style={styles.sectionTitle}>Nearby Providers</Text>
+
         <FlatList
-          data={filteredProviders}
-          keyExtractor={(item) => item.id}
-          numColumns={2} // 👈 two-column grid
+          data={providers}
+          keyExtractor={(item) => item.id.toString()}
+          numColumns={2}
           columnWrapperStyle={{ justifyContent: "space-between" }}
           scrollEnabled={false}
-          renderItem={({ item }) => (
-            <View style={styles.providerCard}>
-              <Image
-                source={{ uri: item.image }}
-                style={styles.providerImage}
-                resizeMode="cover"
-              />
-              <Text style={styles.providerName} numberOfLines={1}>
-                {item.name}
-              </Text>
-              <Text style={styles.providerService} numberOfLines={1}>
-                {item.service}
-              </Text>
-              <Text style={styles.providerArea} numberOfLines={1}>
-                {item.area}
-              </Text>
-              <View style={styles.ratingBox}>
-                <Ionicons name="star" size={14} color="#fbbf24" />
-                <Text style={styles.ratingText}>{item.rating}</Text>
-              </View>
-            </View>
-          )}
+          renderItem={renderProvider}
+          ListFooterComponent={
+            loading ? (
+              <ActivityIndicator size="small" color="#6366f1" />
+            ) : hasMore ? (
+              <TouchableOpacity
+                style={styles.loadMoreBtn}
+                onPress={() => setPage((prev) => prev + 1)}
+              >
+                <Text style={styles.loadMoreText}>Load More</Text>
+              </TouchableOpacity>
+            ) : null
+          }
         />
       </ScrollView>
 
-      {/* Bottom Tabs (same as before) */}
+      {/* SUBSCRIPTION MODAL */}
+      <Modal
+        visible={subscriptionModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSubscriptionModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={{ fontSize: 16, fontWeight: "600", marginBottom: 15 }}>
+              ⚠️ Get Subscription to View Details
+            </Text>
+            <TouchableOpacity
+              style={styles.subscribeButton}
+              onPress={handleSubscribe}
+            >
+              <Text style={styles.subscribeText}>Start Free Trial</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.closeButton, { marginTop: 10 }]}
+              onPress={() => setSubscriptionModalVisible(false)}
+            >
+              <Text style={{ color: "#fff", fontWeight: "600" }}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* PROVIDER INFO MODAL */}
+      {selectedProvider && (
+        <Modal
+          visible={modalVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Image
+                source={{ uri: selectedProvider.provider.profilePhoto }}
+                style={styles.modalImage}
+              />
+              <Text style={styles.modalName}>
+                {selectedProvider.provider.name}
+              </Text>
+
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  marginBottom: 15,
+                }}
+              >
+                <Text style={styles.modalNumber}>
+                  {selectedProvider?.provider?.phone || "N/A"}
+                </Text>
+
+                <TouchableOpacity
+                  style={{ marginLeft: 15 }}
+                  onPress={() => {
+                    const phone = selectedProvider?.provider?.phone;
+                    if (phone) Linking.openURL(`tel:${phone}`);
+                  }}
+                >
+                  <Ionicons name="call-outline" size={24} color="#4ade80" />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={{ marginLeft: 15 }}
+                  onPress={() => {
+                    const phone = selectedProvider?.provider?.phone;
+                    if (phone) Linking.openURL(`sms:${phone}`);
+                  }}
+                >
+                  <Ionicons
+                    name="chatbubble-ellipses-outline"
+                    size={24}
+                    color="#3b82f6"
+                  />
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={{ color: "#fff", fontWeight: "600" }}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* BOTTOM TABS */}
       <BottomTab />
     </View>
   );
 }
 
-// --- STYLES ---
+// ...styles remain unchanged
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f8fafc" },
   header: {
@@ -248,8 +395,8 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, height: 40, marginLeft: 8 },
   sectionTitle: { fontSize: 18, fontWeight: "700", margin: 15 },
   serviceCard: {
-    width: width * 0.25,
-    height: width * 0.3,
+    width: width * 0.175,
+    height: width * 0.2,
     backgroundColor: "#fff",
     borderRadius: 15,
     marginRight: 12,
@@ -258,16 +405,21 @@ const styles = StyleSheet.create({
     padding: 10,
     elevation: 3,
   },
-  serviceIcon: { width: width * 0.12, height: width * 0.12, marginBottom: 8 },
+  serviceIcon: {
+    width: width * 0.12,
+    height: width * 0.12,
+    marginBottom: 8,
+    borderRadius: (width * 0.12) / 2,
+  },
   serviceName: { fontSize: 12, fontWeight: "600", textAlign: "center" },
   providerCard: {
     backgroundColor: "#fff",
     borderRadius: 15,
     padding: 10,
     marginBottom: 15,
-    marginHorizontal: 7, // ✅ spacing on both sides
-    width: (width - 60) / 2, // ✅ consistent spacing (30px total padding + 2 * 15 gap)
-    height: (width - 60) / 2 + 40, // ✅ square-like look + extra space for text
+    marginHorizontal: 7,
+    width: (width - 60) / 2,
+    height: (width - 60) / 2 + 40,
     alignItems: "center",
     shadowColor: "#000",
     shadowOpacity: 0.05,
@@ -277,7 +429,7 @@ const styles = StyleSheet.create({
   },
   providerImage: {
     width: "100%",
-    height: "65%", // ✅ square feel, top image takes most of card
+    height: "65%",
     borderRadius: 12,
     marginBottom: 8,
   },
@@ -299,20 +451,39 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 4,
   },
-  ratingBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fef3c7",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 10,
-    marginTop: 4,
-  },
+  loadMoreBtn: { padding: 10, alignItems: "center", justifyContent: "center" },
+  loadMoreText: { color: "#6366f1", fontWeight: "600" },
 
-  ratingText: {
-    marginLeft: 3,
-    fontWeight: "600",
-    color: "#92400e",
-    fontSize: 12,
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    width: width * 0.8,
+    backgroundColor: "#fff",
+    borderRadius: 15,
+    padding: 20,
+    alignItems: "center",
+  },
+  modalImage: { width: 80, height: 80, borderRadius: 40, marginBottom: 15 },
+  modalName: { fontSize: 18, fontWeight: "700", marginBottom: 8 },
+  modalNumber: { fontSize: 16, color: "#64748b" },
+  subscribeButton: {
+    backgroundColor: "#facc15",
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 8,
+    marginLeft: 15,
+  },
+  subscribeText: { color: "#1e293b", fontWeight: "600" },
+  closeButton: {
+    backgroundColor: "#6366f1",
+    paddingVertical: 8,
+    paddingHorizontal: 25,
+    borderRadius: 10,
+    marginTop: 10,
   },
 });

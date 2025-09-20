@@ -1,69 +1,117 @@
 // app/components/BottomTabs.tsx
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import {
+  Ionicons,
+  MaterialCommunityIcons,
+  FontAwesome5,
+} from "@expo/vector-icons";
 import { useRouter, usePathname } from "expo-router";
 
 export default function BottomTabs() {
   const router = useRouter();
-  const pathname = usePathname(); // detect active tab
+  const pathname = usePathname();
+
+  const activeColor = "#4f46e5"; // stylish purple-blue
+  const inactiveColor = "#94a3b8"; // soft gray
 
   return (
     <View style={styles.tabBar}>
+      {/* Home */}
       <TouchableOpacity
         style={styles.tabItem}
         onPress={() => router.replace("/screens/HomeScreen")}
       >
         <Ionicons
-          name="home"
-          size={24}
-          color={pathname.includes("HomeScreen") ? "#6366f1" : "#64748b"}
+          name="home-outline"
+          size={28}
+          color={pathname.includes("HomeScreen") ? activeColor : inactiveColor}
         />
         <Text
           style={[
             styles.tabText,
-            { color: pathname.includes("HomeScreen") ? "#6366f1" : "#64748b" },
+            {
+              color: pathname.includes("HomeScreen")
+                ? activeColor
+                : inactiveColor,
+            },
           ]}
         >
           Home
         </Text>
       </TouchableOpacity>
 
+      {/* Chat */}
       <TouchableOpacity
         style={styles.tabItem}
         onPress={() => router.replace("/screens/ChatScreen")}
       >
-        <Ionicons
-          name="chatbubbles"
-          size={24}
-          color={pathname.includes("ChatScreen") ? "#6366f1" : "#64748b"}
+        <MaterialCommunityIcons
+          name="chat-processing-outline"
+          size={28}
+          color={pathname.includes("ChatScreen") ? activeColor : inactiveColor}
         />
         <Text
           style={[
             styles.tabText,
-            { color: pathname.includes("ChatScreen") ? "#6366f1" : "#64748b" },
+            {
+              color: pathname.includes("ChatScreen")
+                ? activeColor
+                : inactiveColor,
+            },
           ]}
         >
           Chat
         </Text>
       </TouchableOpacity>
 
+      {/* My Services */}
+      <TouchableOpacity
+        style={styles.tabItem}
+        onPress={() => router.replace("/screens/SubscriptionScreen")}
+      >
+        <FontAwesome5
+          name="briefcase"
+          size={26}
+          color={
+            pathname.includes("SubscriptionScreen")
+              ? activeColor
+              : inactiveColor
+          }
+        />
+        <Text
+          style={[
+            styles.tabText,
+            {
+              color: pathname.includes("SubscriptionScreen")
+                ? activeColor
+                : inactiveColor,
+            },
+          ]}
+        >
+          Subscriptions
+        </Text>
+      </TouchableOpacity>
+
+      {/* My Services */}
       <TouchableOpacity
         style={styles.tabItem}
         onPress={() => router.replace("/screens/MyServicesScreen")}
       >
-        <Ionicons
+        <FontAwesome5
           name="briefcase"
-          size={24}
-          color={pathname.includes("MyServicesScreen") ? "#6366f1" : "#64748b"}
+          size={26}
+          color={
+            pathname.includes("MyServicesScreen") ? activeColor : inactiveColor
+          }
         />
         <Text
           style={[
             styles.tabText,
             {
               color: pathname.includes("MyServicesScreen")
-                ? "#6366f1"
-                : "#64748b",
+                ? activeColor
+                : inactiveColor,
             },
           ]}
         >
@@ -71,20 +119,25 @@ export default function BottomTabs() {
         </Text>
       </TouchableOpacity>
 
+      {/* Profile */}
       <TouchableOpacity
         style={styles.tabItem}
         onPress={() => router.replace("/screens/ProfileScreen")}
       >
         <Ionicons
-          name="person"
-          size={24}
-          color={pathname.includes("ProfileScreen") ? "#6366f1" : "#64748b"}
+          name="person-circle-outline"
+          size={28}
+          color={
+            pathname.includes("ProfileScreen") ? activeColor : inactiveColor
+          }
         />
         <Text
           style={[
             styles.tabText,
             {
-              color: pathname.includes("ProfileScreen") ? "#6366f1" : "#64748b",
+              color: pathname.includes("ProfileScreen")
+                ? activeColor
+                : inactiveColor,
             },
           ]}
         >
@@ -99,16 +152,16 @@ const styles = StyleSheet.create({
   tabBar: {
     flexDirection: "row",
     justifyContent: "space-around",
-    paddingVertical: 10,
+    paddingVertical: 14,
     backgroundColor: "#fff",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
     shadowColor: "#000",
     shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: -2 },
-    shadowRadius: 5,
-    elevation: 10,
+    shadowOffset: { width: 0, height: -3 },
+    shadowRadius: 8,
+    elevation: 15,
   },
   tabItem: { alignItems: "center" },
-  tabText: { fontSize: 12, color: "#64748b", marginTop: 2 },
+  tabText: { fontSize: 12, color: "#64748b", marginTop: 3, fontWeight: "700" },
 });

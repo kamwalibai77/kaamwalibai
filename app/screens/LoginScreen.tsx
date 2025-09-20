@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import api from "../services/api";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Login">;
 
@@ -26,25 +27,17 @@ export default function LoginScreen({ navigation }: Props) {
   const handleLogin = async () => {
     if (email && password) {
       try {
-        const response = await fetch("http://localhost:5000/api/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
-        });
-        const data = await response.json();
-        if (response.ok) {
-          console.log("✅ Registration successful:", data);
-          await AsyncStorage.setItem("token", String(data.token));
-          await AsyncStorage.setItem("userRole", String(data.role));
-          await AsyncStorage.setItem("userId", String(data.id));
+        const response = await api.post("/auth/login", { email, password });
+        const data = await response.data;
+        console.log("✅ Registration successful:", data);
+        await AsyncStorage.setItem("token", String(data.token));
+        await AsyncStorage.setItem("userRole", String(data.role));
+        await AsyncStorage.setItem("userId", String(data.id));
 
-          // ✅ Redirect to ProfileScreen
-          router.navigate("/screens/HomeScreen");
-        } else {
-          alert(data.error || "Registration failed");
-        }
+        // ✅ Redirect to ProfileScreen
+        router.navigate("/screens/HomeScreen");
       } catch (err) {
-        alert("Network error");
+        alert("Error" + err?.response?.data?.error || "Registration failed");
       }
     } else {
       alert("Please enter email and password");
@@ -106,7 +99,9 @@ export default function LoginScreen({ navigation }: Props) {
               <Text style={styles.buttonText}>Login</Text>
             </LinearGradient>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate("Register")}>
+          <TouchableOpacity
+            onPress={() => router.navigate("/screens/RegisterScreen")}
+          >
             <Text style={styles.registerText}>
               Don't have an account?{" "}
               <Text style={{ color: "#6366f1", fontWeight: "bold" }}>

@@ -10,7 +10,6 @@ import {
   View,
   Image,
   TouchableOpacity,
-  useWindowDimensions,
   ActivityIndicator,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -18,9 +17,6 @@ import BottomTab from "../../components/BottomTabs";
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { width } = useWindowDimensions();
-  const isMobile = width < 600;
-
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -46,7 +42,7 @@ export default function ProfileScreen() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+      <View style={styles.centered}>
         <ActivityIndicator size="large" color="#6366f1" />
       </View>
     );
@@ -54,17 +50,17 @@ export default function ProfileScreen() {
 
   if (!user) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+      <View style={styles.centered}>
         <Text>No user found</Text>
       </View>
     );
   }
 
   return (
-    <LinearGradient colors={["#eef2ff", "#e0e7ff"]} style={styles.gradient}>
+    <LinearGradient colors={["#f9fafb", "#eef2ff"]} style={styles.gradient}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         {/* Profile Header */}
-        <View style={styles.profileHeader}>
+        <View style={styles.profileCard}>
           <Image
             source={{
               uri: user.profilePhoto || "https://via.placeholder.com/150",
@@ -81,31 +77,33 @@ export default function ProfileScreen() {
             style={styles.editButton}
             onPress={() => router.push("/screens/ProfileEditScreen")}
           >
-            <Ionicons name="pencil-outline" size={20} color="#fff" />
+            <Ionicons name="pencil-outline" size={18} color="#fff" />
             <Text style={styles.editButtonText}>Edit Profile</Text>
           </TouchableOpacity>
         </View>
 
-        {/* About Section */}
-        <View style={styles.infoSection}>
+        {/* Info Section */}
+        <View style={styles.infoCard}>
           <Text style={styles.sectionTitle}>About</Text>
+
           <View style={styles.infoRow}>
-            <Ionicons name="call-outline" size={20} color="#6366f1" />
+            <Ionicons name="call-outline" size={18} color="#6366f1" />
             <Text style={styles.infoText}>{user.mobile || "NA"}</Text>
           </View>
+
           <View style={styles.infoRow}>
-            <Ionicons name="home-outline" size={20} color="#6366f1" />
+            <Ionicons name="home-outline" size={18} color="#6366f1" />
             <Text style={styles.infoText}>{user.address || "NA"}</Text>
           </View>
+
           <View style={styles.infoRow}>
-            <Ionicons name="male-female-outline" size={20} color="#6366f1" />
+            <Ionicons name="male-female-outline" size={18} color="#6366f1" />
             <Text style={styles.infoText}>
               {user.gender || "NA"}, {user.age || "NA"} yrs
             </Text>
           </View>
         </View>
       </ScrollView>
-      {/* Bottom Tabs (same as before) */}
       <BottomTab />
     </LinearGradient>
   );
@@ -113,42 +111,60 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   gradient: { flex: 1 },
-  scrollContainer: {
-    paddingVertical: 20,
-    paddingHorizontal: 16,
+  scrollContainer: { paddingVertical: 20, paddingHorizontal: 16 },
+
+  centered: { flex: 1, justifyContent: "center", alignItems: "center" },
+
+  profileCard: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 20,
     alignItems: "center",
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
   },
-  profileHeader: { alignItems: "center", marginBottom: 24 },
   profileImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
     borderWidth: 3,
     borderColor: "#6366f1",
     marginBottom: 12,
   },
-  userName: { fontSize: 24, fontWeight: "700", color: "#1e293b" },
-  userRole: { fontSize: 16, color: "#6366f1", marginBottom: 4 },
-  userLocation: { fontSize: 14, color: "#64748b" },
+  userName: { fontSize: 22, fontWeight: "700", color: "#111827" },
+  userRole: { fontSize: 15, color: "#6366f1", marginBottom: 4 },
+  userLocation: { fontSize: 13, color: "#6b7280" },
+
   editButton: {
     flexDirection: "row",
     backgroundColor: "#6366f1",
     paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 30,
+    paddingHorizontal: 18,
+    borderRadius: 25,
+    marginTop: 12,
     alignItems: "center",
-    marginTop: 10,
   },
-  editButtonText: { color: "#fff", fontWeight: "600", marginLeft: 8 },
-  infoSection: {
-    width: "100%",
+  editButtonText: { color: "#fff", fontWeight: "600", marginLeft: 6 },
+
+  infoCard: {
     backgroundColor: "#fff",
     borderRadius: 16,
-    padding: 16,
+    padding: 18,
     marginBottom: 20,
-    elevation: 5,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  sectionTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12 },
-  infoRow: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
-  infoText: { marginLeft: 12, fontSize: 14, color: "#334155" },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 12,
+    color: "#111827",
+  },
+  infoRow: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
+  infoText: { marginLeft: 10, fontSize: 14, color: "#374151" },
 });

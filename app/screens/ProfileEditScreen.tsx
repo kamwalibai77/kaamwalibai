@@ -13,7 +13,8 @@ import {
   ActivityIndicator,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as ImagePicker from "expo-image-picker"; // ✅ Added
+import * as ImagePicker from "expo-image-picker";
+import { Picker } from "@react-native-picker/picker"; // ✅ Dropdown
 import api from "../services/api";
 
 export default function ProfileEditScreen() {
@@ -22,7 +23,6 @@ export default function ProfileEditScreen() {
   const [id, setId] = useState("");
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
-  const [location, setLocation] = useState("");
   const [mobile, setMobile] = useState("");
   const [address, setAddress] = useState("");
   const [gender, setGender] = useState("");
@@ -44,21 +44,27 @@ export default function ProfileEditScreen() {
   };
 
   const handleSave = async () => {
+    // ✅ Validate Mobile number
+    if (!/^\+91\d{10}$/.test(mobile)) {
+      alert("Mobile number must be 10 digits after +91");
+      return;
+    }
+
     try {
       const formData = new FormData();
       formData.append("name", name);
       formData.append("role", role);
-      formData.append("location", location);
       formData.append("mobile", mobile);
       formData.append("address", address);
       formData.append("gender", gender);
       formData.append("age", age);
-      debugger;
+
       if (profilePhoto) {
         const response = await fetch(profilePhoto);
         const profilePhotoBlob = await response.blob();
         formData.append("profilePhoto", profilePhotoBlob, "profile.jpg");
       }
+
       await api.put("/profile/update", formData);
     } catch (e) {
       console.log(e);
@@ -72,18 +78,21 @@ export default function ProfileEditScreen() {
         const userId = await AsyncStorage.getItem("userId");
         if (!userId) return;
 
-        const response = await fetch(
+        const response = await api.get(
           `http://localhost:5000/api/users/${userId}`
         );
-        const data = await response.json();
+        const data = await response.data;
         setId(data.id);
         setName(data.name);
         setRole(data.role);
-        setLocation(data.location);
-        setMobile(data.mobile);
+        setMobile(
+          data.mobile?.startsWith("+91")
+            ? data.mobile
+            : `+91${data.mobile || ""}`
+        );
         setAddress(data.address);
         setGender(data.gender);
-        setAge(data.age);
+        setAge(data.age?.toString());
         setProfilePhoto(data.profilePhoto);
       } catch (err) {
         console.log(err);
@@ -123,21 +132,29 @@ export default function ProfileEditScreen() {
           <TextInput value={name} onChangeText={setName} style={styles.input} />
 
           <Text style={styles.label}>Role</Text>
-          <TextInput value={role} onChangeText={setRole} style={styles.input} />
-
-          <Text style={styles.label}>Location</Text>
           <TextInput
-            value={location}
-            onChangeText={setLocation}
-            style={styles.input}
+            value={role}
+            style={[
+              styles.input,
+              { backgroundColor: "#f1f5f9", color: "#475569" },
+            ]} // gray background
+            editable={false} // 🚫 Not editable
           />
+
+          {/* 🚫 Location Removed */}
 
           <Text style={styles.label}>Mobile</Text>
           <TextInput
             value={mobile}
-            onChangeText={setMobile}
+            onChangeText={(text) => {
+              let clean = text.replace(/\D/g, ""); // only numbers
+              if (clean.startsWith("91")) clean = clean.substring(2);
+              if (clean.length > 10) clean = clean.substring(0, 10);
+              setMobile(`+91${clean}`);
+            }}
             style={styles.input}
             keyboardType="phone-pad"
+            maxLength={13} // +91XXXXXXXXXX
           />
 
           <Text style={styles.label}>Address</Text>
@@ -145,22 +162,36 @@ export default function ProfileEditScreen() {
             value={address}
             onChangeText={setAddress}
             style={styles.input}
+            autoCapitalize="characters" // ✅ Accepts CAPITALS
           />
 
           <Text style={styles.label}>Gender</Text>
-          <TextInput
-            value={gender}
-            onChangeText={setGender}
-            style={styles.input}
-          />
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={gender}
+              onValueChange={(value) => setGender(value)}
+              style={styles.picker}
+            >
+              <Picker.Item label="Select Gender" value="" />
+              <Picker.Item label="Male" value="male" />
+              <Picker.Item label="Female" value="female" />
+              <Picker.Item label="Other" value="other" />
+            </Picker>
+          </View>
 
           <Text style={styles.label}>Age</Text>
-          <TextInput
-            value={age}
-            onChangeText={setAge}
-            style={styles.input}
-            keyboardType="numeric"
-          />
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={age}
+              onValueChange={(value) => setAge(value)}
+              style={styles.picker}
+            >
+              <Picker.Item label="Select Age" value="" />
+              {Array.from({ length: 83 }, (_, i) => i + 18).map((val) => (
+                <Picker.Item key={val} label={`${val}`} value={`${val}`} />
+              ))}
+            </Picker>
+          </View>
         </View>
 
         {/* Save Button */}
@@ -228,6 +259,17 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     fontSize: 14,
     color: "#1e293b",
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    borderRadius: 8,
+    marginBottom: 12,
+    overflow: "hidden",
+  },
+  picker: {
+    height: 44,
+    width: "100%",
   },
   saveButton: {
     flexDirection: "row",

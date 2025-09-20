@@ -1,5 +1,5 @@
 // app/screens/FindJobScreen.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,9 +7,7 @@ import {
   FlatList,
   TouchableOpacity,
   Dimensions,
-  ScrollView,
   Modal,
-  SafeAreaView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -17,65 +15,60 @@ import { useRouter } from "expo-router";
 import BottomTab from "@/components/BottomTabs";
 import FloatingAddButton from "@/components/FloatingAddButton";
 import AddService from "./AddServiceScreen";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import serviceProviders from "../services/serviceProviders";
 
 const { width } = Dimensions.get("window");
 
-// Sample jobs data
-const jobs = [
-  {
-    id: "1",
-    title: "House Cleaning Needed",
-    service: "Cleaning",
-    salary: "₹500/day",
-    location: "Andheri, Mumbai",
-  },
-  {
-    id: "2",
-    title: "Baby Care Required",
-    service: "Babysitting",
-    salary: "₹800/day",
-    location: "Powai, Mumbai",
-  },
-  {
-    id: "3",
-    title: "Gardening Service",
-    service: "Gardening",
-    salary: "₹600/day",
-    location: "Bandra, Mumbai",
-  },
-  {
-    id: "4",
-    title: "Cook Needed",
-    service: "Cooking",
-    salary: "₹700/day",
-    location: "Malad, Mumbai",
-  },
-];
-
-export default function FindJobScreen() {
+export default function MyserviceScreen() {
   const router = useRouter();
-  const [jobList, setJobList] = useState(jobs);
+  const [jobList, setJobList] = useState([]);
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const renderJob = ({ item }: { item: (typeof jobs)[0] }) => (
+  const fetchProviderPostedServices = async () => {
+    try {
+      const userId = await AsyncStorage.getItem("userId");
+      if (!userId) return;
+
+      const response = await serviceProviders.getAllProviderPostedServices(
+        userId
+      );
+      const data = await response.data;
+      setJobList(data);
+    } catch (err) {
+      console.log(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProviderPostedServices();
+  }, []);
+
+  const renderJob = ({ item }: { item: any }) => (
     <LinearGradient colors={["#eef2ff", "#e0e7ff"]} style={styles.jobCard}>
+      {/* Left side info */}
       <View style={styles.jobInfo}>
-        <Text style={styles.jobTitle}>{item.title}</Text>
-        <Text style={styles.jobService}>{item.service}</Text>
-        <Text style={styles.jobSalary}>{item.salary}</Text>
-        <Text style={styles.jobLocation}>
-          <Ionicons name="location-outline" size={14} color="#64748b" />{" "}
-          {item.location}
+        <Text style={styles.jobServiceTypesIds}>
+          {item.serviceTypeIds.join(", ")}
         </Text>
+        <Text
+          style={styles.jobAmount}
+        >{`${item.amount} ${item.currency}/${item.rateType}`}</Text>
+        <Text style={styles.jobContactNumber}>{item.contactNumber}</Text>
       </View>
-      <TouchableOpacity style={styles.applyButton}>
-        <LinearGradient
-          colors={["#6366f1", "#4f46e5"]}
-          style={styles.applyGradient}
-        >
-          <Text style={styles.applyText}>Apply</Text>
-        </LinearGradient>
-      </TouchableOpacity>
+
+      {/* Right side action buttons */}
+      <View style={styles.actionButtons}>
+        <TouchableOpacity style={styles.iconButton}>
+          <Ionicons name="pencil" size={22} color="#4f46e5" />
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.iconButton, { marginLeft: 12 }]}>
+          <Ionicons name="trash" size={22} color="#ef4444" />
+        </TouchableOpacity>
+      </View>
     </LinearGradient>
   );
 
@@ -91,25 +84,27 @@ export default function FindJobScreen() {
           showsVerticalScrollIndicator={false}
         />
         <FloatingAddButton onPress={() => setOpen(true)} />
+
         {/* ✅ Popup Modal */}
         <Modal visible={open} transparent animationType="fade">
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
-              {/* Header */}
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}></Text>
                 <TouchableOpacity onPress={() => setOpen(false)}>
                   <Ionicons name="close" size={24} color="#1e293b" />
                 </TouchableOpacity>
               </View>
-
-              {/* PostServicePage inside modal */}
-              <AddService />
+              <AddService
+                afterSubmit={() => {
+                  setOpen(false);
+                  fetchProviderPostedServices();
+                }}
+              />
             </View>
           </View>
         </Modal>
       </View>
-      {/* Bottom Tabs (same as before) */}
       <BottomTab />
     </>
   );
@@ -137,65 +132,57 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 5 },
-    shadowRadius: 5,
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 6,
     elevation: 3,
   },
   jobInfo: {
     flex: 1,
     paddingRight: 10,
   },
-  jobTitle: {
+  jobServiceTypesIds: {
     fontSize: 16,
-    fontWeight: "700",
-    color: "#1e293b",
-    marginBottom: 4,
-  },
-  jobService: {
-    fontSize: 14,
     fontWeight: "600",
     color: "#6366f1",
     marginBottom: 4,
   },
-  jobSalary: {
+  jobAmount: {
     fontSize: 14,
     fontWeight: "500",
     color: "#10b981",
     marginBottom: 4,
   },
-  jobLocation: {
-    fontSize: 12,
-    color: "#64748b",
-  },
-  applyButton: {
-    borderRadius: 25,
-    overflow: "hidden",
-  },
-  applyGradient: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 25,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  applyText: {
-    color: "#fff",
-    fontWeight: "700",
+  jobContactNumber: {
     fontSize: 14,
+    fontWeight: "500",
+    color: "#374151",
+  },
+  actionButtons: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  iconButton: {
+    backgroundColor: "#fff",
+    borderRadius: 50,
+    padding: 8,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
   },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
     justifyContent: "center",
     alignItems: "center",
-    padding: 20,
+    padding: 10,
   },
   modalContent: {
     width: "100%",
     backgroundColor: "#fff",
     borderRadius: 20,
-    padding: 20,
     maxHeight: "80%",
   },
   modalHeader: {
@@ -204,9 +191,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 15,
   },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#1e293b",
-  },
+  modalTitle: {},
 });

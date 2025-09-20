@@ -14,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import api from "./../services/api";
 
 export default function RegisterScreen() {
   const [name, setName] = useState("");
@@ -31,21 +32,19 @@ export default function RegisterScreen() {
       return;
     }
     try {
-      const response = await fetch("http://localhost:5000/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password, role }),
+      const response = await api.post("/auth/register", {
+        name,
+        email,
+        password,
+        role,
       });
-      const data = await response.json();
-      if (response.ok) {
-        await AsyncStorage.setItem("userRole", data.role);
-        await AsyncStorage.setItem("userId", String(data.id));
-        router.navigate("/screens/ProfileScreen");
-      } else {
-        Alert.alert("Error", data.error || "Registration failed");
-      }
+      const data = await response.data;
+      await AsyncStorage.setItem("token", String(data.token));
+      await AsyncStorage.setItem("userRole", data.role);
+      await AsyncStorage.setItem("userId", String(data.id));
+      router.navigate("/screens/ProfileScreen");
     } catch (err) {
-      Alert.alert("Error", "Network error");
+      alert("Error" + err?.response?.data?.error || "Registration failed");
     }
   };
 
@@ -144,7 +143,7 @@ export default function RegisterScreen() {
                   role === "user" && styles.roleButtonTextSelected,
                 ]}
               >
-                I am User
+                User
               </Text>
             </TouchableOpacity>
 
@@ -167,7 +166,7 @@ export default function RegisterScreen() {
                   role === "ServiceProvider" && styles.roleButtonTextSelected,
                 ]}
               >
-                I am Service Provider
+                Service Provider
               </Text>
             </TouchableOpacity>
           </View>
