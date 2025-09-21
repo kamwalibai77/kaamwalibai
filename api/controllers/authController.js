@@ -9,19 +9,21 @@ export default {
   // Register
   register: async (req, res) => {
     try {
-      const { name, email, password, role } = req.body;
+      const { name, phoneNumber, password, role } = req.body;
 
       // Check if user already exists
-      const existingUser = await User.findOne({ where: { email } });
+      const existingUser = await User.findOne({ where: { phoneNumber } });
       if (existingUser) {
-        return res.status(400).json({ error: "Email already registered" });
+        return res
+          .status(400)
+          .json({ error: "Phone Number already registered" });
       }
 
       const hashedPassword = await bcrypt.hash(password, 10);
 
       const newUser = await User.create({
         name,
-        email,
+        phoneNumber,
         password: hashedPassword,
         role,
       });
@@ -34,7 +36,7 @@ export default {
       res.status(201).json({
         id: newUser.id,
         name: newUser.name,
-        email: newUser.email,
+        phoneNumber: newUser.phoneNumber,
         role: newUser.role,
         token, // ✅ send token
       });
@@ -47,9 +49,9 @@ export default {
   // Login
   login: async (req, res) => {
     try {
-      const { email, password } = req.body;
+      const { phoneNumber, password } = req.body;
 
-      const user = await User.findOne({ where: { email } });
+      const user = await User.findOne({ where: { phoneNumber } });
       if (!user) {
         return res.status(400).json({ error: "Invalid credentials" });
       }
@@ -67,7 +69,7 @@ export default {
       res.json({
         id: user.id,
         name: user.name,
-        email: user.email,
+        phoneNumber: user.phoneNumber,
         role: user.role,
         token,
       });

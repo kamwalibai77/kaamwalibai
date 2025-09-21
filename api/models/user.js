@@ -4,7 +4,7 @@ export default (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: false,
     },
-    email: {
+    phoneNumber: {
       type: DataTypes.STRING,
       unique: true,
       allowNull: false,
@@ -16,10 +16,6 @@ export default (sequelize, DataTypes) => {
     role: {
       type: DataTypes.ENUM("user", "ServiceProvider", "superadmin"), // ✅ role column
       defaultValue: "user", // default role
-    },
-    mobile: {
-      type: DataTypes.STRING,
-      allowNull: true,
     },
     address: {
       type: DataTypes.STRING,

@@ -23,7 +23,7 @@ export default function ProfileEditScreen() {
   const [id, setId] = useState("");
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
-  const [mobile, setMobile] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [address, setAddress] = useState("");
   const [gender, setGender] = useState("");
   const [age, setAge] = useState("");
@@ -44,9 +44,9 @@ export default function ProfileEditScreen() {
   };
 
   const handleSave = async () => {
-    // ✅ Validate Mobile number
-    if (!/^\+91\d{10}$/.test(mobile)) {
-      alert("Mobile number must be 10 digits after +91");
+    // ✅ Validate phoneNumber number
+    if (!/^\+91\d{10}$/.test(phoneNumber)) {
+      alert("phoneNumber number must be 10 digits after +91");
       return;
     }
 
@@ -54,7 +54,7 @@ export default function ProfileEditScreen() {
       const formData = new FormData();
       formData.append("name", name);
       formData.append("role", role);
-      formData.append("mobile", mobile);
+      formData.append("phoneNumber", phoneNumber);
       formData.append("address", address);
       formData.append("gender", gender);
       formData.append("age", age);
@@ -85,10 +85,10 @@ export default function ProfileEditScreen() {
         setId(data.id);
         setName(data.name);
         setRole(data.role);
-        setMobile(
-          data.mobile?.startsWith("+91")
-            ? data.mobile
-            : `+91${data.mobile || ""}`
+        setPhoneNumber(
+          data.phoneNumber?.startsWith("+91")
+            ? data.phoneNumber
+            : `+91${data.phoneNumber || ""}`
         );
         setAddress(data.address);
         setGender(data.gender);
@@ -143,14 +143,14 @@ export default function ProfileEditScreen() {
 
           {/* 🚫 Location Removed */}
 
-          <Text style={styles.label}>Mobile</Text>
+          <Text style={styles.label}>phoneNumber</Text>
           <TextInput
-            value={mobile}
+            value={phoneNumber}
             onChangeText={(text) => {
               let clean = text.replace(/\D/g, ""); // only numbers
               if (clean.startsWith("91")) clean = clean.substring(2);
               if (clean.length > 10) clean = clean.substring(0, 10);
-              setMobile(`+91${clean}`);
+              setPhoneNumber(`+91${clean}`);
             }}
             style={styles.input}
             keyboardType="phone-pad"

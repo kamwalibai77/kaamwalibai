@@ -1,5 +1,5 @@
 "use strict";
-const bcrypt = require("bcrypt");
+import bcrypt from "bcrypt";
 
 export default {
   async up(queryInterface, Sequelize) {
@@ -8,7 +8,7 @@ export default {
     return queryInterface.bulkInsert("Users", [
       {
         name: "Super Admin",
-        email: "superadmin@example.com",
+        phoneNumber: "9876543210",
         password: hashedPassword,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -19,7 +19,7 @@ export default {
   async down(queryInterface, Sequelize) {
     return queryInterface.bulkDelete(
       "Users",
-      { email: "superadmin@example.com" },
+      { phoneNumber: "9876543210" },
       {}
     );
   },

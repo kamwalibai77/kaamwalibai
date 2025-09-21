@@ -12,7 +12,7 @@ export default {
       name: {
         type: Sequelize.STRING,
       },
-      email: {
+      phoneNumber: {
         type: Sequelize.STRING,
       },
       password: {

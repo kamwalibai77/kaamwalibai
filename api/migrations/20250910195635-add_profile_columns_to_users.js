@@ -4,11 +4,11 @@ export default {
   async up(queryInterface, Sequelize) {
     const table = await queryInterface.describeTable("Users");
 
-    // Add mobile
-    if (!table.mobile) {
-      await queryInterface.addColumn("Users", "mobile", {
-        type: Sequelize.STRING,
-        allowNull: true,
+    // Add trialCount
+    if (!table.trialCount) {
+      await queryInterface.addColumn("Users", "trialCount", {
+        type: DataTypes.INTEGER,
+        defaultValue: 0, // user gets 0 trial connections by default until they accept free trial
       });
     }
 
@@ -56,7 +56,8 @@ export default {
   async down(queryInterface, Sequelize) {
     const table = await queryInterface.describeTable("Users");
 
-    if (table.mobile) await queryInterface.removeColumn("Users", "mobile");
+    if (table.trialCount)
+      await queryInterface.removeColumn("Users", "trialCount");
     if (table.address) await queryInterface.removeColumn("Users", "address");
     if (table.gender) await queryInterface.removeColumn("Users", "gender");
     if (table.age) await queryInterface.removeColumn("Users", "age");

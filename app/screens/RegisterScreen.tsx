@@ -18,23 +18,23 @@ import api from "./../services/api";
 
 export default function RegisterScreen() {
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"user" | "ServiceProvider">("user");
 
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const isMobile = width < 600;
+  const isPhoneNumber = width < 600;
 
   const handleRegister = async () => {
-    if (!name || !email || !password) {
+    if (!name || !phoneNumber || !password) {
       Alert.alert("Error", "Please fill all fields");
       return;
     }
     try {
       const response = await api.post("/auth/register", {
         name,
-        email,
+        phoneNumber,
         password,
         role,
       });
@@ -55,17 +55,20 @@ export default function RegisterScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View
-          style={[styles.card, isMobile ? styles.cardMobile : styles.cardWeb]}
+          style={[
+            styles.card,
+            isPhoneNumber ? styles.cardPhoneNumber : styles.cardWeb,
+          ]}
         >
           <Image
             source={require("../../assets/images/logo.jpeg")}
-            style={[styles.logo, isMobile && { width: 80, height: 80 }]}
+            style={[styles.logo, isPhoneNumber && { width: 80, height: 80 }]}
             resizeMode="contain"
           />
-          <Text style={[styles.title, isMobile && { fontSize: 28 }]}>
+          <Text style={[styles.title, isPhoneNumber && { fontSize: 28 }]}>
             Create Your Account
           </Text>
-          <Text style={[styles.subtitle, isMobile && { fontSize: 14 }]}>
+          <Text style={[styles.subtitle, isPhoneNumber && { fontSize: 14 }]}>
             Sign up as a User or Service Provider
           </Text>
 
@@ -78,7 +81,10 @@ export default function RegisterScreen() {
               style={styles.icon}
             />
             <TextInput
-              style={[styles.input, isMobile && { fontSize: 14, height: 40 }]}
+              style={[
+                styles.input,
+                isPhoneNumber && { fontSize: 14, height: 40 },
+              ]}
               placeholder="Full Name"
               value={name}
               onChangeText={setName}
@@ -88,17 +94,23 @@ export default function RegisterScreen() {
 
           <View style={styles.inputContainer}>
             <Ionicons
-              name="mail-outline"
+              name="call-outline"
               size={22}
               color="#6366f1"
               style={styles.icon}
             />
             <TextInput
-              style={[styles.input, isMobile && { fontSize: 14, height: 40 }]}
-              placeholder="Email Address"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
+              style={[
+                styles.input,
+                isPhoneNumber && { fontSize: 14, height: 40 },
+              ]}
+              placeholder="Contact Number"
+              value={phoneNumber}
+              onChangeText={(text) => {
+                const numericText = text.replace(/[^0-9]/g, "").slice(0, 10);
+                setPhoneNumber(numericText);
+              }}
+              keyboardType="phone-pad"
               autoCapitalize="none"
               placeholderTextColor="#a5b4fc"
             />
@@ -112,7 +124,10 @@ export default function RegisterScreen() {
               style={styles.icon}
             />
             <TextInput
-              style={[styles.input, isMobile && { fontSize: 14, height: 40 }]}
+              style={[
+                styles.input,
+                isPhoneNumber && { fontSize: 14, height: 40 },
+              ]}
               placeholder="Password"
               value={password}
               onChangeText={setPassword}
@@ -191,7 +206,9 @@ export default function RegisterScreen() {
 
           {/* Login Redirect */}
           <TouchableOpacity onPress={() => router.push("/screens/LoginScreen")}>
-            <Text style={[styles.registerText, isMobile && { fontSize: 14 }]}>
+            <Text
+              style={[styles.registerText, isPhoneNumber && { fontSize: 14 }]}
+            >
               Already have an account?{" "}
               <Text style={{ color: "#6366f1", fontWeight: "bold" }}>
                 Login
@@ -223,7 +240,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   cardWeb: { width: "60%", maxWidth: 800, minHeight: 650, padding: 50 },
-  cardMobile: { width: "90%", padding: 24, minHeight: 500 },
+  cardPhoneNumber: { width: "90%", padding: 24, minHeight: 500 },
   logo: { width: 120, height: 120, marginBottom: 30 },
   title: {
     fontSize: 36,

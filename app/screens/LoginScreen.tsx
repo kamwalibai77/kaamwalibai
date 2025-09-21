@@ -8,6 +8,7 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from "react-native";
 import { RootStackParamList } from "../navigation/AppNavigator";
 import { LinearGradient } from "expo-linear-gradient";
@@ -20,14 +21,17 @@ import api from "../services/api";
 type Props = NativeStackScreenProps<RootStackParamList, "Login">;
 
 export default function LoginScreen({ navigation }: Props) {
-  const [email, setEmail] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const router = useRouter();
 
   const handleLogin = async () => {
-    if (email && password) {
+    if (phoneNumber && password) {
       try {
-        const response = await api.post("/auth/login", { email, password });
+        const response = await api.post("/auth/login", {
+          phoneNumber,
+          password,
+        });
         const data = await response.data;
         console.log("✅ Registration successful:", data);
         await AsyncStorage.setItem("token", String(data.token));
@@ -37,10 +41,12 @@ export default function LoginScreen({ navigation }: Props) {
         // ✅ Redirect to ProfileScreen
         router.navigate("/screens/HomeScreen");
       } catch (err) {
-        alert("Error" + err?.response?.data?.error || "Registration failed");
+        Alert.alert(
+          "Error" + err?.response?.data?.error || "Registration failed"
+        );
       }
     } else {
-      alert("Please enter email and password");
+      Alert.alert("Please enter phoneNumber and password");
     }
   };
 
@@ -60,18 +66,21 @@ export default function LoginScreen({ navigation }: Props) {
           <Text style={styles.subtitle}>Login to your account</Text>
           <View style={styles.inputContainer}>
             <Ionicons
-              name="mail-outline"
+              name="call-outline"
               size={20}
               color="#6366f1"
               style={styles.icon}
             />
             <TextInput
               style={styles.input}
-              placeholder="Email"
-              value={email}
-              onChangeText={setEmail}
+              placeholder="Phone Number"
+              value={phoneNumber}
+              onChangeText={(text) => {
+                const numericText = text.replace(/[^0-9]/g, "").slice(0, 10);
+                setPhoneNumber(numericText);
+              }}
               autoCapitalize="none"
-              keyboardType="email-address"
+              keyboardType="phone-pad"
               placeholderTextColor="#a5b4fc"
             />
           </View>

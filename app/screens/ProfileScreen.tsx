@@ -88,7 +88,7 @@ export default function ProfileScreen() {
 
           <View style={styles.infoRow}>
             <Ionicons name="call-outline" size={18} color="#6366f1" />
-            <Text style={styles.infoText}>{user.mobile || "NA"}</Text>
+            <Text style={styles.infoText}>{user.phoneNumber || "NA"}</Text>
           </View>
 
           <View style={styles.infoRow}>
@@ -159,12 +159,21 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  infoText: {
+    marginLeft: 10,
+    fontSize: 16, // ⬆️ increased from 14 → 16
+    fontWeight: "600", // ⬆️ boldened the text
+    color: "#111827", // ⬆️ darker text for better contrast
+  },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 18, // ⬆️ slightly bigger title
     fontWeight: "700",
-    marginBottom: 12,
+    marginBottom: 14,
     color: "#111827",
   },
-  infoRow: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
-  infoText: { marginLeft: 10, fontSize: 14, color: "#374151" },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12, // ⬆️ spacing increased for readability
+  },
 });

@@ -21,23 +21,23 @@ router.put(
 
     try {
       const userId = req.user.id;
-      const { name, mobile, address, gender, age } = req.body;
+      const { name, phoneNumber, address, gender, age } = req.body;
 
       // save local path for cleanup
       localFilePath = req.file?.path;
 
-      if (!mobile || !address) {
+      if (!phoneNumber || !address) {
         if (localFilePath && fs.existsSync(localFilePath)) {
           fs.unlinkSync(localFilePath);
         }
         return res
           .status(400)
-          .json({ success: false, message: "Mobile and Address required" });
+          .json({ success: false, message: "Number and Address required" });
       }
 
       // Save user to DB
       const [rowsUpdated, [updatedUser]] = await User.update(
-        { name, mobile, address, gender, age },
+        { name, phoneNumber, address, gender, age },
         {
           where: { id: userId },
           returning: true,
