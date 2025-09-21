@@ -55,7 +55,27 @@ export default {
       },
       {
         name: "Beautician",
-        icon: "https://media.istockphoto.com/id/1497806504/photo/hair-styling-in-beauty-salon-woman-does-her-hair-in-modern-beauty-salon-woman-stylist-dries.jpg?s=612x612&w=0&k=20&c=3dO_HWS8WvSGNbGmxTsqK70vZMGqM2REnbVJG09YnmI=",
+        icon: "https://media.istockphoto.com/photos/woman-receiving-a-cosmetic-treatment-picture-id178989683?k=6&m=178989683&s=612x612&w=0&h=CYtAj7Qc5X7oGtD1Eex6Zc8zyXnpKX6ocT2hmUHZ-rw=",
+      },
+      {
+        name: "Car washing",
+        icon: "https://c8.alamy.com/comp/2HDR04B/man-car-washing-car-wash-guy-men-cars-wash-car-washs-2HDR04B.jpg",
+      },
+      {
+        name: "Worker",
+        icon: "https://as2.ftcdn.net/v2/jpg/06/13/13/75/1000_F_613137518_tG9dGy1mK8kGsMEfgHxyqgRrKl1meHC0.jpg",
+      },
+      {
+        name: "Interrior designer",
+        icon: "https://roohome.com/wp-content/uploads/2016/03/modern-paneling.jpg",
+      },
+      {
+        name: "Carpenter",
+        icon: "https://static.vecteezy.com/system/resources/previews/007/424/164/large_2x/young-carpenter-african-american-man-looking-and-choosing-wood-and-using-sandpaper-to-rub-wooden-plank-at-workshop-table-in-carpenter-wood-factory-free-photo.jpg",
+      },
+      {
+        name: "Mechanic",
+        icon: "https://th.bing.com/th/id/R.4eae69983e0e789682ad445396345e8a?rik=WGN7I2JIsmSiBA&riu=http%3a%2f%2fgwrench.com%2fwp-content%2fuploads%2f2020%2f12%2fVistaCarMechanic.jpeg&ehk=fIr1oWPGfbODcKpiWJgz8WWM32dxHrVmdanyD2ifQEM%3d&risl=&pid=ImgRaw&r=0",
       },
     ]);
   },

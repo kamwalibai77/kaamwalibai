@@ -97,7 +97,6 @@ router.put("/subscribe", authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // update isSubscribed + trial count (3 connections)
     const [rowsUpdated, [updatedUser]] = await User.update(
       { isSubscribed: true, trialCount: 3 },
       {
@@ -121,6 +120,25 @@ router.put("/subscribe", authMiddleware, async (req, res) => {
     console.error("Subscription Error:", err);
     res.status(500).json({ success: false, error: "Server error" });
   }
+});
+
+// adhar code  Dummy Aadhaar data
+const dummyData = {
+  999999990019: { name: "Mohit Shankarrao Pote", status: "Success" },
+  999999990020: { name: "Abhijeet Rahul Kuttarmare", status: "Success" },
+};
+
+// Endpoint to verify Aadhaar
+router.post("/verify-aadhaar", (req, res) => {
+  const { aadhaar } = req.body;
+  const result = dummyData[aadhaar] || { name: "", status: "Failure" };
+  res.json(result);
+});
+
+router.post("/submit-kyc", (req, res) => {
+  const { aadhaarNumber, panCardNumber } = req.body;
+  const result = dummyData[aadhaar] || { name: "", status: "Failure" };
+  res.json(result);
 });
 
 export default router;

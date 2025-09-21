@@ -9,6 +9,7 @@ import {
   ScrollView,
   useWindowDimensions,
   Alert,
+  Modal,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -21,6 +22,8 @@ export default function RegisterScreen() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"user" | "ServiceProvider">("user");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
 
   const router = useRouter();
   const { width } = useWindowDimensions();
@@ -31,6 +34,11 @@ export default function RegisterScreen() {
       Alert.alert("Error", "Please fill all fields");
       return;
     }
+    if (!acceptedTerms) {
+      Alert.alert("Error", "You must agree to the Terms & Conditions");
+      return;
+    }
+
     try {
       const response = await api.post("/auth/register", {
         name,
@@ -44,7 +52,7 @@ export default function RegisterScreen() {
       await AsyncStorage.setItem("userId", String(data.id));
       router.navigate("/screens/ProfileScreen");
     } catch (err) {
-      alert("Error" + err?.response?.data?.error || "Registration failed");
+      alert("Error " + (err?.response?.data?.error || "Registration failed"));
     }
   };
 
@@ -186,8 +194,30 @@ export default function RegisterScreen() {
             </TouchableOpacity>
           </View>
 
+          {/* Terms & Conditions */}
+          <View style={styles.termsContainer}>
+            <TouchableOpacity
+              style={styles.checkbox}
+              onPress={() => setAcceptedTerms(!acceptedTerms)}
+            >
+              {acceptedTerms && (
+                <Ionicons name="checkmark" size={16} color="#fff" />
+              )}
+            </TouchableOpacity>
+            <Text style={styles.termsText}>
+              I agree to the{" "}
+              <Text style={styles.link} onPress={() => setShowTerms(true)}>
+                Terms & Conditions
+              </Text>
+            </Text>
+          </View>
+
           {/* Register Button */}
-          <TouchableOpacity style={styles.button} onPress={handleRegister}>
+          <TouchableOpacity
+            style={[styles.button, !acceptedTerms && { opacity: 0.5 }]}
+            disabled={!acceptedTerms}
+            onPress={handleRegister}
+          >
             <LinearGradient
               colors={["#6366f1", "#4f46e5"]}
               start={{ x: 0, y: 0 }}
@@ -217,6 +247,77 @@ export default function RegisterScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Terms & Conditions Modal */}
+      <Modal
+        visible={showTerms}
+        animationType="slide"
+        onRequestClose={() => setShowTerms(false)}
+      >
+        <ScrollView style={styles.modalContent}>
+          <Text style={styles.modalHeading}>Terms & Conditions</Text>
+          <Text style={styles.modalText}>
+            {/* Paste your Terms & Conditions text here */}
+            Effective Date: 2-9-25 Welcome to Kaamwali Bai (“we”, “our”, “us”).
+            By accessing or using our application (“App”), you agree to the
+            following Terms & Conditions. Please read them carefully.{"\n\n"}
+            1.Purpose of the App Kaamwali Bai is a service provider platform
+            that connects users (“Clients”) with independent service providers
+            (“Providers”). We only provide subscription-based access to the
+            platform. We do not charge commissions on transactions between
+            Clients and Providers.
+            {"\n\n"}
+            2.User Responsibilities Clients and Providers are solely responsible
+            for their interactions, agreements, and transactions with each
+            other. Kaamwali Bai is not a party to any agreement between Client
+            and Provider. Any payments, refunds, or disputes related to services
+            are handled directly between the involved parties
+            {"\n\n"}
+            3.. No Liability for Disputes Kaamwali Bai is not responsible for
+            any: Payment issues or disputes between Clients and Providers.
+            Service quality, delays, or non-performance. Damages, fraud, or
+            misrepresentation by any party. All risks arising from interactions
+            on the App remain with the respective users.
+            {"\n\n"}
+            4. Data & Privacy Kaamwali Bai does not sell, misuse, or share user
+            data, contacts, or personal information. Data collected is used
+            solely for account creation, verification, and App functionality. By
+            using the App, you agree to our Privacy Policy.
+            {"\n\n"}
+            5. Subscriptions & Fees Users may be required to purchase a
+            subscription to access certain features. All subscription fees are
+            non-refundable, unless required by law. Kaamwali Bai reserves the
+            right to change pricing with prior notice.
+            {"\n\n"}
+            6.Prohibited Activities Users must not: Use the App for unlawful,
+            harmful, or fraudulent purposes. Misrepresent themselves or
+            impersonate another person. Violate the rights of other users.
+            {"\n\n"}
+            7. Limitation of Liability Our role is limited to providing a
+            platform for connecting Clients and Providers. Kaamwali Bai is not
+            liable for any direct, indirect, incidental, or consequential
+            damages arising from the use of the App
+            {"\n\n"}
+            8. Termination We reserve the right to suspend or terminate accounts
+            that violate these Terms & Conditions. Upon termination, users lose
+            access to subscription benefits
+            {"\n\n"}
+            9. Modifications We may update these Terms & Conditions from time to
+            time. Continued use of the App after changes constitutes acceptance
+            of the updated terms.
+            {"\n\n"}
+            10. Governing Law These Terms & Conditions shall be governed by and
+            interpreted in accordance with the laws of [India /Maharashtra].
+            (Include your full Terms here)
+          </Text>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => setShowTerms(false)}
+          >
+            <Text style={styles.closeButtonText}>Close</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </Modal>
     </LinearGradient>
   );
 }
@@ -297,6 +398,25 @@ const styles = StyleSheet.create({
   roleSelected: { backgroundColor: "#6366f1" },
   roleButtonText: { fontSize: 15, fontWeight: "600", color: "#6366f1" },
   roleButtonTextSelected: { color: "#fff", fontWeight: "700" },
+  termsContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 12,
+    width: "100%",
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 1.5,
+    borderColor: "#6366f1",
+    marginRight: 8,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 4,
+    backgroundColor: "#fff",
+  },
+  termsText: { fontSize: 13, color: "#334155", flexShrink: 1 },
+  link: { color: "#6366f1", fontWeight: "600" },
   button: {
     width: "100%",
     borderRadius: 30,
@@ -329,4 +449,21 @@ const styles = StyleSheet.create({
     marginTop: 10,
     textAlign: "center",
   },
+  modalContent: { flex: 1, padding: 20, backgroundColor: "#fff" },
+  modalHeading: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 15,
+    textAlign: "center",
+  },
+  modalText: { fontSize: 14, color: "#334155", lineHeight: 22 },
+  closeButton: {
+    marginTop: 20,
+    alignSelf: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    backgroundColor: "#6366f1",
+    borderRadius: 8,
+  },
+  closeButtonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
 });

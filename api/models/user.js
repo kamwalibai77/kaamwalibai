@@ -49,6 +49,14 @@ export default (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       defaultValue: 0, // user gets 0 trial connections by default until they accept free trial
     },
+    aaadharNumber: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    panCardNumber: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
   });
 
   User.associate = (models) => {

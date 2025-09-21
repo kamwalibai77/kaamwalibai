@@ -56,6 +56,11 @@ export default function ProfileScreen() {
     );
   }
 
+  const handleLogout = async () => {
+    await AsyncStorage.removeItem("userId");
+    router.replace("/screens/LoginScreen");
+  };
+
   return (
     <LinearGradient colors={["#f9fafb", "#eef2ff"]} style={styles.gradient}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
@@ -70,16 +75,8 @@ export default function ProfileScreen() {
           <Text style={styles.userName}>{user.name}</Text>
           <Text style={styles.userRole}>{user.role}</Text>
           <Text style={styles.userLocation}>
-            {user.location || "Not updated"}
+            {user.address || "Add Location"}
           </Text>
-
-          <TouchableOpacity
-            style={styles.editButton}
-            onPress={() => router.push("/screens/ProfileEditScreen")}
-          >
-            <Ionicons name="pencil-outline" size={18} color="#fff" />
-            <Text style={styles.editButtonText}>Edit Profile</Text>
-          </TouchableOpacity>
         </View>
 
         {/* Info Section */}
@@ -102,6 +99,60 @@ export default function ProfileScreen() {
               {user.gender || "NA"}, {user.age || "NA"} yrs
             </Text>
           </View>
+        </View>
+
+        {/* Action Section */}
+        <View style={styles.actionCard}>
+          <TouchableOpacity
+            style={styles.actionRow}
+            onPress={() => router.push("/screens/ProfileEditScreen")}
+          >
+            <Ionicons name="create-outline" size={20} color="#6366f1" />
+            <Text style={styles.actionText}>Edit Profile</Text>
+            <Ionicons
+              name="chevron-forward-outline"
+              size={18}
+              color="#cbd5e1"
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionRow}
+            onPress={() => router.push("/screens/KYCScreen")}
+          >
+            <Ionicons name="document-text-outline" size={20} color="#6366f1" />
+            <Text style={styles.actionText}>Complete KYC</Text>
+            <Ionicons
+              name="chevron-forward-outline"
+              size={18}
+              color="#cbd5e1"
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionRow}
+            onPress={() => router.push("/screens/SettingsScreen")}
+          >
+            <Ionicons name="settings-outline" size={20} color="#6366f1" />
+            <Text style={styles.actionText}>Settings</Text>
+            <Ionicons
+              name="chevron-forward-outline"
+              size={18}
+              color="#cbd5e1"
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.actionRow} onPress={handleLogout}>
+            <Ionicons name="log-out-outline" size={20} color="#ef4444" />
+            <Text style={[styles.actionText, { color: "#ef4444" }]}>
+              Logout
+            </Text>
+            <Ionicons
+              name="chevron-forward-outline"
+              size={18}
+              color="#cbd5e1"
+            />
+          </TouchableOpacity>
         </View>
       </ScrollView>
       <BottomTab />
@@ -138,17 +189,6 @@ const styles = StyleSheet.create({
   userRole: { fontSize: 15, color: "#6366f1", marginBottom: 4 },
   userLocation: { fontSize: 13, color: "#6b7280" },
 
-  editButton: {
-    flexDirection: "row",
-    backgroundColor: "#6366f1",
-    paddingVertical: 8,
-    paddingHorizontal: 18,
-    borderRadius: 25,
-    marginTop: 12,
-    alignItems: "center",
-  },
-  editButtonText: { color: "#fff", fontWeight: "600", marginLeft: 6 },
-
   infoCard: {
     backgroundColor: "#fff",
     borderRadius: 16,
@@ -161,12 +201,12 @@ const styles = StyleSheet.create({
   },
   infoText: {
     marginLeft: 10,
-    fontSize: 16, // ⬆️ increased from 14 → 16
-    fontWeight: "600", // ⬆️ boldened the text
-    color: "#111827", // ⬆️ darker text for better contrast
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#111827",
   },
   sectionTitle: {
-    fontSize: 18, // ⬆️ slightly bigger title
+    fontSize: 18,
     fontWeight: "700",
     marginBottom: 14,
     color: "#111827",
@@ -174,6 +214,34 @@ const styles = StyleSheet.create({
   infoRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12, // ⬆️ spacing increased for readability
+    marginBottom: 12,
+  },
+
+  actionCard: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  actionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
+    justifyContent: "space-between",
+  },
+  actionText: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginLeft: 12,
+    color: "#111827",
+    flex: 1,
   },
 });
