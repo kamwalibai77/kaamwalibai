@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -14,8 +13,8 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
-import { Picker } from "@react-native-picker/picker"; // ✅ Dropdown
 import api from "../services/api";
+import DropDownPicker from "react-native-dropdown-picker";
 
 export default function ProfileEditScreen() {
   const router = useRouter();
@@ -25,12 +24,27 @@ export default function ProfileEditScreen() {
   const [role, setRole] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [address, setAddress] = useState("");
-  const [gender, setGender] = useState("");
-  const [age, setAge] = useState("");
   const [profilePhoto, setProfilePhoto] = useState("");
   const [loading, setLoading] = useState(true);
 
-  // ✅ Pick image + upload
+  // Dropdown states
+  const [genderOpen, setGenderOpen] = useState(false);
+  const [ageOpen, setAgeOpen] = useState(false);
+
+  const [gender, setGender] = useState<string | null>(null);
+  const [age, setAge] = useState<number | null>(null);
+
+  const genderItems = [
+    { label: "Male", value: "male" },
+    { label: "Female", value: "female" },
+    { label: "Other", value: "other" },
+  ];
+
+  const ageItems = Array.from({ length: 83 }, (_, i) => ({
+    label: `${i + 18}`,
+    value: i + 18,
+  }));
+
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -44,9 +58,8 @@ export default function ProfileEditScreen() {
   };
 
   const handleSave = async () => {
-    // ✅ Validate phoneNumber number
     if (!/^\+91\d{10}$/.test(phoneNumber)) {
-      alert("phoneNumber number must be 10 digits after +91");
+      alert("Phone number must be 10 digits after +91");
       return;
     }
 
@@ -56,8 +69,8 @@ export default function ProfileEditScreen() {
       formData.append("role", role);
       formData.append("phoneNumber", phoneNumber);
       formData.append("address", address);
-      formData.append("gender", gender);
-      formData.append("age", age);
+      formData.append("gender", gender || "");
+      formData.append("age", age?.toString() || "");
 
       if (profilePhoto) {
         const response = await fetch(profilePhoto);
@@ -92,7 +105,7 @@ export default function ProfileEditScreen() {
         );
         setAddress(data.address);
         setGender(data.gender);
-        setAge(data.age?.toString());
+        setAge(data.age);
         setProfilePhoto(data.profilePhoto);
       } catch (err) {
         console.log(err);
@@ -106,183 +119,199 @@ export default function ProfileEditScreen() {
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" color="#6366f1" />
+        <ActivityIndicator size="large" color="#2563eb" />
       </View>
     );
   }
 
   return (
-    <LinearGradient colors={["#eef2ff", "#e0e7ff"]} style={styles.gradient}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContainer}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Profile Image */}
-        <View style={styles.profileHeader}>
-          <Image source={{ uri: profilePhoto }} style={styles.profileImage} />
-          <TouchableOpacity style={styles.changePhotoBtn} onPress={pickImage}>
-            <Ionicons name="camera-outline" size={18} color="#fff" />
-            <Text style={styles.changePhotoText}>Change Photo</Text>
-          </TouchableOpacity>
-        </View>
+    <ScrollView
+      contentContainerStyle={styles.scrollContainer}
+      showsVerticalScrollIndicator={false}
+    >
+      <Text style={styles.title}>Profile</Text>
 
-        {/* Input Fields */}
-        <View style={styles.formContainer}>
-          <Text style={styles.label}>Full Name</Text>
-          <TextInput value={name} onChangeText={setName} style={styles.input} />
-
-          <Text style={styles.label}>Role</Text>
-          <TextInput
-            value={role}
-            style={[
-              styles.input,
-              { backgroundColor: "#f1f5f9", color: "#475569" },
-            ]} // gray background
-            editable={false} // 🚫 Not editable
-          />
-
-          {/* 🚫 Location Removed */}
-
-          <Text style={styles.label}>phoneNumber</Text>
-          <TextInput
-            value={phoneNumber}
-            onChangeText={(text) => {
-              let clean = text.replace(/\D/g, ""); // only numbers
-              if (clean.startsWith("91")) clean = clean.substring(2);
-              if (clean.length > 10) clean = clean.substring(0, 10);
-              setPhoneNumber(`+91${clean}`);
-            }}
-            style={styles.input}
-            keyboardType="phone-pad"
-            maxLength={13} // +91XXXXXXXXXX
-          />
-
-          <Text style={styles.label}>Address</Text>
-          <TextInput
-            value={address}
-            onChangeText={setAddress}
-            style={styles.input}
-            autoCapitalize="characters" // ✅ Accepts CAPITALS
-          />
-
-          <Text style={styles.label}>Gender</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={gender}
-              onValueChange={(value) => setGender(value)}
-              style={styles.picker}
-            >
-              <Picker.Item label="Select Gender" value="" />
-              <Picker.Item label="Male" value="male" />
-              <Picker.Item label="Female" value="female" />
-              <Picker.Item label="Other" value="other" />
-            </Picker>
-          </View>
-
-          <Text style={styles.label}>Age</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={age}
-              onValueChange={(value) => setAge(value)}
-              style={styles.picker}
-            >
-              <Picker.Item label="Select Age" value="" />
-              {Array.from({ length: 83 }, (_, i) => i + 18).map((val) => (
-                <Picker.Item key={val} label={`${val}`} value={`${val}`} />
-              ))}
-            </Picker>
-          </View>
-        </View>
-
-        {/* Save Button */}
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-          <Ionicons name="save-outline" size={20} color="#fff" />
-          <Text style={styles.saveButtonText}>Save Changes</Text>
+      {/* Profile Image */}
+      <View style={styles.profileHeader}>
+        <Image source={{ uri: profilePhoto }} style={styles.profileImage} />
+        <TouchableOpacity style={styles.editIcon} onPress={pickImage}>
+          <Ionicons name="create-outline" size={18} color="#fff" />
         </TouchableOpacity>
-      </ScrollView>
-    </LinearGradient>
+      </View>
+
+      {/* Input Fields */}
+      <View style={styles.formContainer}>
+        <Text style={styles.label}>Name</Text>
+        <TextInput
+          placeholder="Enter your name"
+          value={name}
+          onChangeText={setName}
+          style={styles.input}
+        />
+
+        <Text style={styles.label}>Address</Text>
+        <TextInput
+          placeholder="Enter your address"
+          value={address}
+          onChangeText={setAddress}
+          style={styles.input}
+        />
+
+        <Text style={styles.label}>Mobile Number</Text>
+        <TextInput
+          placeholder="Enter mobile number"
+          value={phoneNumber}
+          onChangeText={(text) => {
+            let clean = text.replace(/\D/g, "");
+            if (clean.startsWith("91")) clean = clean.substring(2);
+            if (clean.length > 10) clean = clean.substring(0, 10);
+            setPhoneNumber(`+91${clean}`);
+          }}
+          style={styles.input}
+          keyboardType="phone-pad"
+          maxLength={13}
+        />
+
+        <Text style={styles.label}>Role</Text>
+        <TextInput
+          placeholder="Role"
+          value={role}
+          editable={false}
+          style={[styles.input, { backgroundColor: "#f8fafc" }]}
+        />
+
+        {/* Gender Dropdown */}
+        <Text style={styles.label}>Gender</Text>
+        <View
+          style={[styles.dropdownWrapper, { zIndex: genderOpen ? 3000 : 1000 }]}
+        >
+          <DropDownPicker
+            open={genderOpen}
+            setOpen={setGenderOpen}
+            value={gender}
+            setValue={setGender}
+            items={genderItems}
+            placeholder="Select Gender"
+            style={styles.dropdown}
+            textStyle={styles.dropdownText}
+            dropDownContainerStyle={styles.dropDownContainer}
+          />
+        </View>
+
+        {/* Age Dropdown */}
+        <Text style={styles.label}>Age</Text>
+        <View
+          style={[styles.dropdownWrapper, { zIndex: ageOpen ? 2000 : 500 }]}
+        >
+          <DropDownPicker
+            open={ageOpen}
+            setOpen={setAgeOpen}
+            value={age}
+            setValue={setAge}
+            items={ageItems}
+            placeholder="Select Age"
+            style={styles.dropdown}
+            textStyle={styles.dropdownText}
+            dropDownContainerStyle={styles.dropDownContainer}
+          />
+        </View>
+      </View>
+
+      {/* Save Button */}
+      <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+        <Text style={styles.saveButtonText}>Save</Text>
+      </TouchableOpacity>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  gradient: { flex: 1 },
   scrollContainer: {
     paddingVertical: 20,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     alignItems: "center",
+    backgroundColor: "#fff",
   },
-  profileHeader: { alignItems: "center", marginBottom: 24 },
+  title: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#2563eb",
+    marginBottom: 20,
+  },
+  profileHeader: {
+    alignItems: "center",
+    marginBottom: 24,
+    position: "relative",
+  },
   profileImage: {
     width: 120,
     height: 120,
     borderRadius: 60,
     borderWidth: 3,
-    borderColor: "#6366f1",
-    marginBottom: 12,
+    borderColor: "#2563eb",
   },
-  changePhotoBtn: {
-    flexDirection: "row",
-    backgroundColor: "#6366f1",
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+  editIcon: {
+    position: "absolute",
+    bottom: 0,
+    right: "35%",
+    backgroundColor: "#2563eb",
+    padding: 6,
     borderRadius: 20,
-    alignItems: "center",
-  },
-  changePhotoText: {
-    color: "#fff",
-    marginLeft: 6,
-    fontWeight: "600",
   },
   formContainer: {
     width: "100%",
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 16,
     marginBottom: 20,
-    shadowColor: "#6366f1",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 5,
   },
   label: {
     fontSize: 14,
     fontWeight: "600",
-    marginBottom: 4,
+    marginBottom: 6,
     color: "#1e293b",
   },
   input: {
     borderWidth: 1,
     borderColor: "#cbd5e1",
     borderRadius: 8,
-    padding: 10,
-    marginBottom: 12,
-    fontSize: 14,
+    padding: 12,
+    marginBottom: 18,
+    fontSize: 15,
     color: "#1e293b",
-  },
-  pickerContainer: {
-    borderWidth: 1,
-    borderColor: "#cbd5e1",
-    borderRadius: 8,
-    marginBottom: 12,
-    overflow: "hidden",
-  },
-  picker: {
-    height: 44,
-    width: "100%",
+    backgroundColor: "#fff",
   },
   saveButton: {
-    flexDirection: "row",
-    backgroundColor: "#22c55e",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    backgroundColor: "#2563eb",
+    paddingVertical: 14,
+    paddingHorizontal: 40,
     borderRadius: 30,
     alignItems: "center",
+    marginTop: 10,
   },
   saveButtonText: {
     color: "#fff",
     fontWeight: "700",
-    marginLeft: 8,
     fontSize: 16,
+  },
+  dropdownWrapper: {
+    marginBottom: 18,
+    position: "relative",
+  },
+  dropdown: {
+    borderColor: "#e5e7eb",
+    borderRadius: 12,
+    backgroundColor: "#f9fafb",
+  },
+  dropdownText: {
+    fontSize: 14,
+    color: "#111827",
+  },
+  dropDownContainer: {
+    borderColor: "#e5e7eb",
+    borderRadius: 12,
+    maxHeight: 200,
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 6,
   },
 });
