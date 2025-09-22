@@ -1,43 +1,30 @@
 // app/screens/HomeScreen.tsx
+import BottomTab from "@/components/BottomTabs";
+import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Image,
-  TouchableOpacity,
-  FlatList,
-  Dimensions,
-  TextInput,
   ActivityIndicator,
-  Modal,
-  Linking,
   Alert,
+  Dimensions,
+  FlatList,
+  Image,
+  Linking,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { Picker } from "@react-native-picker/picker";
-import { useRouter } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import BottomTab from "@/components/BottomTabs";
-import serviceTypesApi from "../services/serviceTypes";
+import api from "../services/api"; // ✅ for maps/suggest API
 import providersApi from "../services/serviceProviders";
-import userApi from "../services/user"; // ✅ NEW API for subscription
+import serviceTypesApi from "../services/serviceTypes";
+import userApi from "../services/user";
 
 const { width } = Dimensions.get("window");
-
-const nagpurAreas = [
-  "Trimurti Nagar",
-  "Dharampeth",
-  "Sitabuldi",
-  "Civil Lines",
-  "Pratap Nagar",
-  "Bajaj Nagar",
-  "Mahal",
-  "Ambazari",
-  "Sadar",
-  "Jaripatka",
-];
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -54,6 +41,10 @@ export default function HomeScreen() {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [subscriptionModalVisible, setSubscriptionModalVisible] =
     useState(false);
+
+  // ✅ NEW: for location search suggestions
+  const [locationQuery, setLocationQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<any[]>([]);
 
   const handleLogout = async () => {
     await AsyncStorage.clear();
@@ -107,7 +98,6 @@ export default function HomeScreen() {
     fetchProviders(true);
     fetchServiceTypes();
 
-    // fetch subscription status
     AsyncStorage.getItem("isSubscribed").then((res) => {
       setIsSubscribed(res === "true");
     });
@@ -130,15 +120,14 @@ export default function HomeScreen() {
     if (isSubscribed) {
       setModalVisible(true);
     } else {
-      setSubscriptionModalVisible(true); // show subscription warning modal
+      setSubscriptionModalVisible(true);
     }
   };
 
-  // ✅ Handle Subscribe / Free Trial
   const handleSubscribe = async () => {
     try {
-      const res = await userApi.subscribe(); // ✅ no ID here
-      if (res.success) {
+      const res = await userApi.subscribe();
+      if (res.data.success) {
         await AsyncStorage.setItem("isSubscribed", "true");
         setIsSubscribed(true);
         setSubscriptionModalVisible(false);
@@ -149,6 +138,30 @@ export default function HomeScreen() {
       console.log("❌ Subscription error:", err);
       Alert.alert("Error", "Unable to subscribe. Please try again.");
     }
+  };
+
+  // ✅ NEW: fetch location suggestions
+  const fetchSuggestions = async (text: string) => {
+    setLocationQuery(text);
+    if (text.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+    try {
+      const res = await api.get("profile/maps/suggest", {
+        params: { query: text },
+      });
+      setSuggestions(res.data.suggestedLocations || []);
+    } catch (err) {
+      console.error("Error fetching suggestions:", err);
+    }
+  };
+
+  // ✅ select location
+  const handleSelectAddress = (item: any) => {
+    setLocationQuery(item.placeName);
+    setSelectedArea(item.placeName);
+    setSuggestions([]);
   };
 
   const renderProvider = ({ item }: { item: any }) => (
@@ -192,21 +205,38 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* AREA FILTER */}
-      <View style={styles.filterContainer}>
-        <Ionicons name="location-outline" size={20} color="#6366f1" />
-        <Picker
-          selectedValue={selectedArea}
-          style={styles.dropdown}
-          onValueChange={(itemValue) => setSelectedArea(itemValue)}
-        >
-          {nagpurAreas.map((area) => (
-            <Picker.Item key={area} label={area} value={area} />
-          ))}
-        </Picker>
+      {/* ✅ NEW: Location Search Filter */}
+      <View style={styles.searchContainer}>
+        <Ionicons name="location-outline" size={20} color="gray" />
+        <TextInput
+          style={styles.searchInput}
+          value={locationQuery}
+          placeholder="Search city, area or locality"
+          onChangeText={fetchSuggestions}
+        />
       </View>
 
-      {/* SEARCH */}
+      {suggestions.length > 0 && (
+        <FlatList
+          data={suggestions}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.suggestionItem}
+              onPress={() => handleSelectAddress(item)}
+            >
+              <Text style={styles.suggestionText}>{item.placeName}</Text>
+              <Text style={styles.suggestionSubText}>
+                {item.placeAddress || ""}
+              </Text>
+            </TouchableOpacity>
+          )}
+          style={styles.suggestionDropdown}
+          keyboardShouldPersistTaps="handled"
+        />
+      )}
+
+      {/* SEARCH SERVICES */}
       <View style={styles.searchContainer}>
         <Ionicons name="search" size={20} color="#94a3b8" />
         <TextInput
@@ -312,14 +342,14 @@ export default function HomeScreen() {
                 }}
               >
                 <Text style={styles.modalNumber}>
-                  {selectedProvider?.provider?.phone || "N/A"}
+                  {selectedProvider?.provider?.phoneNumber || "N/A"}
                 </Text>
 
                 <TouchableOpacity
                   style={{ marginLeft: 15 }}
                   onPress={() => {
-                    const phone = selectedProvider?.provider?.phone;
-                    if (phone) Linking.openURL(`tel:${phone}`);
+                    const phoneNumber = selectedProvider?.provider?.phoneNumber;
+                    if (phoneNumber) Linking.openURL(`tel:${phoneNumber}`);
                   }}
                 >
                   <Ionicons name="call-outline" size={24} color="#4ade80" />
@@ -328,8 +358,8 @@ export default function HomeScreen() {
                 <TouchableOpacity
                   style={{ marginLeft: 15 }}
                   onPress={() => {
-                    const phone = selectedProvider?.provider?.phone;
-                    if (phone) Linking.openURL(`sms:${phone}`);
+                    const phoneNumber = selectedProvider?.provider?.phoneNumber;
+                    if (phoneNumber) Linking.openURL(`sms:${phoneNumber}`);
                   }}
                 >
                   <Ionicons
@@ -356,8 +386,6 @@ export default function HomeScreen() {
     </View>
   );
 }
-
-// ...styles remain unchanged
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f8fafc" },
@@ -430,7 +458,7 @@ const styles = StyleSheet.create({
   providerImage: {
     width: "80%",
     height: "65%",
-    borderRadius: "50%",
+    borderRadius: 50,
     marginBottom: 8,
   },
   providerName: {
@@ -453,8 +481,6 @@ const styles = StyleSheet.create({
   },
   loadMoreBtn: { padding: 10, alignItems: "center", justifyContent: "center" },
   loadMoreText: { color: "#6366f1", fontWeight: "600" },
-
-  // Modal styles
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
@@ -486,4 +512,20 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginTop: 10,
   },
+  // ✅ suggestion styles
+  suggestionDropdown: {
+    maxHeight: 200,
+    marginHorizontal: 15,
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    elevation: 3,
+  },
+  suggestionItem: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+    paddingHorizontal: 10,
+  },
+  suggestionText: { fontSize: 15, fontWeight: "500", color: "#1e293b" },
+  suggestionSubText: { fontSize: 12, color: "gray" },
 });

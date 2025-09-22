@@ -7,7 +7,7 @@ export default {
     // Add trialCount
     if (!table.trialCount) {
       await queryInterface.addColumn("Users", "trialCount", {
-        type: DataTypes.INTEGER,
+        type: Sequelize.INTEGER,
         defaultValue: 0, // user gets 0 trial connections by default until they accept free trial
       });
     }

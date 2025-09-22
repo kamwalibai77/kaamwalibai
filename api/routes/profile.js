@@ -1,8 +1,8 @@
 import express from "express";
 import fs from "fs";
 import cloudinary from "../config/cloudinary.js";
-import { upload } from "../middleware/multer.js";
 import { authMiddleware } from "../middleware/auth.js";
+import { upload } from "../middleware/multer.js";
 import db from "../models/index.js";
 
 const router = express.Router();
@@ -139,6 +139,37 @@ router.post("/submit-kyc", (req, res) => {
   const { aadhaarNumber, panCardNumber } = req.body;
   const result = dummyData[aadhaar] || { name: "", status: "Failure" };
   res.json(result);
+});
+
+//////////////////////////////////////
+// ✅ MapMyIndia Autosuggest API
+//////////////////////////////////////
+// ✅ MapMyIndia / LocationIQ Autosuggest API
+router.get("/maps/suggest", async (req, res) => {
+  try {
+    const { query } = req.query;
+    if (!query) return res.status(400).json({ error: "Query is required" });
+
+    // Using fetch instead of axios
+    const url = `https://us1.locationiq.com/v1/autocomplete.php?key=pk.263dd6c4a3d225906a300d90564caf1c&q=${encodeURIComponent(
+      query + ", India"
+    )}&format=json&limit=5`;
+
+    const response = await fetch(url);
+    const data = await response.json();
+
+    const suggestedLocations = data.map((item) => ({
+      placeName: item.display_name,
+      placeAddress: item.display_name,
+      lat: item.lat,
+      lng: item.lon,
+    }));
+
+    res.json({ suggestedLocations });
+  } catch (err) {
+    console.error("LocationIQ API Error:", err.message);
+    res.status(500).json({ error: "Failed to fetch location suggestions" });
+  }
 });
 
 export default router;

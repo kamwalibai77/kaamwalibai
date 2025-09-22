@@ -1,20 +1,23 @@
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as ImagePicker from "expo-image-picker";
+import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
-  View,
   TextInput,
-  Image,
   TouchableOpacity,
-  ActivityIndicator,
+  View,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as ImagePicker from "expo-image-picker";
-import api from "../services/api";
 import DropDownPicker from "react-native-dropdown-picker";
+import api from "../services/api"; // make sure api.ts is configured with your local IP
 
 export default function ProfileEditScreen() {
   const router = useRouter();
@@ -33,6 +36,10 @@ export default function ProfileEditScreen() {
 
   const [gender, setGender] = useState<string | null>(null);
   const [age, setAge] = useState<number | null>(null);
+
+  // location search states
+  const [query, setQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<any[]>([]);
 
   const genderItems = [
     { label: "Male", value: "male" },
@@ -54,6 +61,49 @@ export default function ProfileEditScreen() {
     });
     if (!result.canceled) {
       setProfilePhoto(result.assets[0].uri);
+    }
+  };
+
+  const fetchSuggestions = async (text: string) => {
+    setQuery(text);
+    if (text.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+    try {
+      const res = await api.get("profile/maps/suggest", {
+        params: { query: text },
+      });
+      setSuggestions(res.data.suggestedLocations || []);
+    } catch (err) {
+      console.error("Error fetching suggestions:", err);
+    }
+  };
+
+  const handleSelectAddress = (item: any) => {
+    setQuery(item.placeName);
+    setAddress(item.placeName);
+    setSuggestions([]);
+  };
+
+  const handleCurrentLocation = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission denied", "Location permission is required.");
+        return;
+      }
+      const location = await Location.getCurrentPositionAsync({});
+      const currentLoc = {
+        placeName: "Current Location",
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      };
+      setQuery(currentLoc.placeName);
+      setAddress(`${currentLoc.latitude},${currentLoc.longitude}`);
+    } catch (err) {
+      console.error("Error getting location:", err);
+      Alert.alert("Error", "Could not fetch current location.");
     }
   };
 
@@ -79,10 +129,12 @@ export default function ProfileEditScreen() {
       }
 
       await api.put("/profile/update", formData);
+      Alert.alert("Success", "Profile updated successfully!");
+      router.navigate("/screens/ProfileScreen");
     } catch (e) {
-      console.log(e);
+      console.error("Profile update failed:", e);
+      Alert.alert("Error", "Failed to update profile");
     }
-    router.navigate("/screens/ProfileScreen");
   };
 
   useEffect(() => {
@@ -91,10 +143,8 @@ export default function ProfileEditScreen() {
         const userId = await AsyncStorage.getItem("userId");
         if (!userId) return;
 
-        const response = await api.get(
-          `http://localhost:5000/api/users/${userId}`
-        );
-        const data = await response.data;
+        const response = await api.get(`/users/${userId}`);
+        const data = response.data;
         setId(data.id);
         setName(data.name);
         setRole(data.role);
@@ -104,11 +154,12 @@ export default function ProfileEditScreen() {
             : `+91${data.phoneNumber || ""}`
         );
         setAddress(data.address);
+        setQuery(data.address || "");
         setGender(data.gender);
         setAge(data.age);
         setProfilePhoto(data.profilePhoto);
       } catch (err) {
-        console.log(err);
+        console.error("Error fetching user:", err);
       } finally {
         setLoading(false);
       }
@@ -131,7 +182,6 @@ export default function ProfileEditScreen() {
     >
       <Text style={styles.title}>Profile</Text>
 
-      {/* Profile Image */}
       <View style={styles.profileHeader}>
         <Image source={{ uri: profilePhoto }} style={styles.profileImage} />
         <TouchableOpacity style={styles.editIcon} onPress={pickImage}>
@@ -139,7 +189,6 @@ export default function ProfileEditScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Input Fields */}
       <View style={styles.formContainer}>
         <Text style={styles.label}>Name</Text>
         <TextInput
@@ -150,12 +199,40 @@ export default function ProfileEditScreen() {
         />
 
         <Text style={styles.label}>Address</Text>
-        <TextInput
-          placeholder="Enter your address"
-          value={address}
-          onChangeText={setAddress}
-          style={styles.input}
-        />
+        <View style={styles.searchRow}>
+          <Ionicons
+            name="search-outline"
+            size={20}
+            color="gray"
+            style={{ marginRight: 8 }}
+          />
+          <TextInput
+            style={styles.inputNoBorder}
+            value={query}
+            placeholder="Search city, area or locality"
+            onChangeText={fetchSuggestions}
+          />
+        </View>
+
+        {suggestions.length > 0 && (
+          <FlatList
+            data={suggestions}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.item}
+                onPress={() => handleSelectAddress(item)}
+              >
+                <Text style={styles.itemText}>{item.placeName}</Text>
+                <Text style={styles.itemSubText}>
+                  {item.placeAddress || ""}
+                </Text>
+              </TouchableOpacity>
+            )}
+            style={styles.dropdown}
+            keyboardShouldPersistTaps="handled"
+          />
+        )}
 
         <Text style={styles.label}>Mobile Number</Text>
         <TextInput
@@ -180,7 +257,6 @@ export default function ProfileEditScreen() {
           style={[styles.input, { backgroundColor: "#f8fafc" }]}
         />
 
-        {/* Gender Dropdown */}
         <Text style={styles.label}>Gender</Text>
         <View
           style={[styles.dropdownWrapper, { zIndex: genderOpen ? 3000 : 1000 }]}
@@ -198,7 +274,6 @@ export default function ProfileEditScreen() {
           />
         </View>
 
-        {/* Age Dropdown */}
         <Text style={styles.label}>Age</Text>
         <View
           style={[styles.dropdownWrapper, { zIndex: ageOpen ? 2000 : 500 }]}
@@ -217,7 +292,6 @@ export default function ProfileEditScreen() {
         </View>
       </View>
 
-      {/* Save Button */}
       <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
         <Text style={styles.saveButtonText}>Save</Text>
       </TouchableOpacity>
@@ -278,6 +352,42 @@ const styles = StyleSheet.create({
     color: "#1e293b",
     backgroundColor: "#fff",
   },
+  inputNoBorder: {
+    flex: 1,
+    fontSize: 15,
+    color: "#1e293b",
+  },
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    marginBottom: 12,
+    height: 45,
+  },
+  currentLocationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+    marginBottom: 12,
+  },
+  currentLocationText: {
+    marginLeft: 8,
+    color: "#003580",
+    fontWeight: "500",
+  },
+  dropdown: { maxHeight: 200, marginBottom: 12 },
+  item: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  itemText: { fontSize: 16 },
+  itemSubText: { fontSize: 12, color: "gray" },
   saveButton: {
     backgroundColor: "#2563eb",
     paddingVertical: 14,
@@ -294,11 +404,6 @@ const styles = StyleSheet.create({
   dropdownWrapper: {
     marginBottom: 18,
     position: "relative",
-  },
-  dropdown: {
-    borderColor: "#e5e7eb",
-    borderRadius: 12,
-    backgroundColor: "#f9fafb",
   },
   dropdownText: {
     fontSize: 14,
