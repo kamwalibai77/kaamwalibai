@@ -1,15 +1,19 @@
-import React, { useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import React, { useEffect, useState } from "react";
 
-import LoginScreen from "../screens/LoginScreen";
-import RegisterScreen from "../screens/RegisterScreen";
-import HomeScreen from "../screens/HomeScreen";
-import ProfileScreen from "../screens/ProfileScreen";
-import ProfileEditScreen from "../screens/ProfileEditScreen";
-import MyServicesScreen from "../screens/MyServicesScreen";
 import IndexScreen from "../(tabs)/index";
+import AboutUsScreen from "../screens/AboutUsScreen";
+import ChatBoxScreen from "../screens/ChatBoxScreen";
+import HomeScreen from "../screens/HomeScreen";
+import LoginScreen from "../screens/LoginScreen";
+import MyServicesScreen from "../screens/MyServicesScreen";
+import PrivacyPolicyScreen from "../screens/PrivacyPolicyScreen";
+import ProfileEditScreen from "../screens/ProfileEditScreen";
+import ProfileScreen from "../screens/ProfileScreen";
+import RegisterScreen from "../screens/RegisterScreen";
+import ReveiwFormScreen from "../screens/ReviewFormScreen";
 import SubscriptionScreen from "../screens/SubscriptionScreen";
 
 export type RootStackParamList = {
@@ -21,6 +25,10 @@ export type RootStackParamList = {
   EditProfile: undefined;
   MyServices?: undefined;
   Subscription: undefined;
+  ChatBox: { userId: string; name: string; profilePhoto?: string }; // ✅ Added profilePhoto
+  Aboutus: undefined; // ✅ Added About Us
+  PrivacyPolicy: undefined; // ✅ Added Privacy Policy
+  ReveiwForm: undefined; // ✅ Added Privacy Policy
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -58,13 +66,14 @@ export default function AppNavigator() {
         <Stack.Screen name="Profile" component={ProfileScreen} />
         <Stack.Screen name="EditProfile" component={ProfileEditScreen} />
         <Stack.Screen name="Subscription" component={SubscriptionScreen} />
+        <Stack.Screen name="Aboutus" component={AboutUsScreen} />
+        <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+        <Stack.Screen name="ReveiwForm" component={ReveiwFormScreen} />
+        <Stack.Screen name="ChatBox" component={ChatBoxScreen} />
 
         {/* 👇 Only Service Providers can access MyServices */}
         {role === "serviceProvider" && (
-          <>
-            <Stack.Screen name="MyServices" component={MyServicesScreen} />
-            {/* <Stack.Screen name="AddService" component={AddServiceScreen} /> */}
-          </>
+          <Stack.Screen name="MyServices" component={MyServicesScreen} />
         )}
       </Stack.Navigator>
     </NavigationContainer>

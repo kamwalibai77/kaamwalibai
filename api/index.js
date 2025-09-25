@@ -1,6 +1,6 @@
-import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import express from "express";
 
 // Routes
 import authRoutes from "./routes/authRoutes.js";
@@ -21,10 +21,12 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/profile", profileRoutes); // ✅ mount profile routes
 app.use("/api/users", userRoutes);
+app.use("/api/chat", chatRoutes);
 
+import availabilityRoutes from "./routes/availabilityTimeRoutes.js";
+import chatRoutes from "./routes/chatRoutes.js";
 import serviceTypeRoutes from "./routes/serviceTypeRoutes.js";
 import userServicesRoutes from "./routes/userServicesRoutes.js";
-import availabilityRoutes from "./routes/availabilityTimeRoutes.js";
 
 app.use("/api/service-types", serviceTypeRoutes);
 app.use("/api/service-provider", userServicesRoutes);

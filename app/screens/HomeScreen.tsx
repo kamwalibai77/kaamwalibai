@@ -324,57 +324,153 @@ export default function HomeScreen() {
           animationType="fade"
           onRequestClose={() => setModalVisible(false)}
         >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: "rgba(0,0,0,0.6)",
+              justifyContent: "center",
+              alignItems: "center",
+              padding: 20,
+            }}
+          >
+            <View
+              style={{
+                width: "100%",
+                backgroundColor: "#fff",
+                borderRadius: 20,
+                padding: 25,
+                alignItems: "center",
+                shadowColor: "#000",
+                shadowOpacity: 0.2,
+                shadowOffset: { width: 0, height: 5 },
+                shadowRadius: 10,
+                elevation: 10,
+              }}
+            >
+              {/* Profile Image */}
               <Image
                 source={{ uri: selectedProvider.provider.profilePhoto }}
-                style={styles.modalImage}
+                style={{
+                  width: 100,
+                  height: 100,
+                  borderRadius: 50,
+                  borderWidth: 3,
+                  borderColor: "#6366f1",
+                  marginBottom: 15,
+                }}
               />
-              <Text style={styles.modalName}>
+
+              {/* Name */}
+              <Text
+                style={{
+                  fontSize: 20,
+                  fontWeight: "bold",
+                  color: "#1e293b",
+                  marginBottom: 5,
+                }}
+              >
                 {selectedProvider.provider.name}
               </Text>
 
+              {/* Service Type */}
+              <Text
+                style={{
+                  fontSize: 14,
+                  color: "#4b5563",
+                  marginBottom: 15,
+                  textAlign: "center",
+                }}
+              >
+                {selectedProvider.serviceTypes
+                  .map((st: any) => st.name)
+                  .join(", ")}
+              </Text>
+
+              {/* Contact Box */}
               <View
                 style={{
                   flexDirection: "row",
-                  alignItems: "center",
-                  marginBottom: 15,
+                  backgroundColor: "#eef2ff",
+                  borderRadius: 12,
+                  padding: 15,
+                  justifyContent: "space-around",
+                  width: "100%",
+                  marginBottom: 20,
                 }}
               >
-                <Text style={styles.modalNumber}>
-                  {selectedProvider?.provider?.phoneNumber || "N/A"}
-                </Text>
-
+                {/* Phone */}
                 <TouchableOpacity
-                  style={{ marginLeft: 15 }}
+                  style={{
+                    alignItems: "center",
+                  }}
                   onPress={() => {
-                    const phoneNumber = selectedProvider?.provider?.phoneNumber;
-                    if (phoneNumber) Linking.openURL(`tel:${phoneNumber}`);
+                    const phone = selectedProvider.provider.phoneNumber;
+                    if (phone) Linking.openURL(`tel:${phone}`);
                   }}
                 >
-                  <Ionicons name="call-outline" size={24} color="#4ade80" />
+                  <Ionicons name="call-outline" size={28} color="#4ade80" />
+                  <Text
+                    style={{
+                      marginTop: 5,
+                      color: "#065f46",
+                      fontWeight: "600",
+                    }}
+                  >
+                    Call
+                  </Text>
                 </TouchableOpacity>
 
+                {/* Message */}
                 <TouchableOpacity
-                  style={{ marginLeft: 15 }}
+                  style={{
+                    alignItems: "center",
+                  }}
                   onPress={() => {
-                    const phoneNumber = selectedProvider?.provider?.phoneNumber;
-                    if (phoneNumber) Linking.openURL(`sms:${phoneNumber}`);
+                    // Close modal first
+                    setModalVisible(false);
+
+                    // Redirect to ChatBoxScreen with provider's ID and name
+                    router.push({
+                      pathname: "/screens/ChatBoxScreen",
+                      params: {
+                        userId: selectedProvider.provider.id,
+                        name: selectedProvider.provider.name,
+                      },
+                    });
                   }}
                 >
                   <Ionicons
                     name="chatbubble-ellipses-outline"
-                    size={24}
+                    size={28}
                     color="#3b82f6"
                   />
+                  <Text
+                    style={{
+                      marginTop: 5,
+                      color: "#1e40af",
+                      fontWeight: "600",
+                    }}
+                  >
+                    Message
+                  </Text>
                 </TouchableOpacity>
               </View>
 
+              {/* Close Button */}
               <TouchableOpacity
-                style={styles.closeButton}
+                style={{
+                  backgroundColor: "#6366f1",
+                  paddingVertical: 10,
+                  paddingHorizontal: 40,
+                  borderRadius: 12,
+                }}
                 onPress={() => setModalVisible(false)}
               >
-                <Text style={{ color: "#fff", fontWeight: "600" }}>Close</Text>
+                <Text
+                  style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}
+                >
+                  Close
+                </Text>
               </TouchableOpacity>
             </View>
           </View>

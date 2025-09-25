@@ -58,6 +58,16 @@ export default (sequelize, DataTypes) => {
       allowNull: true,
     },
   });
+  User.associate = (models) => {
+    User.hasMany(models.Message, {
+      as: "sentMessages",
+      foreignKey: "senderId",
+    });
+    User.hasMany(models.Message, {
+      as: "receivedMessages",
+      foreignKey: "receiverId",
+    });
+  };
 
   User.associate = (models) => {
     User.hasMany(models.UserService, {

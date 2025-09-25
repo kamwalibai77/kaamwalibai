@@ -1,21 +1,21 @@
+import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
+  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
-  Alert,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { RootStackParamList } from "../navigation/AppNavigator";
-import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons } from "@expo/vector-icons";
-import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useRouter } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "../services/api";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Login">;
@@ -76,7 +76,7 @@ export default function LoginScreen({ navigation }: Props) {
               placeholder="Phone Number"
               value={phoneNumber}
               onChangeText={(text) => {
-                const numericText = text.replace(/[^0-9]/g, "").slice(0, 10);
+                const numericText = text.replace(/[^0-9+]/g, "").slice(0, 13);
                 setPhoneNumber(numericText);
               }}
               autoCapitalize="none"
