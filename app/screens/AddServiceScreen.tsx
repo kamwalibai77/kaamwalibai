@@ -101,10 +101,24 @@ export default function AddServiceScreen({
 
     try {
       setPosting(true);
+      const storedId = await AsyncStorage.getItem("userId");
+      const providerIdNum = storedId ? parseInt(storedId, 10) : undefined;
+
+      if (!providerIdNum) {
+        Alert.alert(
+          "Error",
+          "Unable to determine provider id. Please login again."
+        );
+        setPosting(false);
+        return;
+      }
+
       const payload = {
-        providerId: await AsyncStorage.getItem("userId"),
+        // providerId is expected to be a number by the API client
+        providerId: providerIdNum,
         serviceTypeIds: selectedServices,
-        rateType: selectedRate,
+        // API expects a string for rateType; default to empty string if null
+        rateType: selectedRate || "",
         amount: costVal,
         contactNumber: phoneOnly,
         currency: "INR",

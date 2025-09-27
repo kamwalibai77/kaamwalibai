@@ -1,8 +1,13 @@
-// app/screens/ChatBoxScreen.tsx
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { RouteProp, useRoute } from "@react-navigation/native";
+import {
+  RouteProp,
+  useRoute,
+  useNavigation,
+  NavigationProp,
+  StackActions,
+} from "@react-navigation/native";
 import axios from "axios";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   FlatList,
   Image,
@@ -13,8 +18,12 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Alert,
 } from "react-native";
-import { RootStackParamList } from "/../navigators/AppNavigator";
+import io from "socket.io-client";
+import { SOCKET_URL } from "../utills/config";
+import { RootStackParamList } from "../navigation/AppNavigator";
+import { Ionicons } from "@expo/vector-icons";
 
 type ChatBoxRouteProp = RouteProp<RootStackParamList, "ChatBox">;
 
@@ -25,16 +34,44 @@ interface Message {
   message: string;
   createdAt: string;
   read?: boolean;
+  liked?: boolean;
 }
 
 export default function ChatBoxScreen() {
-  const { params } = useRoute<ChatBoxRouteProp>();
-  const { userId, name, profilePhoto } = params; // profile photo passed from ChatScreen
+  const route = useRoute<ChatBoxRouteProp>();
+  const navigation =
+    useNavigation<NavigationProp<Record<string, object | undefined>>>();
 
+  // Hooks must be declared unconditionally at the top
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [myId, setMyId] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [editingMessage, setEditingMessage] = useState<Message | null>(null);
+  const socketRef = useRef<any>(null);
+  const flatListRef = useRef<FlatList>(null);
+  // Extract params early (may be undefined)
+  const params = route.params;
+  const userId = params?.userId;
+  const name = params?.name;
+  const profilePhoto = params?.profilePhoto;
+
+  // If the screen was opened without params, redirect back to the chat list to avoid a crash
+  useEffect(() => {
+    if (!userId) {
+      try {
+        navigation.dispatch(StackActions.replace("Chat"));
+      } catch (e) {
+        try {
+          navigation.goBack();
+        } catch (e) {
+          console.warn(
+            "Unable to navigate away from ChatBox when params are missing."
+          );
+        }
+      }
+    }
+  }, [userId, navigation]);
 
   // Load my user id + token from storage
   useEffect(() => {
@@ -47,22 +84,51 @@ export default function ChatBoxScreen() {
     fetchUser();
   }, []);
 
-  // Fetch chat history and mark messages as read
+  // Setup socket connection
   useEffect(() => {
-    if (!myId || !token) return;
+    if (!myId) return;
+
+    const socket = io(SOCKET_URL, { transports: ["websocket"] });
+    socketRef.current = socket;
+
+    socket.on("connect", () => {
+      console.log("Connected to socket server:", socket.id);
+      socket.emit("register", myId);
+    });
+
+    socket.on("receiveMessage", (msg: Message) => {
+      setMessages((prev) => {
+        // Prevent duplicates
+        if (prev.find((m) => m.id === msg.id)) return prev;
+        return [...prev, msg];
+      });
+    });
+
+    return () => {
+      try {
+        socket.disconnect();
+      } catch (e) {
+        console.warn("Error disconnecting socket:", e);
+      }
+      socketRef.current = null;
+    };
+  }, [myId]);
+
+  // Fetch chat history
+  useEffect(() => {
+    if (!myId || !token || !userId) return;
 
     const fetchMessages = async () => {
       try {
         await axios.put(
-          `http://localhost:5000/api/chat/read/${userId}`,
+          `${SOCKET_URL}/api/chat/read/${userId}`,
           {},
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
-        const res = await axios.get(
-          `http://localhost:5000/api/chat/${userId}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        const res = await axios.get(`${SOCKET_URL}/api/chat/${userId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
         if (res.data.success) {
           setMessages(res.data.messages);
@@ -73,38 +139,73 @@ export default function ChatBoxScreen() {
     };
 
     fetchMessages();
-    const interval = setInterval(fetchMessages, 3000); // poll every 3s
-    return () => clearInterval(interval);
   }, [myId, userId, token]);
 
   const sendMessage = async () => {
     if (!input.trim() || !token || !myId) return;
 
-    try {
-      const res = await axios.post(
-        "http://localhost:5000/api/chat/send",
-        {
-          senderId: myId,
-          receiverId: userId,
-          message: input,
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      if (res.data.success) {
-        setMessages((prev) => [...prev, res.data.message]);
-        setInput("");
+    if (editingMessage) {
+      // Edit existing message
+      try {
+        const res = await axios.put(
+          `${SOCKET_URL}/api/chat/${editingMessage.id}`,
+          { message: input.trim() },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (res.data.success) {
+          setMessages((prev) =>
+            prev.map((m) => (m.id === editingMessage.id ? res.data.message : m))
+          );
+          setEditingMessage(null);
+          setInput("");
+        }
+      } catch (err) {
+        console.error("Error editing message:", err);
       }
-    } catch (err) {
-      console.error("Error sending message:", err);
+    } else {
+      // Send new message
+      const newMessage: Message = {
+        id: Math.random().toString(),
+        senderId: myId,
+        receiverId: userId,
+        message: input.trim(),
+        createdAt: new Date().toISOString(),
+        read: false,
+        liked: false,
+      };
+
+      socketRef.current?.emit("sendMessage", newMessage);
+      setMessages((prev) => [...prev, newMessage]);
+      setInput("");
+
+      try {
+        await axios.post(`${SOCKET_URL}/api/chat/send`, newMessage, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } catch (err) {
+        console.error("Error saving message:", err);
+      }
     }
+  };
+
+  const likeMessage = (msg: Message) => {
+    setMessages((prev) =>
+      prev.map((m) => (m.id === msg.id ? { ...m, liked: !m.liked } : m))
+    );
   };
 
   const renderMessage = ({ item }: { item: Message }) => {
     const isMe = String(item.senderId) === String(myId);
 
     return (
-      <View
+      <TouchableOpacity
+        onLongPress={() => {
+          if (isMe) {
+            setEditingMessage(item);
+            setInput(item.message);
+          }
+        }}
+        onPress={() => likeMessage(item)}
         style={[
           styles.messageWrapper,
           isMe ? styles.alignRight : styles.alignLeft,
@@ -125,9 +226,10 @@ export default function ChatBoxScreen() {
               })}
             </Text>
             {isMe && item.read && <Text style={styles.readText}>✓✓</Text>}
+            <Text style={{ marginLeft: 4 }}>{item.liked ? "❤️" : "🤍"}</Text>
           </View>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -137,7 +239,6 @@ export default function ChatBoxScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={90}
     >
-      {/* Header with profile image and name */}
       <View style={styles.header}>
         <Image
           source={{
@@ -150,13 +251,17 @@ export default function ChatBoxScreen() {
       </View>
 
       <FlatList
+        ref={flatListRef}
         data={messages}
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderMessage}
         contentContainerStyle={styles.chatContainer}
+        onContentSizeChange={() =>
+          flatListRef.current?.scrollToEnd({ animated: true })
+        }
+        onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
       />
 
-      {/* Input */}
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}
@@ -165,7 +270,11 @@ export default function ChatBoxScreen() {
           onChangeText={setInput}
         />
         <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
-          <Text style={styles.sendText}>Send</Text>
+          <Ionicons
+            name={editingMessage ? "pencil-outline" : "send-outline"}
+            size={24}
+            color="#fff"
+          />
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -197,16 +306,16 @@ const styles = StyleSheet.create({
   alignLeft: { alignSelf: "flex-start" },
   messageBubble: {
     paddingVertical: 8,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     borderRadius: 20,
-    maxWidth: "75%",
+    maxWidth: "80%",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.15,
     shadowRadius: 1.5,
     elevation: 2,
   },
-  myMessage: { backgroundColor: "#25d366", borderTopRightRadius: 5 },
+  myMessage: { backgroundColor: "#b7ffa5ff", borderTopRightRadius: 5 },
   theirMessage: { backgroundColor: "#fff", borderTopLeftRadius: 5 },
   messageText: { fontSize: 16, color: "#000" },
   timeWrapper: {
@@ -249,7 +358,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 2,
-    elevation: 3,
+    elevation: 2,
   },
-  sendText: { color: "#fff", fontWeight: "bold" },
 });

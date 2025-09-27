@@ -1,8 +1,9 @@
 // screens/ProfileScreen.tsx
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../navigation/AppNavigator";
 import {
   ScrollView,
   StyleSheet,
@@ -13,10 +14,12 @@ import {
   ActivityIndicator,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { API_BASE_URL } from "../utills/config";
 import BottomTab from "../../components/BottomTabs";
 
-export default function ProfileScreen() {
-  const router = useRouter();
+type Props = NativeStackScreenProps<RootStackParamList, "Profile">;
+
+export default function ProfileScreen({ navigation }: Props) {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -26,9 +29,7 @@ export default function ProfileScreen() {
         const userId = await AsyncStorage.getItem("userId");
         if (!userId) return;
 
-        const response = await fetch(
-          `http://localhost:5000/api/users/${userId}`
-        );
+        const response = await fetch(`${API_BASE_URL}/users/${userId}`);
         const data = await response.json();
         setUser(data);
       } catch (err) {
@@ -58,7 +59,7 @@ export default function ProfileScreen() {
 
   const handleLogout = async () => {
     await AsyncStorage.removeItem("userId");
-    router.replace("/screens/LoginScreen");
+    navigation.replace("Login");
   };
 
   return (
@@ -105,7 +106,7 @@ export default function ProfileScreen() {
         <View style={styles.actionCard}>
           <TouchableOpacity
             style={styles.actionRow}
-            onPress={() => router.push("/screens/ProfileEditScreen")}
+            onPress={() => navigation.navigate("EditProfile")}
           >
             <Ionicons name="create-outline" size={20} color="#6366f1" />
             <Text style={styles.actionText}>Edit Profile</Text>
@@ -118,7 +119,7 @@ export default function ProfileScreen() {
 
           <TouchableOpacity
             style={styles.actionRow}
-            onPress={() => router.push("/screens/KYCScreen")}
+            onPress={() => navigation.navigate("KYC")}
           >
             <Ionicons name="document-text-outline" size={20} color="#6366f1" />
             <Text style={styles.actionText}>Complete KYC</Text>
@@ -131,7 +132,7 @@ export default function ProfileScreen() {
 
           <TouchableOpacity
             style={styles.actionRow}
-            onPress={() => router.push("/screens/SettingsScreen")}
+            onPress={() => navigation.navigate("Settings")}
           >
             <Ionicons name="settings-outline" size={20} color="#6366f1" />
             <Text style={styles.actionText}>Settings</Text>

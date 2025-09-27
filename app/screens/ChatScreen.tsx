@@ -1,11 +1,10 @@
-// app/screens/ChatScreen.tsx
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
-import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../navigation/AppNavigator";
 import {
   ActivityIndicator,
-  Dimensions,
   FlatList,
   Image,
   StyleSheet,
@@ -13,98 +12,175 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import io from "socket.io-client";
+import { SOCKET_URL } from "../utills/config";
 import BottomTab from "../../components/BottomTabs";
 
-const { width } = Dimensions.get("window");
+interface Chat {
+  id: string; // other user id
+  name: string;
+  profilePhoto?: string;
+  lastMessage: string;
+  updatedAt: string;
+  unreadCount: number;
+}
 
-export default function ChatScreen() {
-  const router = useRouter();
-  const [chatList, setChatList] = useState<any[]>([]);
+type Props = NativeStackScreenProps<RootStackParamList, "Chat">;
+
+export default function ChatScreen({ navigation }: Props) {
+  const [chatList, setChatList] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState<string | null>(null);
+  const [myId, setMyId] = useState<string | null>(null);
+  const socketRef = useRef<any>(null);
 
-  // Load token from AsyncStorage
   useEffect(() => {
-    const loadToken = async () => {
+    const loadData = async () => {
       const storedToken = await AsyncStorage.getItem("token");
+      const storedId = await AsyncStorage.getItem("userId");
       setToken(storedToken);
+      setMyId(storedId);
     };
-    loadToken();
+    loadData();
   }, []);
 
-  // Fetch chat list
+  useEffect(() => {
+    if (!myId) return;
+
+    const socket = io(SOCKET_URL, { transports: ["websocket"] });
+    socketRef.current = socket;
+
+    socket.on("connect", () => {
+      console.log("Connected to socket:", socket.id);
+      socket.emit("register", myId);
+    });
+
+    socket.on("receiveMessage", (msg: any) => {
+      const otherUserId = msg.senderId === myId ? msg.receiverId : msg.senderId;
+
+      setChatList((prev) => {
+        const existingIndex = prev.findIndex((chat) => chat.id == otherUserId);
+
+        const updatedChat: Chat = {
+          id: otherUserId,
+          name:
+            (msg.senderId === myId ? msg.receiverName : msg.senderName) ||
+            prev[existingIndex]?.name,
+          profilePhoto:
+            msg.senderProfilePhoto || prev[existingIndex]?.profilePhoto,
+          lastMessage: msg.message,
+          updatedAt: msg.createdAt,
+          unreadCount:
+            msg.receiverId === myId
+              ? existingIndex >= 0
+                ? prev[existingIndex].unreadCount + 1
+                : 1
+              : 0,
+        };
+
+        let newList = [...prev];
+        if (existingIndex >= 0) {
+          // Update existing chat
+          newList[existingIndex] = updatedChat;
+        } else {
+          // Add new chat if not exist
+          newList.push(updatedChat);
+        }
+
+        // Sort by latest message
+        newList.sort(
+          (a, b) =>
+            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+        );
+        return newList;
+      });
+    });
+
+    return () => {
+      try {
+        socket.disconnect();
+      } catch (e) {
+        console.warn("Error disconnecting socket:", e);
+      }
+      socketRef.current = null;
+    };
+  }, [myId]);
+
   const fetchChats = async () => {
     if (!token) return;
-
     try {
       setLoading(true);
-      const res = await axios.get("http://localhost:5000/api/chat", {
+      const res = await axios.get(`${SOCKET_URL}/api/chat`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
       if (res.data.success) {
-        setChatList(res.data.chats);
+        const chats: Chat[] = res.data.chats.map((c: any) => ({
+          id: c.id,
+          name: c.name,
+          profilePhoto: c.profilePhoto,
+          lastMessage: c.lastMessage || "",
+          updatedAt: c.updatedAt,
+          unreadCount: c.unreadCount || 0,
+        }));
+        chats.sort(
+          (a, b) =>
+            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+        );
+        setChatList(chats);
       }
     } catch (err) {
-      console.error("Error fetching chats:", err);
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  // Poll chat list every 3 seconds
   useEffect(() => {
-    if (!token) return;
-
-    fetchChats(); // initial fetch
-    const interval = setInterval(fetchChats, 5000); // every 3s
-
-    return () => clearInterval(interval); // cleanup
+    if (token) fetchChats();
   }, [token]);
 
-  const renderChatItem = ({ item }: { item: any }) => {
-    return (
-      <TouchableOpacity
-        style={styles.chatItem}
-        onPress={() =>
-          router.push({
-            pathname: "/screens/ChatBoxScreen",
-            params: { userId: item.id, name: item.name },
-          })
-        }
-      >
-        <Image
-          source={{
-            uri:
-              item.profilePhoto ||
-              "https://randomuser.me/api/portraits/lego/1.jpg",
-          }}
-          style={styles.avatar}
-        />
-        <View style={styles.chatInfo}>
-          <View style={styles.chatTop}>
-            <Text style={styles.chatName}>{item.name}</Text>
-            <View style={styles.chatRight}>
-              <Text style={styles.chatTime}>
-                {new Date(item.updatedAt).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </Text>
-              {item.unreadCount > 0 && (
-                <View style={styles.unreadBadge}>
-                  <Text style={styles.unreadText}>{item.unreadCount}</Text>
-                </View>
-              )}
-            </View>
+  const renderChatItem = ({ item }: { item: Chat }) => (
+    <TouchableOpacity
+      style={styles.chatItem}
+      onPress={() =>
+        navigation.navigate("ChatBox", {
+          userId: item.id,
+          name: item.name,
+          profilePhoto: item.profilePhoto,
+        })
+      }
+    >
+      <Image
+        source={{
+          uri:
+            item.profilePhoto ||
+            "https://randomuser.me/api/portraits/lego/1.jpg",
+        }}
+        style={styles.avatar}
+      />
+      <View style={styles.chatInfo}>
+        <View style={styles.chatTop}>
+          <Text style={styles.chatName}>{item.name}</Text>
+          <View style={styles.chatRight}>
+            <Text style={styles.chatTime}>
+              {new Date(item.updatedAt).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </Text>
+            {item.unreadCount > 0 && (
+              <View style={styles.unreadBadge}>
+                <Text style={styles.unreadText}>{item.unreadCount}</Text>
+              </View>
+            )}
           </View>
-          <Text style={styles.chatLastMessage} numberOfLines={1}>
-            {item.lastMessage || "No messages yet"}
-          </Text>
         </View>
-      </TouchableOpacity>
-    );
-  };
+        <Text style={styles.chatLastMessage} numberOfLines={1}>
+          {item.lastMessage || "No messages yet"}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
 
   if (loading) {
     return (
@@ -163,10 +239,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 4,
   },
-  chatRight: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
+  chatRight: { flexDirection: "row", alignItems: "center" },
   chatName: { fontSize: 16, fontWeight: "700", color: "#1e293b" },
   chatTime: { fontSize: 12, color: "#94a3b8", marginRight: 8 },
   chatLastMessage: { fontSize: 14, color: "#64748b" },

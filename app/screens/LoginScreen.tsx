@@ -2,7 +2,6 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
@@ -23,7 +22,6 @@ type Props = NativeStackScreenProps<RootStackParamList, "Login">;
 export default function LoginScreen({ navigation }: Props) {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
-  const router = useRouter();
 
   const handleLogin = async () => {
     if (phoneNumber && password) {
@@ -38,12 +36,15 @@ export default function LoginScreen({ navigation }: Props) {
         await AsyncStorage.setItem("userRole", String(data.role));
         await AsyncStorage.setItem("userId", String(data.id));
 
-        // ✅ Redirect to ProfileScreen
-        router.navigate("/screens/HomeScreen");
+        // ✅ Reset the navigation state and set Home as the only route so
+        // the back button cannot return to the auth screens.
+        navigation.reset({ index: 0, routes: [{ name: "Home" }] });
       } catch (err) {
-        Alert.alert(
-          "Error" + err?.response?.data?.error || "Registration failed"
-        );
+        const msg =
+          (err as any)?.response?.data?.error ??
+          (err as any)?.message ??
+          "Login failed";
+        Alert.alert("Error", String(msg));
       }
     } else {
       Alert.alert("Please enter phoneNumber and password");
@@ -58,7 +59,7 @@ export default function LoginScreen({ navigation }: Props) {
       >
         <View style={styles.card}>
           <Image
-            source={require("../../assets/images/logo.jpeg")}
+            source={require("../../assets/images/logo.png")}
             style={styles.logo}
             resizeMode="contain"
           />
@@ -108,11 +109,9 @@ export default function LoginScreen({ navigation }: Props) {
               <Text style={styles.buttonText}>Login</Text>
             </LinearGradient>
           </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => router.navigate("/screens/RegisterScreen")}
-          >
+          <TouchableOpacity onPress={() => navigation.navigate("Register")}>
             <Text style={styles.registerText}>
-              Don't have an account?{" "}
+              Don&apos;t have an account?{" "}
               <Text style={{ color: "#6366f1", fontWeight: "bold" }}>
                 Register
               </Text>

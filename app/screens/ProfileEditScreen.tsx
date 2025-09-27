@@ -2,8 +2,9 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
-import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../navigation/AppNavigator";
 import {
   ActivityIndicator,
   Alert,
@@ -18,10 +19,11 @@ import {
 } from "react-native";
 import DropDownPicker from "react-native-dropdown-picker";
 import api from "../services/api"; // make sure api.ts is configured with your local IP
+import { API_BASE_URL } from "../utills/config";
 
-export default function ProfileEditScreen() {
-  const router = useRouter();
+type Props = NativeStackScreenProps<RootStackParamList, "EditProfile">;
 
+export default function ProfileEditScreen({ navigation }: Props) {
   const [id, setId] = useState("");
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
@@ -76,7 +78,9 @@ export default function ProfileEditScreen() {
       });
       setSuggestions(res.data.suggestedLocations || []);
     } catch (err) {
+      // Don't spam the user with alerts on every keystroke — log and clear
       console.error("Error fetching suggestions:", err);
+      setSuggestions([]);
     }
   };
 
@@ -130,10 +134,22 @@ export default function ProfileEditScreen() {
 
       await api.put("/profile/update", formData);
       Alert.alert("Success", "Profile updated successfully!");
-      router.navigate("/screens/ProfileScreen");
+      navigation.navigate("Profile");
     } catch (e) {
       console.error("Profile update failed:", e);
-      Alert.alert("Error", "Failed to update profile");
+      // axios error may include response.data with helpful info
+      const err: any = e;
+      let message = "Failed to update profile.";
+      if (err?.response?.data?.error) message = String(err.response.data.error);
+      else if (err?.response?.data?.message) message = String(err.response.data.message);
+      else if (err?.message) message = String(err.message);
+
+      // If network error, suggest checking API_BASE_URL resolution
+      if (message.toLowerCase().includes("network request failed") || message.toLowerCase().includes("network error")) {
+        message += `\n\nThe app is using API_BASE_URL=${API_BASE_URL}. If you're testing on a device or standalone APK, set MANUAL_HOST in app/utills/config.ts to your machine LAN IP or an ngrok tunnel.`;
+      }
+
+      Alert.alert("Error", message);
     }
   };
 
@@ -167,6 +183,19 @@ export default function ProfileEditScreen() {
     fetchUser();
   }, []);
 
+  const pingServer = async () => {
+    try {
+      // API_BASE_URL is like http://host:5000/api -> remove trailing /api to reach server root
+      const base = String(API_BASE_URL).replace(/\/api\/?$/i, "");
+      const res = await fetch(base + "/");
+      const text = await res.text().catch(() => "<no body>");
+      Alert.alert("Ping result", `status=${res.status}\n${text}`);
+    } catch (err: any) {
+      console.error("Ping failed:", err);
+      Alert.alert("Ping failed", String(err.message || err));
+    }
+  };
+
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
@@ -183,7 +212,22 @@ export default function ProfileEditScreen() {
       <Text style={styles.title}>Profile</Text>
 
       <View style={styles.profileHeader}>
-        <Image source={{ uri: profilePhoto }} style={styles.profileImage} />
+        {profilePhoto ? (
+          <Image source={{ uri: profilePhoto }} style={styles.profileImage} />
+        ) : (
+          <View
+            style={[
+              styles.profileImage,
+              {
+                backgroundColor: "#e6e7ee",
+                justifyContent: "center",
+                alignItems: "center",
+              },
+            ]}
+          >
+            <Ionicons name="person" size={36} color="#9ca3af" />
+          </View>
+        )}
         <TouchableOpacity style={styles.editIcon} onPress={pickImage}>
           <Ionicons name="create-outline" size={18} color="#fff" />
         </TouchableOpacity>

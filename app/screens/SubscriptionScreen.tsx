@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
+  Platform,
   View,
   Text,
   StyleSheet,
@@ -8,6 +10,7 @@ import {
   Dimensions,
   Alert,
 } from "react-native";
+
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import BottomTabs from "@/components/BottomTabs";
@@ -16,16 +19,20 @@ const { width } = Dimensions.get("window");
 
 export default function SubscriptionScreen() {
   const [selectedRole, setSelectedRole] = useState<"user" | "provider">("user");
+  const [purchasedPlan, setPurchasedPlan] = useState<string | null>(null);
 
-  // Plans for Users
-  const userPlans = [
+  const userPlans: {
+    id: number;
+    price: string;
+    contacts?: number;
+    duration: string;
+  }[] = [
     { id: 1, price: "₹99", contacts: 3, duration: "7 Days" },
     { id: 2, price: "₹199", contacts: 10, duration: "15 Days" },
     { id: 3, price: "₹299", contacts: 20, duration: "30 Days" },
     { id: 4, price: "₹499", contacts: 50, duration: "45 Days" },
   ];
 
-  // Plans for Service Providers
   const providerPlans = [
     { id: 1, price: "₹399", duration: "1 Month" },
     { id: 2, price: "₹999", duration: "6 Months" },
@@ -33,16 +40,70 @@ export default function SubscriptionScreen() {
     { id: 4, price: "₹2499", duration: "18 Months" },
   ];
 
-  const handleSubscribe = (plan: any) => {
-    Alert.alert("Subscribed!", `You selected ${plan.price} plan.`);
-    // 🔗 Later integrate with payment gateway
+  const plans = selectedRole === "user" ? userPlans : providerPlans;
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const plan = await AsyncStorage.getItem("purchasedPlan");
+        if (plan) setPurchasedPlan(plan);
+      } catch (e) {
+        console.warn("Failed to read purchasedPlan from storage", e);
+      }
+    };
+    load();
+  }, []);
+
+  const loadRazorpayScript = () => {
+    // Razorpay flow is web-only. Prevent calling web DOM APIs on native platforms.
+    if (Platform.OS !== "web") return Promise.resolve(false);
+    return new Promise((resolve) => {
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
   };
 
-  const plans = selectedRole === "user" ? userPlans : providerPlans;
+  const handleSubscribe = async (plan: any) => {
+    const res = await loadRazorpayScript();
+    if (!res) {
+      alert("Razorpay SDK failed to load");
+      return;
+    }
+
+    const options = {
+      key: "rzp_test_RMakN5bfeyuqEe",
+      amount: parseInt(plan.price.replace("₹", "")) * 100,
+      currency: "INR",
+      name: "Maid Service App",
+      description: `Subscription for ${plan.duration}`,
+      prefill: {
+        name: "Test User",
+        email: "test@example.com",
+        contact: "9999999999",
+      },
+      notes: {
+        role: selectedRole,
+        plan: plan.duration,
+      },
+      theme: { color: "#6366f1" },
+      handler: function (response: any) {
+        alert(
+          "Payment Successful! Payment ID: " + response.razorpay_payment_id
+        );
+        AsyncStorage.setItem("purchasedPlan", plan.duration).catch(() => {});
+        setPurchasedPlan(plan.duration);
+      },
+    };
+
+    const paymentObject: any = new (window as any).Razorpay(options);
+    paymentObject.open();
+  };
 
   return (
     <LinearGradient colors={["#eef2ff", "#e0e7ff"]} style={{ flex: 1 }}>
-      {/* Toggle Role */}
       <View style={styles.toggleContainer}>
         <TouchableOpacity
           style={[
@@ -89,34 +150,39 @@ export default function SubscriptionScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Subscription Plans */}
       <ScrollView contentContainerStyle={styles.scroll}>
         {plans.map((plan) => (
           <View key={plan.id} style={styles.card}>
             <Text style={styles.price}>{plan.price}</Text>
             {selectedRole === "user" ? (
               <Text style={styles.details}>
-                {plan.contacts} Contacts • {plan.duration}
+                {(plan as any).contacts ?? 0} Contacts • {plan.duration}
               </Text>
             ) : (
               <Text style={styles.details}>{plan.duration}</Text>
             )}
 
-            <TouchableOpacity
-              style={styles.subscribeButton}
-              onPress={() => handleSubscribe(plan)}
-            >
-              <LinearGradient
-                colors={["#6366f1", "#4f46e5"]}
-                style={styles.subscribeGradient}
+            {purchasedPlan === plan.duration ? (
+              <Text style={{ color: "green", fontWeight: "700" }}>
+                Purchased ✅
+              </Text>
+            ) : (
+              <TouchableOpacity
+                style={styles.subscribeButton}
+                onPress={() => handleSubscribe(plan)}
               >
-                <Text style={styles.subscribeText}>Subscribe</Text>
-              </LinearGradient>
-            </TouchableOpacity>
+                <LinearGradient
+                  colors={["#6366f1", "#4f46e5"]}
+                  style={styles.subscribeGradient}
+                >
+                  <Text style={styles.subscribeText}>Subscribe</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            )}
           </View>
         ))}
       </ScrollView>
-      {/* BOTTOM TABS */}
+
       <BottomTabs />
     </LinearGradient>
   );

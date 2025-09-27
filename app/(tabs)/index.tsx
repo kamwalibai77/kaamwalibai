@@ -1,23 +1,22 @@
-// app/index.tsx
 import React, { useEffect } from "react";
 import { View, StyleSheet, Image } from "react-native";
-import { useRouter } from "expo-router";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../navigation/AppNavigator";
+type Props = NativeStackScreenProps<RootStackParamList, "Index">;
 
-export default function IndexScreen() {
-  const router = useRouter();
-
+export default function IndexScreen({ navigation }: Props) {
   useEffect(() => {
     const timer = setTimeout(() => {
-      router.replace("../screens/RegisterScreen"); // redirect to RegisterScreen after 2s
+      navigation.replace("Register");
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [router]);
+  }, [navigation]);
 
   return (
     <View style={styles.container}>
       <Image
-        source={require("../../assets/images/logo.jpeg")}
+        source={require("../../assets/images/logo.png")}
         style={styles.logo}
         resizeMode="contain"
       />

@@ -2,7 +2,6 @@
 import BottomTab from "@/components/BottomTabs";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -24,11 +23,14 @@ import providersApi from "../services/serviceProviders";
 import serviceTypesApi from "../services/serviceTypes";
 import userApi from "../services/user";
 
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../navigation/AppNavigator";
+
 const { width } = Dimensions.get("window");
 
-export default function HomeScreen() {
-  const router = useRouter();
+type Props = NativeStackScreenProps<RootStackParamList, "Home">;
 
+export default function HomeScreen({ navigation }: Props) {
   const [selectedArea, setSelectedArea] = useState("Trimurti Nagar");
   const [searchQuery, setSearchQuery] = useState("");
   const [providers, setProviders] = useState([] as any[]);
@@ -48,7 +50,9 @@ export default function HomeScreen() {
 
   const handleLogout = async () => {
     await AsyncStorage.clear();
-    router.replace("/screens/LoginScreen");
+    if (typeof navigation !== "undefined") {
+      navigation.reset({ index: 0, routes: [{ name: "Login" }] });
+    }
   };
 
   const fetchServiceTypes = async () => {
@@ -247,46 +251,70 @@ export default function HomeScreen() {
         />
       </View>
 
-      {/* Service Type LIST */}
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <Text style={styles.sectionTitle}>Services</Text>
-        <FlatList
-          data={filteredServices}
-          keyExtractor={(item) => item.name}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 10 }}
-          renderItem={({ item }) => (
-            <TouchableOpacity style={styles.serviceCard}>
-              <Image source={{ uri: item.icon }} style={styles.serviceIcon} />
-              <Text style={styles.serviceName}>{item.name}</Text>
+      {/* Service Type LIST + Providers
+          Use a single vertical FlatList for providers and render the
+          horizontal services list inside ListHeaderComponent. This avoids
+          nesting VirtualizedLists inside a ScrollView which causes the
+          runtime warning and breaks windowing. */}
+      <FlatList
+        data={providers}
+        keyExtractor={(item) => item.id.toString()}
+        numColumns={2}
+        columnWrapperStyle={{ justifyContent: "space-between" }}
+        renderItem={renderProvider}
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={() => (
+          <>
+            <Text style={styles.sectionTitle}>Services</Text>
+
+            <FlatList
+              data={filteredServices}
+              keyExtractor={(item) => item.name}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 10 }}
+              renderItem={({ item }) => (
+                <TouchableOpacity style={styles.serviceCard}>
+                  {item.icon ? (
+                    <Image
+                      source={{ uri: item.icon }}
+                      style={styles.serviceIcon}
+                    />
+                  ) : (
+                    <View
+                      style={[
+                        styles.serviceIcon,
+                        {
+                          backgroundColor: "#f1f5f9",
+                          justifyContent: "center",
+                          alignItems: "center",
+                        },
+                      ]}
+                    >
+                      <Ionicons name="construct" size={20} color="#94a3b8" />
+                    </View>
+                  )}
+                  <Text style={styles.serviceName}>{item.name}</Text>
+                </TouchableOpacity>
+              )}
+            />
+
+            <Text style={styles.sectionTitle}>Nearby Providers</Text>
+          </>
+        )}
+        ListFooterComponent={
+          loading ? (
+            <ActivityIndicator size="small" color="#6366f1" />
+          ) : hasMore ? (
+            <TouchableOpacity
+              style={styles.loadMoreBtn}
+              onPress={() => setPage((prev) => prev + 1)}
+            >
+              <Text style={styles.loadMoreText}>Load More</Text>
             </TouchableOpacity>
-          )}
-        />
-
-        <Text style={styles.sectionTitle}>Nearby Providers</Text>
-
-        <FlatList
-          data={providers}
-          keyExtractor={(item) => item.id.toString()}
-          numColumns={2}
-          columnWrapperStyle={{ justifyContent: "space-between" }}
-          scrollEnabled={false}
-          renderItem={renderProvider}
-          ListFooterComponent={
-            loading ? (
-              <ActivityIndicator size="small" color="#6366f1" />
-            ) : hasMore ? (
-              <TouchableOpacity
-                style={styles.loadMoreBtn}
-                onPress={() => setPage((prev) => prev + 1)}
-              >
-                <Text style={styles.loadMoreText}>Load More</Text>
-              </TouchableOpacity>
-            ) : null
-          }
-        />
-      </ScrollView>
+          ) : null
+        }
+      />
 
       {/* SUBSCRIPTION MODAL */}
       <Modal
@@ -430,12 +458,9 @@ export default function HomeScreen() {
                     setModalVisible(false);
 
                     // Redirect to ChatBoxScreen with provider's ID and name
-                    router.push({
-                      pathname: "/screens/ChatBoxScreen",
-                      params: {
-                        userId: selectedProvider.provider.id,
-                        name: selectedProvider.provider.name,
-                      },
+                    navigation.navigate("ChatBox", {
+                      userId: selectedProvider.provider.id,
+                      name: selectedProvider.provider.name,
                     });
                   }}
                 >

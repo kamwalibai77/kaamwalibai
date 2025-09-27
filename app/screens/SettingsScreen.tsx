@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 import React, { useState } from "react";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../navigation/AppNavigator";
 import {
   Alert,
   Modal,
@@ -13,10 +14,21 @@ import {
 import BottomTab from "../../components/BottomTabs";
 import api from "../services/api";
 
-export default function SettingsScreen() {
-  const router = useRouter();
+type Props = NativeStackScreenProps<RootStackParamList, "Settings">;
+
+export default function SettingsScreen({ navigation }: Props) {
   // Web-only confirmation modal
   const [confirmVisible, setConfirmVisible] = useState(false);
+
+  const deleteAccount = async () => {
+    try {
+      await api.delete("profile");
+      Alert.alert("Success", "Profile deleted successfully!");
+    } catch (e) {
+      console.error("Profile delete failed:", e);
+      Alert.alert("Error", "Failed to delete profile");
+    }
+  };
 
   const handleDeleteAccount = () => {
     if (Platform.OS === "web") {
@@ -35,17 +47,6 @@ export default function SettingsScreen() {
         ]
       );
     }
-
-    const deleteAccount = async () => {
-      try {
-        await api.delete("profile");
-        Alert.alert("Success", "Profile deleted successfully!");
-      } catch (e) {
-        console.error("Profile delete failed:", e);
-        Alert.alert("Error", "Failed to delete profile");
-      }
-    };
-
     Alert.alert(
       "Delete Account",
       "Are you sure you want to delete your account? This action cannot be undone.",
@@ -56,7 +57,7 @@ export default function SettingsScreen() {
           style: "destructive",
           onPress: () => {
             console.log("Account deleted");
-            router.replace("/screens/LoginScreen"); // ✅ matches AppNavigator
+            navigation.replace("Login"); // ✅ matches AppNavigator
           },
         },
       ]
@@ -69,7 +70,7 @@ export default function SettingsScreen() {
         {/* Reviews & Ratings */}
         <TouchableOpacity
           style={styles.option}
-          onPress={() => router.push("/screens/ReviewFormScreen")} // 👈 only works if added in AppNavigator
+          onPress={() => navigation.navigate("ReveiwForm")} // 👈 only works if added in AppNavigator
         >
           <Ionicons name="star" size={22} color="#333" />
           <Text style={styles.optionText}>Reviews & Ratings</Text>
@@ -78,7 +79,7 @@ export default function SettingsScreen() {
         {/* Privacy & Policy */}
         <TouchableOpacity
           style={styles.option}
-          onPress={() => router.push("/screens/PrivacyPolicyScreen")} // ✅ exact match
+          onPress={() => navigation.navigate("PrivacyPolicy")} // ✅ exact match
         >
           <Ionicons name="shield-checkmark-outline" size={22} color="#333" />
           <Text style={styles.optionText}>Privacy & Policy</Text>
@@ -87,7 +88,7 @@ export default function SettingsScreen() {
         {/* About Us */}
         <TouchableOpacity
           style={styles.option}
-          onPress={() => router.push("/screens/AboutUsScreen")} // ✅ exact match
+          onPress={() => navigation.navigate("Aboutus")} // ✅ exact match
         >
           <Ionicons name="information-circle-outline" size={22} color="#333" />
           <Text style={styles.optionText}>About Us</Text>
@@ -121,7 +122,7 @@ export default function SettingsScreen() {
                     style={[styles.confirmBtn, { backgroundColor: "#ef4444" }]}
                     onPress={() => {
                       deleteAccount();
-                      router.replace("/screens/LoginScreen"); // ✅ matches AppNavigator
+                      navigation.replace("Login"); // ✅ matches AppNavigator
                     }}
                   >
                     <Text style={styles.confirmBtnText}>Yes</Text>

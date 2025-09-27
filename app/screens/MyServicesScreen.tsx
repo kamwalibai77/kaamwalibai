@@ -13,7 +13,8 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../navigation/AppNavigator";
 import BottomTab from "@/components/BottomTabs";
 import FloatingAddButton from "@/components/FloatingAddButton";
 import AddService from "./AddServiceScreen";
@@ -22,8 +23,9 @@ import serviceProviders from "../services/serviceProviders";
 
 const { width } = Dimensions.get("window");
 
-export default function MyserviceScreen() {
-  const router = useRouter();
+type Props = NativeStackScreenProps<RootStackParamList, "MyServices">;
+
+export default function MyserviceScreen({ navigation }: Props) {
   const [jobList, setJobList] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);

@@ -13,11 +13,14 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "./../services/api";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../navigation/AppNavigator";
 
-export default function RegisterScreen() {
+type Props = NativeStackScreenProps<RootStackParamList, "Register">;
+
+export default function RegisterScreen({ navigation }: Props) {
   const [name, setName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
@@ -25,7 +28,7 @@ export default function RegisterScreen() {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
 
-  const router = useRouter();
+  // navigation will be passed as prop
   const { width } = useWindowDimensions();
   const isPhoneNumber = width < 600;
 
@@ -47,11 +50,20 @@ export default function RegisterScreen() {
         role,
       });
       const data = await response.data;
+
+      // Normalize role to match app's canonical form (serviceProvider or user)
+      const rawRole = (data.role || role || "user").toString();
+      const compact = rawRole.replace(/[^a-zA-Z]/g, "").toLowerCase();
+      const normalizedRole =
+        compact === "serviceprovider" ? "serviceProvider" : "user";
+
       await AsyncStorage.setItem("token", String(data.token));
-      await AsyncStorage.setItem("userRole", data.role);
+      await AsyncStorage.setItem("userRole", normalizedRole);
       await AsyncStorage.setItem("userId", String(data.id));
-      router.navigate("/screens/ProfileScreen");
-    } catch (err) {
+
+      // Reset navigation to Home so back button doesn't return to Register
+      navigation.reset({ index: 0, routes: [{ name: "Home" }] });
+    } catch (err: any) {
       alert("Error " + (err?.response?.data?.error || "Registration failed"));
     }
   };
@@ -69,12 +81,12 @@ export default function RegisterScreen() {
           ]}
         >
           <Image
-            source={require("../../assets/images/logo.jpeg")}
+            source={require("../../assets/images/logo.png")}
             style={[styles.logo, isPhoneNumber && { width: 80, height: 80 }]}
             resizeMode="contain"
           />
           <Text style={[styles.title, isPhoneNumber && { fontSize: 28 }]}>
-            Create Your Account
+            Welcome to कामवालीबाई
           </Text>
           <Text style={[styles.subtitle, isPhoneNumber && { fontSize: 14 }]}>
             Sign up as a User or Service Provider
@@ -235,7 +247,7 @@ export default function RegisterScreen() {
           </TouchableOpacity>
 
           {/* Login Redirect */}
-          <TouchableOpacity onPress={() => router.push("/screens/LoginScreen")}>
+          <TouchableOpacity onPress={() => navigation.navigate("Login")}>
             <Text
               style={[styles.registerText, isPhoneNumber && { fontSize: 14 }]}
             >
@@ -342,7 +354,7 @@ const styles = StyleSheet.create({
   },
   cardWeb: { width: "60%", maxWidth: 800, minHeight: 650, padding: 50 },
   cardPhoneNumber: { width: "90%", padding: 24, minHeight: 500 },
-  logo: { width: 120, height: 120, marginBottom: 30 },
+  logo: { width: 180, height: 180, marginBottom: 30 },
   title: {
     fontSize: 36,
     fontWeight: "bold",

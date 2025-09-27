@@ -1,12 +1,8 @@
 // app/layout.tsx
 import React from "react";
-import { Stack } from "expo-router";
 
+// Neutralized layout to avoid expo-router building its own navigation stack
+// The app now uses React Navigation (AppNavigator) as the single router.
 export default function RootLayout() {
-  return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="index" /> {/* Splash Screen */}
-      <Stack.Screen name="RegisterScreen" /> {/* Register Screen */}
-    </Stack>
-  );
+  return null;
 }

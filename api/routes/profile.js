@@ -58,6 +58,18 @@ router.put(
       // Upload to Cloudinary if file present
       let cloudinaryUrl = null;
       if (localFilePath) {
+        if (
+          !process.env.CLOUDINARY_API_KEY ||
+          !process.env.CLOUDINARY_API_SECRET
+        ) {
+          // Cloudinary not configured — cleanup and error
+          if (fs.existsSync(localFilePath)) fs.unlinkSync(localFilePath);
+          await transaction.rollback();
+          return res
+            .status(500)
+            .json({ error: "Cloudinary not configured on server" });
+        }
+
         const uploadRes = await cloudinary.uploader.upload(localFilePath, {
           folder: "maid-service",
         });
@@ -66,7 +78,7 @@ router.put(
         updatedUser.profilePhoto = cloudinaryUrl;
         await updatedUser.save({ transaction });
 
-        fs.unlinkSync(localFilePath);
+        if (fs.existsSync(localFilePath)) fs.unlinkSync(localFilePath);
       }
 
       await transaction.commit();
@@ -156,19 +168,34 @@ router.get("/maps/suggest", async (req, res) => {
     )}&format=json&limit=5`;
 
     const response = await fetch(url);
+    if (!response.ok) {
+      const body = await response.text().catch(() => "<no body>");
+      console.error("LocationIQ non-OK response:", response.status, body);
+      return res
+        .status(502)
+        .json({
+          error: "Location provider returned an error",
+          status: response.status,
+        });
+    }
+
     const data = await response.json();
 
-    const suggestedLocations = data.map((item) => ({
-      placeName: item.display_name,
-      placeAddress: item.display_name,
-      lat: item.lat,
-      lng: item.lon,
-    }));
+    const suggestedLocations = (Array.isArray(data) ? data : []).map(
+      (item) => ({
+        placeName: item.display_name,
+        placeAddress: item.display_name,
+        lat: item.lat,
+        lng: item.lon,
+      })
+    );
 
-    res.json({ suggestedLocations });
+    return res.json({ suggestedLocations });
   } catch (err) {
-    console.error("LocationIQ API Error:", err.message);
-    res.status(500).json({ error: "Failed to fetch location suggestions" });
+    console.error("LocationIQ API Error:", err && err.stack ? err.stack : err);
+    return res
+      .status(500)
+      .json({ error: "Failed to fetch location suggestions" });
   }
 });
 

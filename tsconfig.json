@@ -4,8 +4,10 @@
     "strict": true,
     "paths": {
       "@/*": ["./*"]
-    }
+    },
+    "importHelpers": true
   },
+
   "include": [
     "**/*.ts",
     "**/*.tsx",

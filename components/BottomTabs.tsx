@@ -7,11 +7,19 @@ import {
   MaterialCommunityIcons,
   FontAwesome5,
 } from "@expo/vector-icons";
-import { useRouter, usePathname } from "expo-router";
+import {
+  useNavigation,
+  useRoute,
+  NavigationProp,
+  StackActions,
+} from "@react-navigation/native";
 
 export default function BottomTabs() {
-  const router = useRouter();
-  const pathname = usePathname();
+  const navigation =
+    useNavigation<NavigationProp<Record<string, object | undefined>>>();
+  const route = useRoute();
+
+  const pathname = route.name as string;
 
   const activeColor = "#4f46e5"; // stylish purple-blue
   const inactiveColor = "#94a3b8"; // soft gray
@@ -34,27 +42,28 @@ export default function BottomTabs() {
   }, []);
 
   if (loading) return null; // optional: show loader/spinner here
+  // Match the same role string AppNavigator expects ("serviceProvider").
+  // Allow common case variants (case-insensitive) but prefer the camelCase value
+  const isServiceProvider =
+    role === "serviceProvider" ||
+    (role || "").toLowerCase() === "serviceprovider";
 
   return (
     <View style={styles.tabBar}>
       {/* Home */}
       <TouchableOpacity
         style={styles.tabItem}
-        onPress={() => router.replace("/screens/HomeScreen")}
+        onPress={() => navigation.dispatch(StackActions.replace("Home"))}
       >
         <Ionicons
           name="home-outline"
           size={28}
-          color={pathname.includes("HomeScreen") ? activeColor : inactiveColor}
+          color={pathname === "Home" ? activeColor : inactiveColor}
         />
         <Text
           style={[
             styles.tabText,
-            {
-              color: pathname.includes("HomeScreen")
-                ? activeColor
-                : inactiveColor,
-            },
+            { color: pathname === "Home" ? activeColor : inactiveColor },
           ]}
         >
           Home
@@ -64,21 +73,17 @@ export default function BottomTabs() {
       {/* Chat */}
       <TouchableOpacity
         style={styles.tabItem}
-        onPress={() => router.replace("/screens/ChatScreen")}
+        onPress={() => navigation.dispatch(StackActions.replace("Chat"))}
       >
         <MaterialCommunityIcons
           name="chat-processing-outline"
           size={28}
-          color={pathname.includes("ChatScreen") ? activeColor : inactiveColor}
+          color={pathname === "Chat" ? activeColor : inactiveColor}
         />
         <Text
           style={[
             styles.tabText,
-            {
-              color: pathname.includes("ChatScreen")
-                ? activeColor
-                : inactiveColor,
-            },
+            { color: pathname === "Chat" ? activeColor : inactiveColor },
           ]}
         >
           Chat
@@ -88,24 +93,20 @@ export default function BottomTabs() {
       {/* My Services */}
       <TouchableOpacity
         style={styles.tabItem}
-        onPress={() => router.replace("/screens/SubscriptionScreen")}
+        onPress={() =>
+          navigation.dispatch(StackActions.replace("Subscription"))
+        }
       >
         <FontAwesome5
           name="briefcase"
           size={26}
-          color={
-            pathname.includes("SubscriptionScreen")
-              ? activeColor
-              : inactiveColor
-          }
+          color={pathname === "Subscription" ? activeColor : inactiveColor}
         />
         <Text
           style={[
             styles.tabText,
             {
-              color: pathname.includes("SubscriptionScreen")
-                ? activeColor
-                : inactiveColor,
+              color: pathname === "Subscription" ? activeColor : inactiveColor,
             },
           ]}
         >
@@ -114,27 +115,30 @@ export default function BottomTabs() {
       </TouchableOpacity>
 
       {/* My Services */}
-      {role === "ServiceProvider" && (
+      {isServiceProvider && (
         <TouchableOpacity
           style={styles.tabItem}
-          onPress={() => router.replace("/screens/MyServicesScreen")}
+          onPress={() => {
+            // Only attempt to go to MyServices when we believe the user is a
+            // service provider. Otherwise fall back to the Subscription screen
+            // to avoid dispatching replace for an unregistered route.
+            if (isServiceProvider) {
+              navigation.dispatch(StackActions.replace("MyServices"));
+            } else {
+              navigation.dispatch(StackActions.replace("Subscription"));
+            }
+          }}
         >
           <FontAwesome5
             name="briefcase"
             size={26}
-            color={
-              pathname.includes("MyServicesScreen")
-                ? activeColor
-                : inactiveColor
-            }
+            color={pathname === "MyServices" ? activeColor : inactiveColor}
           />
           <Text
             style={[
               styles.tabText,
               {
-                color: pathname.includes("MyServicesScreen")
-                  ? activeColor
-                  : inactiveColor,
+                color: pathname === "MyServices" ? activeColor : inactiveColor,
               },
             ]}
           >
@@ -145,23 +149,17 @@ export default function BottomTabs() {
       {/* Profile */}
       <TouchableOpacity
         style={styles.tabItem}
-        onPress={() => router.replace("/screens/ProfileScreen")}
+        onPress={() => navigation.dispatch(StackActions.replace("Profile"))}
       >
         <Ionicons
           name="person-circle-outline"
           size={28}
-          color={
-            pathname.includes("ProfileScreen") ? activeColor : inactiveColor
-          }
+          color={pathname === "Profile" ? activeColor : inactiveColor}
         />
         <Text
           style={[
             styles.tabText,
-            {
-              color: pathname.includes("ProfileScreen")
-                ? activeColor
-                : inactiveColor,
-            },
+            { color: pathname === "Profile" ? activeColor : inactiveColor },
           ]}
         >
           Profile
