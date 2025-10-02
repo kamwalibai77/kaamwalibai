@@ -117,18 +117,25 @@ export default function ProfileScreen({ navigation }: Props) {
             />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.actionRow}
-            onPress={() => navigation.navigate("KYC")}
-          >
-            <Ionicons name="document-text-outline" size={20} color="#6366f1" />
-            <Text style={styles.actionText}>Complete KYC</Text>
-            <Ionicons
-              name="chevron-forward-outline"
-              size={18}
-              color="#cbd5e1"
-            />
-          </TouchableOpacity>
+          {/* Only show Complete KYC for Service Provider */}
+          {user.role === "ServiceProvider" && (
+            <TouchableOpacity
+              style={styles.actionRow}
+              onPress={() => navigation.navigate("KYC")}
+            >
+              <Ionicons
+                name="document-text-outline"
+                size={20}
+                color="#6366f1"
+              />
+              <Text style={styles.actionText}>Complete KYC</Text>
+              <Ionicons
+                name="chevron-forward-outline"
+                size={18}
+                color="#cbd5e1"
+              />
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity
             style={styles.actionRow}

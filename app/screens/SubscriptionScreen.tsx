@@ -22,14 +22,8 @@ const { width } = Dimensions.get("window");
 export default function SubscriptionScreen() {
   const [selectedRole, setSelectedRole] = useState<"user" | "provider">("user");
   const [purchasedPlan, setPurchasedPlan] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null); // new
 
-  const userPlans: {
-    id: number;
-    price: string;
-    contacts?: number;
-    duration: string;
-  }[] = [
+  const userPlans = [
     { id: 1, price: "₹99", contacts: 3, duration: "7 Days" },
     { id: 2, price: "₹199", contacts: 10, duration: "15 Days" },
     { id: 3, price: "₹299", contacts: 20, duration: "30 Days" },
@@ -50,11 +44,8 @@ export default function SubscriptionScreen() {
       try {
         const plan = await AsyncStorage.getItem("purchasedPlan");
         if (plan) setPurchasedPlan(plan);
-
-        const uid = await AsyncStorage.getItem("userId"); // load user id
-        if (uid) setUserId(uid);
       } catch (e) {
-        console.warn("Failed to read from storage", e);
+        console.warn("Failed to read purchasedPlan from storage", e);
       }
     };
     load();
@@ -78,34 +69,20 @@ export default function SubscriptionScreen() {
         Alert.alert("Invalid amount");
         return;
       }
-      let resp: Response | null = null;
-      const token = await AsyncStorage.getItem("token");
-      if (token) {
-        resp = await fetch(`${API_BASE_URL}/payments/create-link/user`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            amount: numeric,
-            currency: "INR",
-            notes: { role: selectedRole, plan: plan.duration, user_id: userId },
-          }),
-        });
-      }
 
-      if (!resp) {
-        resp = await fetch(`${API_BASE_URL}/payments/create-link`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            amount: numeric,
-            currency: "INR",
-            notes: { role: selectedRole, plan: plan.duration, user_id: userId },
-          }),
-        });
-      }
+      const token = await AsyncStorage.getItem("token");
+      const resp = await fetch(`${API_BASE_URL}/payments/create-link/user`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+        body: JSON.stringify({
+          amount: numeric,
+          currency: "INR",
+          notes: { role: selectedRole, plan: plan.duration },
+        }),
+      });
 
       const json = await resp.json();
       if (!resp.ok || !json.link) {
@@ -129,122 +106,66 @@ export default function SubscriptionScreen() {
     }
   };
 
+  const saveSubscription = async (paymentId: string, plan: any) => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      const numeric = Number(String(plan.price).replace(/[^0-9]/g, ""));
+      const res = await fetch(`${API_BASE_URL}/payments/verify`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+        body: JSON.stringify({
+          razorpay_payment_id: paymentId,
+          plan_id: plan.id,
+          amount: numeric,
+        }),
+      });
+      const json = await res.json();
+      if (res.ok) console.log("Subscription saved on backend:", json);
+      else console.warn("Failed to save subscription:", json);
+    } catch (err) {
+      console.error("Error saving subscription:", err);
+    }
+  };
+
   const handleSubscribe = async (plan: any) => {
-    const saveSubscription = async (paymentId: string) => {
-      try {
-        const token = await AsyncStorage.getItem("token");
-        const res = await fetch(`${API_BASE_URL}/payments/verify`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: token ? `Bearer ${token}` : "",
-          },
-          body: JSON.stringify({
-            razorpay_payment_id: paymentId,
-            plan_id: plan.id,
-            amount: Number(String(plan.price).replace(/[^0-9]/g, "")),
-          }),
-        });
-        const json = await res.json();
-        if (res.ok) console.log("Subscription saved on backend:", json);
-        else console.warn("Failed to save subscription:", json);
-      } catch (err) {
-        console.error("Error saving subscription:", err);
-      }
-    };
+    // Force fallback for Expo Go
+    if (Platform.OS !== "web") {
+      return fallbackToPaymentLink(plan);
+    }
 
     // Web SDK
-    if (Platform.OS === "web") {
-      const res = await loadRazorpayScript();
-      if (!res) return alert("Razorpay SDK failed to load");
+    const res = await loadRazorpayScript();
+    if (!res) return alert("Razorpay SDK failed to load");
 
-      const options = {
-        key: "rzp_test_RMakN5bfeyuqEe",
-        amount: Number(String(plan.price).replace(/[^0-9]/g, "")) * 100,
-        currency: "INR",
-        name: "Maid Service App",
-        description: `Subscription for ${plan.duration}`,
-        prefill: {
-          name: "Test User",
-          email: "test@example.com",
-          contact: "9999999999",
-        },
-        notes: {
-          role: selectedRole,
-          plan: plan.duration,
-          user_id: userId || "guest",
-        }, // updated
-        theme: { color: "#6366f1" },
-        handler: async (response: any) => {
-          alert(
-            "Payment Successful! Payment ID: " + response.razorpay_payment_id
-          );
-          AsyncStorage.setItem("purchasedPlan", plan.duration).catch(() => {});
-          setPurchasedPlan(plan.duration);
+    const amountNumeric = Number(String(plan.price).replace(/[^0-9]/g, ""));
+    const options = {
+      key: "rzp_test_RMakN5bfeyuqEe",
+      amount: amountNumeric * 100,
+      currency: "INR",
+      name: "Maid Service App",
+      description: `Subscription for ${plan.duration}`,
+      prefill: {
+        name: "Test User",
+        email: "test@example.com",
+        contact: "9999999999",
+      },
+      notes: { role: selectedRole, plan: plan.duration },
+      theme: { color: "#6366f1" },
+      handler: async (response: any) => {
+        alert(
+          "Payment Successful! Payment ID: " + response.razorpay_payment_id
+        );
+        AsyncStorage.setItem("purchasedPlan", plan.duration).catch(() => {});
+        setPurchasedPlan(plan.duration);
+        await saveSubscription(response.razorpay_payment_id, plan);
+      },
+    };
 
-          await saveSubscription(response.razorpay_payment_id);
-        },
-      };
-
-      const paymentObject: any = new (window as any).Razorpay(options);
-      paymentObject.open();
-      return;
-    }
-
-    // Native SDK
-    try {
-      const Razorpay = require("react-native-razorpay");
-      if (Razorpay) {
-        const amount = Number(String(plan.price).replace(/[^0-9]/g, "")) * 100;
-        const optionsNative: any = {
-          description: `Subscription for ${plan.duration}`,
-          currency: "INR",
-          key: "rzp_test_RMakN5bfeyuqEe",
-          amount: String(amount),
-          name: "Maid Service App",
-          prefill: {
-            email: "test@example.com",
-            contact: "9999999999",
-            name: "Test User",
-          },
-          notes: {
-            role: selectedRole,
-            plan: plan.duration,
-            user_id: userId || "guest",
-          }, // updated
-          theme: { color: "#6366f1" },
-        };
-
-        const rzp = new Razorpay(optionsNative);
-        rzp
-          .open()
-          .then(async (payment: any) => {
-            Alert.alert(
-              "Payment Successful",
-              `Payment ID: ${payment.razorpay_payment_id}`
-            );
-            AsyncStorage.setItem("purchasedPlan", plan.duration).catch(
-              () => {}
-            );
-            setPurchasedPlan(plan.duration);
-
-            await saveSubscription(payment.razorpay_payment_id);
-          })
-          .catch((err: any) => {
-            console.warn("Native Razorpay error:", err);
-            fallbackToPaymentLink(plan).catch(() => {});
-          });
-        return;
-      }
-    } catch (e) {
-      console.warn(
-        "react-native-razorpay not available, falling back to payment link",
-        e
-      );
-    }
-
-    // Fallback to server payment link
-    await fallbackToPaymentLink(plan);
+    const paymentObject: any = new (window as any).Razorpay(options);
+    paymentObject.open();
   };
 
   return (

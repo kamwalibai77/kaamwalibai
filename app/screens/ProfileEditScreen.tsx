@@ -1,8 +1,9 @@
+// screens/ProfileEditScreen.tsx
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/AppNavigator";
 import {
@@ -17,7 +18,6 @@ import {
   TouchableOpacity,
   Platform,
 } from "react-native";
-import { API_BASE_URL } from "../utills/config";
 import DropDownPicker from "react-native-dropdown-picker";
 import api from "../services/api"; // make sure api.ts is configured with your local IP
 
@@ -42,8 +42,7 @@ export default function ProfileEditScreen({ navigation }: Props) {
   // location search states
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<any[]>([]);
-  const [pinging, setPinging] = useState(false);
-  const [pingResult, setPingResult] = useState<string | null>(null);
+  const lastQueryRef = useRef<string>("");
 
   const genderItems = [
     { label: "Male", value: "male" },
@@ -69,11 +68,24 @@ export default function ProfileEditScreen({ navigation }: Props) {
   };
 
   const fetchSuggestions = async (text: string) => {
-    setQuery(text);
-    if (text.length < 2) {
+    // Do not trigger API for backslash or empty text
+    if (text.includes("\\") || text.length < 3) {
       setSuggestions([]);
+      setQuery(text);
+      lastQueryRef.current = text;
       return;
     }
+
+    // Avoid API trigger if user is deleting text (backspace)
+    if (text.length < lastQueryRef.current.length) {
+      setQuery(text);
+      lastQueryRef.current = text;
+      return;
+    }
+
+    setQuery(text);
+    lastQueryRef.current = text;
+
     try {
       const res = await api.get("profile/maps/suggest", {
         params: { query: text },
@@ -116,7 +128,6 @@ export default function ProfileEditScreen({ navigation }: Props) {
       alert("Phone number must be 10 digits after +91");
       return;
     }
-    let saving = true;
     try {
       setLoading(true);
       const formData = new FormData();
@@ -131,11 +142,9 @@ export default function ProfileEditScreen({ navigation }: Props) {
         const fileName = profilePhoto.split("/").pop() || "profile.jpg";
 
         if (Platform.OS === "web") {
-          // On web we must fetch the resource and append a real File/Blob
           try {
             const resp = await fetch(profilePhoto);
             const blob = await resp.blob();
-            // File constructor is available in browsers
             const webFile: any = new File([blob], fileName, {
               type: blob.type || "image/jpeg",
             });
@@ -145,7 +154,6 @@ export default function ProfileEditScreen({ navigation }: Props) {
             throw new Error("Failed to read selected image for upload (web)");
           }
         } else {
-          // React Native: append an object with uri
           const file: any = {
             uri: profilePhoto,
             name: fileName,
@@ -155,7 +163,6 @@ export default function ProfileEditScreen({ navigation }: Props) {
         }
       }
 
-      // Let axios/setups set headers correctly for multipart requests
       await api.put("/profile/update", formData);
       Alert.alert("Success", "Profile updated successfully!");
       navigation.navigate("Profile");
@@ -166,20 +173,6 @@ export default function ProfileEditScreen({ navigation }: Props) {
       Alert.alert("Error", `Failed to update profile: ${errMsg}`);
     } finally {
       setLoading(false);
-      saving = false;
-    }
-  };
-
-  const pingApi = async () => {
-    setPinging(true);
-    setPingResult(null);
-    try {
-      const res = await api.get("/");
-      setPingResult(`OK: ${JSON.stringify(res.data).slice(0, 200)}`);
-    } catch (err: any) {
-      setPingResult(`ERR: ${err?.message || JSON.stringify(err)}`);
-    } finally {
-      setPinging(false);
     }
   };
 
@@ -260,22 +253,7 @@ export default function ProfileEditScreen({ navigation }: Props) {
         />
 
         <Text style={styles.label}>Address</Text>
-        <View style={styles.pingContainer}>
-          <Text style={{ fontSize: 12, color: "#374151" }}>
-            API: {API_BASE_URL}
-          </Text>
-          <TouchableOpacity
-            style={styles.pingButton}
-            onPress={pingApi}
-            disabled={pinging}
-          >
-            {pinging ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={{ color: "#fff" }}>Ping API</Text>
-            )}
-          </TouchableOpacity>
-        </View>
+
         <View style={styles.searchRow}>
           <Ionicons
             name="search-outline"
@@ -372,6 +350,8 @@ export default function ProfileEditScreen({ navigation }: Props) {
     </ScrollView>
   );
 }
+
+// ...styles remain the same
 
 const styles = StyleSheet.create({
   scrollContainer: {
