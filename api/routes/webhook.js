@@ -9,18 +9,19 @@ const router = express.Router();
 const RAZORPAY_WEBHOOK_SECRET =
   process.env.RAZORPAY_WEBHOOK_SECRET || "your_webhook_secret";
 
+// Use raw body so signature verification is correct
 router.post(
   "/razorpay",
   express.raw({ type: "application/json" }),
   async (req, res) => {
     try {
       const webhookSignature = req.headers["x-razorpay-signature"];
-      const body = req.body; // Buffer
-      const bodyString = body.toString("utf8"); // convert to string for signature verification
+      const body = req.body; // raw Buffer
 
+      // Verify webhook signature
       const expectedSignature = crypto
         .createHmac("sha256", RAZORPAY_WEBHOOK_SECRET)
-        .update(bodyString)
+        .update(body)
         .digest("hex");
 
       if (expectedSignature !== webhookSignature) {
@@ -31,72 +32,88 @@ router.post(
         return res.status(400).send("Invalid signature");
       }
 
-      const parsed = JSON.parse(bodyString);
+      const parsed = JSON.parse(body.toString());
       const event = parsed.event;
-
-      // Extract payload
-      const payloadCandidates = [
-        parsed.payload?.payment?.entity,
-        parsed.payload?.payment_link?.entity,
-        parsed.payload?.subscription?.entity,
-        parsed.payload?.order?.entity,
-      ];
-      const payload = payloadCandidates.find((p) => p && typeof p === "object");
+      const payload =
+        parsed.payload.payment?.entity || parsed.payload.subscription?.entity;
 
       if (!payload) {
-        console.warn("[webhook] no payload entity found", { event });
         return res.status(200).send("No payload to process");
       }
 
-      const paymentId =
-        payload.id || payload.payment_id || payload.reference_id || null;
-      const notes =
-        payload.notes || parsed.payload?.payment_link?.entity?.notes || {};
-      const planId = notes.plan || "basic";
-      const userId = notes.user_id || "guest";
-      const amount = payload.amount || payload.amount_paid || 0;
+      const paymentId = payload.id;
+      const notes = payload.notes || {};
+      const planId = notes.plan_id || notes.plan || "basic";
+
+      // FIX: user_id now comes from notes
+      const userId = notes.user_id || notes.user || "guest";
+
+      // FIX: amount divided by 100 to save actual UI amount
+      const amount = payload.amount ? payload.amount / 100 : 0;
       const currency = payload.currency || "INR";
 
+      // Upsert subscription record by payment_id
       const values = {
         user_id: String(userId),
         plan_id: String(planId),
         payment_id: String(paymentId),
-        amount: Number(amount) / 100, // convert paise to INR
+        amount: Number(amount),
         currency: String(currency),
         start_date: new Date(),
-        status:
-          event === "payment_link.paid" || event === "payment.captured"
-            ? "active"
-            : "failed",
-        end_date:
-          event === "payment_link.paid" || event === "payment.captured"
-            ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-            : null,
       };
 
+      if (event === "payment.captured" || event === "payment_link.paid") {
+        values.status = "active";
+        values.end_date = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      } else if (event === "payment.failed") {
+        values.status = "failed";
+        values.end_date = null;
+      }
+
+      // Try update first, otherwise create
       const [record, created] = await Subscription.findOrCreate({
         where: { payment_id: String(paymentId) },
         defaults: values,
       });
 
       if (!created) {
+        // update existing
         await record.update(values);
       }
 
-      // Update user subscription
-      if (userId !== "guest" && values.status === "active") {
-        const user = await User.findByPk(userId);
-        if (user) {
-          user.isSubscribed = true;
-          await user.save({ fields: ["isSubscribed"] });
-          console.log("[webhook] user marked as subscribed", { userId });
+      // Update user's subscription status if payment is successful
+      try {
+        const uid = notes.user_id || notes.user || null;
+        if (
+          (event === "payment.captured" || event === "payment_link.paid") &&
+          uid &&
+          uid !== "guest"
+        ) {
+          const user = await User.findByPk(String(uid));
+          if (user) {
+            user.isSubscribed = true;
+            await user.save({ fields: ["isSubscribed"] });
+            console.log("[webhook] marked user as subscribed", { userId: uid });
+          } else {
+            console.warn("[webhook] user not found for subscription webhook", {
+              userId: uid,
+            });
+          }
         }
+      } catch (e) {
+        console.error(
+          "[webhook] failed to update user subscription status:",
+          e && e.stack ? e.stack : e
+        );
       }
 
       console.log("[webhook] processed", { event, paymentId, created });
       return res.status(200).send("Webhook processed");
-    } catch (err) {
-      console.error("[webhook] error:", err && err.stack ? err.stack : err);
+    } catch (error) {
+      console.error(
+        "Webhook error:",
+        error && error.stack ? error.stack : error
+      );
       return res.status(500).send("Server error");
     }
   }

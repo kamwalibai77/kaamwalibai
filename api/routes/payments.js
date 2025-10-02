@@ -41,13 +41,12 @@ router.post("/validate", async (req, res) => {
 
     const respData = rpResp.data || {};
 
-    // Try to persist a subscription record when validation returns a payment/payment_link
+    // Best-effort: persist subscription info when validate returns a payload
     try {
       const models = await import("../models/index.js");
       const Subscription = models.default.Subscription;
       const User = models.default.User;
 
-      // Try multiple payload shapes similar to webhook handler
       const parsed = respData;
       const payloadCandidates = [
         parsed.payload?.payment?.entity,
@@ -61,16 +60,20 @@ router.post("/validate", async (req, res) => {
 
       if (payload) {
         const paymentId =
-          payload.id || payload.payment_id || payload.reference_id || null;
+          payload.payment_id || payload.id || payload.reference_id || null;
         const notes =
           payload.notes || parsed.payload?.payment_link?.entity?.notes || {};
         const planId = notes.plan_id || notes.plan || "basic";
         const userId = notes.user_id || notes.user || null;
-        const amount = payload.amount || payload.amount_paid || 0;
+        const amount = Number(payload.amount || payload.amount_paid || 0) || 0;
         const currency = payload.currency || "INR";
 
-        // Only persist when we have some identifier
-        if (paymentId) {
+        if (!paymentId) {
+          console.warn(
+            "/validate: no identifier found in payload, skipping persist",
+            { payload }
+          );
+        } else {
           const values = {
             user_id: userId ? String(userId) : String(userId || "guest"),
             plan_id: String(planId),
@@ -82,26 +85,32 @@ router.post("/validate", async (req, res) => {
             end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
           };
 
-          const [record, created] = await Subscription.findOrCreate({
-            where: { payment_id: String(paymentId) },
-            defaults: values,
-          });
-          if (!created) {
-            await record.update(values);
-          }
+          try {
+            const [record, created] = await Subscription.findOrCreate({
+              where: { payment_id: String(paymentId) },
+              defaults: values,
+            });
+            if (!created) await record.update(values);
 
-          // Mark user as subscribed if user id present
-          if (userId) {
-            try {
-              const user = await User.findByPk(String(userId));
-              if (user) {
-                user.isSubscribed = true;
-                await user.save({ fields: ["isSubscribed"] });
-                console.log("[validate] marked user as subscribed", { userId });
+            if (userId) {
+              try {
+                const user = await User.findByPk(String(userId));
+                if (user) {
+                  user.isSubscribed = true;
+                  await user.save({ fields: ["isSubscribed"] });
+                  console.log("[validate] marked user as subscribed", {
+                    userId,
+                  });
+                }
+              } catch (e) {
+                console.warn("[validate] failed to mark user subscribed", e);
               }
-            } catch (e) {
-              console.warn("[validate] failed to mark user subscribed", e);
             }
+          } catch (dbErr) {
+            console.error(
+              "/validate DB upsert error:",
+              dbErr && dbErr.stack ? dbErr.stack : dbErr
+            );
           }
         }
       }
@@ -217,6 +226,24 @@ router.post("/create-link", async (req, res) => {
       );
     }
 
+    // sanitize notes to avoid sending empty/invalid vpa (UPI) values
+    if (
+      options.notes &&
+      typeof options.notes.vpa !== "undefined" &&
+      !options.notes.vpa
+    ) {
+      delete options.notes.vpa;
+    }
+
+    // sanitize notes.vpa
+    if (
+      options.notes &&
+      typeof options.notes.vpa !== "undefined" &&
+      !options.notes.vpa
+    ) {
+      delete options.notes.vpa;
+    }
+
     const paymentLink = await razorpay.paymentLink.create({
       amount: options.amount,
       currency: options.currency,
@@ -237,10 +264,15 @@ router.post("/create-link", async (req, res) => {
     );
     return res.json({ link: paymentLink.short_url, payload: paymentLink });
   } catch (err) {
-    console.error(
-      "Razorpay create link error:",
-      err && err.stack ? err.stack : err
-    );
+    // Log BAD_REQUEST_ERROR detail from Razorpay if present to help debugging invalid fields
+    if (err && err.error && err.error.description) {
+      console.error("Razorpay create link error (razorpay):", err.error);
+    } else {
+      console.error(
+        "Razorpay create link error:",
+        err && err.stack ? err.stack : err
+      );
+    }
     // Include error message in response for easier debugging (safe in dev).
     return res.status(500).json({
       error: "Failed to create payment link",
@@ -327,10 +359,14 @@ router.post("/create-link/user", authMiddleware, async (req, res) => {
     );
     return res.json({ link: paymentLink.short_url, payload: paymentLink });
   } catch (err) {
-    console.error(
-      "Razorpay create link (user) error:",
-      err && err.stack ? err.stack : err
-    );
+    if (err && err.error && err.error.description) {
+      console.error("Razorpay create link (user) error (razorpay):", err.error);
+    } else {
+      console.error(
+        "Razorpay create link (user) error:",
+        err && err.stack ? err.stack : err
+      );
+    }
     return res.status(500).json({
       error: "Failed to create payment link",
       details: err && err.message ? err.message : err,
@@ -351,10 +387,20 @@ router.get("/status", async (req, res) => {
         .json({ error: "payment_id or reference_id is required" });
     }
 
-    const where = payment_id
-      ? { payment_id: String(payment_id) }
-      : { reference_id: String(reference_id) };
-    const record = await Subscription.findOne({ where });
+    let record = null;
+    if (payment_id) {
+      record = await Subscription.findOne({
+        where: { payment_id: String(payment_id) },
+      });
+    } else {
+      // The subscription table doesn't currently have a separate `reference_id`
+      // column in many setups. Many flows store the payment link/reference id
+      // into `payment_id` on first persist. Look for a matching payment_id
+      // using the provided reference_id value.
+      record = await Subscription.findOne({
+        where: { payment_id: String(reference_id) },
+      });
+    }
     if (!record) return res.status(404).json({ found: false });
     return res.json({ found: true, subscription: record });
   } catch (err) {
