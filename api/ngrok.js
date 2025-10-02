@@ -1,13 +1,16 @@
-// ngrok.js
-import ngrok from "ngrok";
+// // Require ngrok javascript sdk
+import ngrok from "@ngrok/ngrok";
+// import ngrok from '@ngrok/ngrok' // if inside a module
+(async function () {
+  // Establish connectivity
+  await ngrok.authtoken("33Hs42XonDuHxblbsMTCjPaL6Uu_3oyJgeu8rDc7MJ1n9KG7k");
 
-(async () => {
-  try {
-    // Replace 5000 with your backend port
-    const url = await ngrok.connect(5000);
-    console.log("ngrok URL:", url);
-    console.log("Keep this terminal open to keep ngrok running!");
-  } catch (err) {
-    console.error("Error starting ngrok:", err);
-  }
+  const listener = await ngrok.forward({
+    addr: 5000,
+  });
+
+  // Output ngrok url to console
+  console.log(`Ingress established at: ${listener.url()}`);
 })();
+
+process.stdin.resume();

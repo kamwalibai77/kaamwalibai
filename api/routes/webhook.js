@@ -1,67 +1,105 @@
 import express from "express";
 import crypto from "crypto";
-import { Subscription } from "../models/index.js"; // import your Sequelize model
+import db from "../models/index.js";
 
+const Subscription = db.Subscription;
+const User = db.User;
 const router = express.Router();
 
 const RAZORPAY_WEBHOOK_SECRET =
   process.env.RAZORPAY_WEBHOOK_SECRET || "your_webhook_secret";
 
-// Razorpay webhook listener
-router.post("/razorpay", express.json({ type: "*/*" }), async (req, res) => {
-  try {
-    const webhookSignature = req.headers["x-razorpay-signature"];
-    const body = JSON.stringify(req.body);
+router.post(
+  "/razorpay",
+  express.raw({ type: "application/json" }),
+  async (req, res) => {
+    try {
+      const webhookSignature = req.headers["x-razorpay-signature"];
+      const body = req.body; // Buffer
+      const bodyString = body.toString("utf8"); // convert to string for signature verification
 
-    // ✅ Verify signature
-    const expectedSignature = crypto
-      .createHmac("sha256", RAZORPAY_WEBHOOK_SECRET)
-      .update(body)
-      .digest("hex");
+      const expectedSignature = crypto
+        .createHmac("sha256", RAZORPAY_WEBHOOK_SECRET)
+        .update(bodyString)
+        .digest("hex");
 
-    if (expectedSignature !== webhookSignature) {
-      return res.status(400).send("Invalid signature");
-    }
+      if (expectedSignature !== webhookSignature) {
+        console.warn("[webhook] invalid signature", {
+          expectedSignature,
+          webhookSignature,
+        });
+        return res.status(400).send("Invalid signature");
+      }
 
-    const event = req.body.event;
-    const payload =
-      req.body.payload.payment?.entity || req.body.payload.subscription?.entity;
+      const parsed = JSON.parse(bodyString);
+      const event = parsed.event;
 
-    if (!payload) {
-      return res.status(200).send("No payload to process");
-    }
+      // Extract payload
+      const payloadCandidates = [
+        parsed.payload?.payment?.entity,
+        parsed.payload?.payment_link?.entity,
+        parsed.payload?.subscription?.entity,
+        parsed.payload?.order?.entity,
+      ];
+      const payload = payloadCandidates.find((p) => p && typeof p === "object");
 
-    if (event === "payment.captured") {
-      await Subscription.create({
-        user_id: payload.notes?.user_id || "guest", // You can pass user_id in Razorpay notes while creating order
-        plan_id: payload.notes?.plan_id || "basic",
-        payment_id: payload.id,
-        amount: payload.amount,
-        currency: payload.currency,
-        status: "active",
+      if (!payload) {
+        console.warn("[webhook] no payload entity found", { event });
+        return res.status(200).send("No payload to process");
+      }
+
+      const paymentId =
+        payload.id || payload.payment_id || payload.reference_id || null;
+      const notes =
+        payload.notes || parsed.payload?.payment_link?.entity?.notes || {};
+      const planId = notes.plan || "basic";
+      const userId = notes.user_id || "guest";
+      const amount = payload.amount || payload.amount_paid || 0;
+      const currency = payload.currency || "INR";
+
+      const values = {
+        user_id: String(userId),
+        plan_id: String(planId),
+        payment_id: String(paymentId),
+        amount: Number(amount) / 100, // convert paise to INR
+        currency: String(currency),
         start_date: new Date(),
-        end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // example: 30 days plan
-      });
-    }
+        status:
+          event === "payment_link.paid" || event === "payment.captured"
+            ? "active"
+            : "failed",
+        end_date:
+          event === "payment_link.paid" || event === "payment.captured"
+            ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+            : null,
+      };
 
-    if (event === "payment.failed") {
-      await Subscription.create({
-        user_id: payload.notes?.user_id || "guest",
-        plan_id: payload.notes?.plan_id || "basic",
-        payment_id: payload.id,
-        amount: payload.amount,
-        currency: payload.currency,
-        status: "failed",
-        start_date: new Date(),
-        end_date: null,
+      const [record, created] = await Subscription.findOrCreate({
+        where: { payment_id: String(paymentId) },
+        defaults: values,
       });
-    }
 
-    return res.status(200).send("Webhook received");
-  } catch (error) {
-    console.error("Webhook error:", error);
-    return res.status(500).send("Server error");
+      if (!created) {
+        await record.update(values);
+      }
+
+      // Update user subscription
+      if (userId !== "guest" && values.status === "active") {
+        const user = await User.findByPk(userId);
+        if (user) {
+          user.isSubscribed = true;
+          await user.save({ fields: ["isSubscribed"] });
+          console.log("[webhook] user marked as subscribed", { userId });
+        }
+      }
+
+      console.log("[webhook] processed", { event, paymentId, created });
+      return res.status(200).send("Webhook processed");
+    } catch (err) {
+      console.error("[webhook] error:", err && err.stack ? err.stack : err);
+      return res.status(500).send("Server error");
+    }
   }
-});
+);
 
 export default router;

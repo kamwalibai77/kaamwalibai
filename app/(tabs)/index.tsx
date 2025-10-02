@@ -1,16 +1,28 @@
 import React, { useEffect } from "react";
 import { View, StyleSheet, Image } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/AppNavigator";
 type Props = NativeStackScreenProps<RootStackParamList, "Index">;
 
 export default function IndexScreen({ navigation }: Props) {
   useEffect(() => {
-    const timer = setTimeout(() => {
-      navigation.replace("Register");
-    }, 2000);
-
-    return () => clearTimeout(timer);
+    let mounted = true;
+    const bootstrap = async () => {
+      try {
+        const token = await AsyncStorage.getItem("token");
+        if (!mounted) return;
+        if (token) navigation.reset({ index: 0, routes: [{ name: "Home" }] });
+        else navigation.replace("Login");
+      } catch (err) {
+        if (mounted) navigation.replace("Login");
+      }
+    };
+    const timer = setTimeout(bootstrap, 700);
+    return () => {
+      mounted = false;
+      clearTimeout(timer);
+    };
   }, [navigation]);
 
   return (

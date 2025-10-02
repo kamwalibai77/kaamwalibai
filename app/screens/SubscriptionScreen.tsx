@@ -9,7 +9,10 @@ import {
   ScrollView,
   Dimensions,
   Alert,
+  Linking,
 } from "react-native";
+import * as WebBrowser from "expo-web-browser";
+import { API_BASE_URL } from "../utills/config";
 
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -67,39 +70,185 @@ export default function SubscriptionScreen() {
   };
 
   const handleSubscribe = async (plan: any) => {
-    const res = await loadRazorpayScript();
-    if (!res) {
-      alert("Razorpay SDK failed to load");
+    // Try web SDK when on web
+    if (Platform.OS === "web") {
+      const res = await loadRazorpayScript();
+      if (!res) {
+        alert("Razorpay SDK failed to load");
+        return;
+      }
+
+      const options = {
+        key: "rzp_test_RMakN5bfeyuqEe",
+        amount: parseInt(String(plan.price).replace(/[^0-9]/g, "")) * 100,
+        currency: "INR",
+        name: "Maid Service App",
+        description: `Subscription for ${plan.duration}`,
+        prefill: {
+          name: "Test User",
+          email: "test@example.com",
+          contact: "9999999999",
+          vpa: "test@upi",
+        },
+        notes: {
+          role: selectedRole,
+          plan: plan.duration,
+        },
+        theme: { color: "#6366f1" },
+        handler: function (response: any) {
+          alert(
+            "Payment Successful! Payment ID: " + response.razorpay_payment_id
+          );
+          AsyncStorage.setItem("purchasedPlan", plan.duration).catch(() => {});
+          setPurchasedPlan(plan.duration);
+        },
+      };
+
+      const paymentObject: any = new (window as any).Razorpay(options);
+      paymentObject.open();
       return;
     }
 
-    const options = {
-      key: "rzp_test_RMakN5bfeyuqEe",
-      amount: parseInt(plan.price.replace("₹", "")) * 100,
-      currency: "INR",
-      name: "Maid Service App",
-      description: `Subscription for ${plan.duration}`,
-      prefill: {
-        name: "Test User",
-        email: "test@example.com",
-        contact: "9999999999",
-      },
-      notes: {
-        role: selectedRole,
-        plan: plan.duration,
-      },
-      theme: { color: "#6366f1" },
-      handler: function (response: any) {
-        alert(
-          "Payment Successful! Payment ID: " + response.razorpay_payment_id
-        );
-        AsyncStorage.setItem("purchasedPlan", plan.duration).catch(() => {});
-        setPurchasedPlan(plan.duration);
-      },
-    };
+    // On native platforms, try native module first if available
+    try {
+      // Dynamic import so the code doesn't crash on web or if native module isn't linked
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const Razorpay = require("react-native-razorpay");
+      if (Razorpay) {
+        const amount = Number(String(plan.price).replace(/[^0-9]/g, "")) * 100;
+        const optionsNative: any = {
+          description: `Subscription for ${plan.duration}`,
+          image: "",
+          currency: "INR",
+          key: "rzp_test_RMakN5bfeyuqEe",
+          amount: String(amount),
+          name: "Maid Service App",
+          prefill: {
+            email: "test@example.com",
+            contact: "9999999999",
+            name: "Test User",
+          },
+          theme: { color: "#6366f1" },
+        };
 
-    const paymentObject: any = new (window as any).Razorpay(options);
-    paymentObject.open();
+        const rzp = new Razorpay(optionsNative);
+        rzp
+          .open()
+          .then((payment: any) => {
+            Alert.alert(
+              "Payment Successful",
+              `Payment ID: ${payment.razorpay_payment_id}`
+            );
+            AsyncStorage.setItem("purchasedPlan", plan.duration).catch(
+              () => {}
+            );
+            setPurchasedPlan(plan.duration);
+          })
+          .catch((err: any) => {
+            console.warn("Native Razorpay error:", err);
+            // fallback to server payment link
+            fallbackToPaymentLink(plan).catch(() => {});
+          });
+        return;
+      }
+    } catch (e) {
+      // Native module not available or failed to load; fallthrough to server fallback
+      console.warn(
+        "react-native-razorpay not available, falling back to payment link",
+        e
+      );
+    }
+
+    // Fallback: request server to create a Razorpay payment link and open it in browser
+    await fallbackToPaymentLink(plan);
+  };
+
+  const fallbackToPaymentLink = async (plan: any) => {
+    try {
+      const numeric = Number(String(plan.price).replace(/[^0-9]/g, ""));
+      if (Number.isNaN(numeric) || numeric <= 0) {
+        Alert.alert("Invalid amount");
+        return;
+      }
+      // Prefer calling the authenticated endpoint so the server can attach
+      // notes.user_id automatically from the JWT. If token isn't present or
+      // the call fails, fall back to the public create-link endpoint.
+      let resp: Response | null = null;
+      let json: any = null;
+      try {
+        const token = await AsyncStorage.getItem("token");
+        if (token) {
+          resp = await fetch(`${API_BASE_URL}/payments/create-link/user`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              amount: numeric,
+              currency: "INR",
+              notes: { role: selectedRole, plan: plan.duration },
+            }),
+          });
+        }
+      } catch (e) {
+        // token read or call failed; we'll try the public endpoint below
+        console.warn(
+          "Authenticated create-link failed, will try public endpoint",
+          e
+        );
+      }
+
+      if (!resp) {
+        resp = await fetch(`${API_BASE_URL}/payments/create-link`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            amount: numeric,
+            currency: "INR",
+            notes: { role: selectedRole, plan: plan.duration },
+          }),
+        });
+      }
+
+      try {
+        json = await resp.json();
+      } catch (e) {
+        console.error("Failed to parse create-link response", e);
+        Alert.alert(
+          "Payment Error",
+          "Failed to create payment link (invalid response)"
+        );
+        return;
+      }
+
+      if (!resp.ok) {
+        console.warn("create-link failed", json);
+        Alert.alert(
+          "Payment Error",
+          json && json.error ? json.error : "Failed to create payment link"
+        );
+        return;
+      }
+
+      const link = json && json.link;
+      if (!link) {
+        Alert.alert("Payment Error", "No payment link returned from server");
+        return;
+      }
+
+      // Open in browser (in-app browser on Expo when possible)
+      try {
+        await WebBrowser.openBrowserAsync(link);
+      } catch (e) {
+        Linking.openURL(link).catch(() => {
+          Alert.alert("Failed to open payment link");
+        });
+      }
+    } catch (err) {
+      console.error("payment link error", err);
+      Alert.alert("Payment Error", "Failed to initiate payment");
+    }
   };
 
   return (

@@ -119,14 +119,22 @@ export default function BottomTabs() {
         <TouchableOpacity
           style={styles.tabItem}
           onPress={() => {
-            // Only attempt to go to MyServices when we believe the user is a
-            // service provider. Otherwise fall back to the Subscription screen
-            // to avoid dispatching replace for an unregistered route.
-            if (isServiceProvider) {
-              navigation.dispatch(StackActions.replace("MyServices"));
-            } else {
-              navigation.dispatch(StackActions.replace("Subscription"));
+            // Verify that the top-level navigator actually registered the
+            // `MyServices` route before dispatching a REPLACE. AppNavigator
+            // conditionally registers the screen for service providers, so
+            // this avoids the "action not handled by any navigator" error.
+            try {
+              const state: any = navigation.getState();
+              const routeNames: string[] = (state && state.routeNames) || [];
+              if (routeNames.includes("MyServices")) {
+                navigation.dispatch(StackActions.replace("MyServices"));
+                return;
+              }
+            } catch (e) {
+              // getState may not be available in some navigation contexts;
+              // fall through to a safe fallback.
             }
+            navigation.dispatch(StackActions.replace("Subscription"));
           }}
         >
           <FontAwesome5

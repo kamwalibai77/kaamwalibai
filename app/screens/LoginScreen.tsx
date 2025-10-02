@@ -20,6 +20,21 @@ import api from "../services/api";
 type Props = NativeStackScreenProps<RootStackParamList, "Login">;
 
 export default function LoginScreen({ navigation }: Props) {
+  React.useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const token = await AsyncStorage.getItem("token");
+        if (!mounted) return;
+        if (token) navigation.reset({ index: 0, routes: [{ name: "Home" }] });
+      } catch (e) {
+        // ignore and allow login
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [navigation]);
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
 
