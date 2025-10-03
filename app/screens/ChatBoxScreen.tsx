@@ -42,7 +42,6 @@ export default function ChatBoxScreen() {
   const navigation =
     useNavigation<NavigationProp<Record<string, object | undefined>>>();
 
-  // Hooks must be declared unconditionally at the top
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [myId, setMyId] = useState<string | null>(null);
@@ -50,21 +49,121 @@ export default function ChatBoxScreen() {
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const socketRef = useRef<any>(null);
   const flatListRef = useRef<FlatList>(null);
-  // Extract params early (may be undefined)
+
   const params = route.params;
   const userId = params?.userId;
   const name = params?.name;
   const profilePhoto = params?.profilePhoto;
 
-  // If the screen was opened without params, redirect back to the chat list to avoid a crash
+  // 🚨 Restricted words (multi-language)
+  const restrictedWords: string[] = [
+    // English
+    "sex",
+    "nude",
+    "naked",
+    "rape",
+    "porn",
+    "xxx",
+    "boobs",
+    "fuck",
+    "ass",
+    "assault",
+    "murder",
+    "kill",
+    "harass",
+    "molest",
+    "slut",
+    "bitch",
+    "dick",
+    "cock",
+    "pussy",
+    "dildo",
+    "condom",
+    "blowjob",
+    "handjob",
+    "anal",
+    "incest",
+    "orgy",
+    "prostitute",
+    "whore",
+
+    // Hindi (Roman + Devanagari)
+    "chutiya",
+    "asshole",
+    "boobs",
+    "boob",
+    "ass",
+    "chut",
+    "chutiye",
+    "chudai",
+    "lund",
+    "gaand",
+    "randi",
+    "bhosdi",
+    "bhosdike",
+    "madarchod",
+    "behenchod",
+    "teri maa",
+    "teri bahan",
+    "gandu",
+    "harami",
+    "kamina",
+    "suar",
+    "randi",
+    "randi khana",
+    "बलात्कार",
+    "रेप",
+    "सेक्स",
+    "नंगा",
+    "चुदाई",
+    "गांडू",
+    "मादरचोद",
+    "भोसड़ीके",
+    "चूत",
+    "लंड",
+    "रंडी",
+    "कमिना",
+
+    // Marathi (Roman + Devanagari)
+    "chod",
+    "chodna",
+    "lavda",
+    "lavde",
+    "gand",
+    "bhadva",
+    "randi",
+    "sali",
+    "maushi",
+    "aai cha lavda",
+    "najayaz",
+    "haramkhor",
+    "चोद",
+    "लवडा",
+    "गांड",
+    "भडवा",
+    "रंडी",
+    "साली",
+    "हरामखोर",
+    "आईचा लौडा",
+    "तुझ्या मायला",
+    "तुझ्या बहिणीला",
+  ];
+
+  // 🚨 Function to check restricted words
+  const containsRestrictedWords = (text: string) => {
+    const lowerText = text.toLowerCase();
+    return restrictedWords.some((word) => lowerText.includes(word));
+  };
+
+  // If no userId in params → navigate back
   useEffect(() => {
     if (!userId) {
       try {
         navigation.dispatch(StackActions.replace("Chat"));
-      } catch (e) {
+      } catch {
         try {
           navigation.goBack();
-        } catch (e) {
+        } catch {
           console.warn(
             "Unable to navigate away from ChatBox when params are missing."
           );
@@ -98,7 +197,6 @@ export default function ChatBoxScreen() {
 
     socket.on("receiveMessage", (msg: Message) => {
       setMessages((prev) => {
-        // Prevent duplicates
         if (prev.find((m) => m.id === msg.id)) return prev;
         return [...prev, msg];
       });
@@ -141,11 +239,20 @@ export default function ChatBoxScreen() {
     fetchMessages();
   }, [myId, userId, token]);
 
+  // 🚨 Updated sendMessage with filter
   const sendMessage = async () => {
     if (!input.trim() || !token || !myId) return;
 
+    // Check for restricted words
+    if (containsRestrictedWords(input)) {
+      Alert.alert(
+        "⚠️ Warning",
+        "Your message contains inappropriate or restricted words. Please modify it."
+      );
+      return;
+    }
+
     if (editingMessage) {
-      // Edit existing message
       try {
         const res = await axios.put(
           `${SOCKET_URL}/api/chat/${editingMessage.id}`,
@@ -163,7 +270,6 @@ export default function ChatBoxScreen() {
         console.error("Error editing message:", err);
       }
     } else {
-      // Send new message
       const newMessage: Message = {
         id: Math.random().toString(),
         senderId: myId,
