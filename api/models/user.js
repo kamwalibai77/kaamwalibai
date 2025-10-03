@@ -21,6 +21,14 @@ export default (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true,
     },
+    latitude: {
+      type: DataTypes.DOUBLE,
+      allowNull: true,
+    },
+    longitude: {
+      type: DataTypes.DOUBLE,
+      allowNull: true,
+    },
     gender: {
       type: DataTypes.ENUM("male", "female", "other"),
       allowNull: true,

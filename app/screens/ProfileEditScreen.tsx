@@ -42,6 +42,8 @@ export default function ProfileEditScreen({ navigation }: Props) {
   // location search states
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
   const lastQueryRef = useRef<string>("");
 
   const genderItems = [
@@ -100,6 +102,9 @@ export default function ProfileEditScreen({ navigation }: Props) {
     setQuery(item.placeName);
     setAddress(item.placeName);
     setSuggestions([]);
+    // set lat/lng if available from the suggestion
+    if (item.lat) setLatitude(Number(item.lat));
+    if (item.lng) setLongitude(Number(item.lng));
   };
 
   const handleCurrentLocation = async () => {
@@ -135,6 +140,8 @@ export default function ProfileEditScreen({ navigation }: Props) {
       formData.append("role", role);
       formData.append("phoneNumber", phoneNumber);
       formData.append("address", address);
+      if (latitude != null) formData.append("latitude", String(latitude));
+      if (longitude != null) formData.append("longitude", String(longitude));
       formData.append("gender", gender || "");
       formData.append("age", age?.toString() || "");
 

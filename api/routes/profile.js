@@ -21,7 +21,8 @@ router.put(
 
     try {
       const userId = req.user.id;
-      const { name, phoneNumber, address, gender, age } = req.body;
+      const { name, phoneNumber, address, gender, age, latitude, longitude } =
+        req.body;
 
       // save local path for cleanup
       localFilePath = req.file?.path;
@@ -37,7 +38,7 @@ router.put(
 
       // Save user to DB
       const [rowsUpdated, [updatedUser]] = await User.update(
-        { name, phoneNumber, address, gender, age },
+        { name, phoneNumber, address, gender, age, latitude, longitude },
         {
           where: { id: userId },
           returning: true,
@@ -171,12 +172,10 @@ router.get("/maps/suggest", async (req, res) => {
     if (!response.ok) {
       const body = await response.text().catch(() => "<no body>");
       console.error("LocationIQ non-OK response:", response.status, body);
-      return res
-        .status(502)
-        .json({
-          error: "Location provider returned an error",
-          status: response.status,
-        });
+      return res.status(502).json({
+        error: "Location provider returned an error",
+        status: response.status,
+      });
     }
 
     const data = await response.json();
