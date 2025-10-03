@@ -13,7 +13,7 @@ export default function IndexScreen({ navigation }: Props) {
         const token = await AsyncStorage.getItem("token");
         if (!mounted) return;
         if (token) navigation.reset({ index: 0, routes: [{ name: "Home" }] });
-        else navigation.replace("MobileAuth");
+        else navigation.replace("Login");
       } catch (err) {
         if (mounted) navigation.replace("Login");
       }

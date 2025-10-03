@@ -16,15 +16,12 @@ import SettingsScreen from "../screens/SettingsScreen";
 import PrivacyPolicyScreen from "../screens/PrivacyPolicyScreen";
 import ProfileEditScreen from "../screens/ProfileEditScreen";
 import ProfileScreen from "../screens/ProfileScreen";
-import RegisterScreen from "../screens/RegisterScreen";
 import ReveiwFormScreen from "../screens/ReviewFormScreen";
 import SubscriptionScreen from "../screens/SubscriptionScreen";
 
 export type RootStackParamList = {
   Index: undefined;
   Login: undefined;
-  Register: undefined;
-  MobileAuth: undefined;
   Home: undefined;
   Profile: undefined;
   EditProfile: undefined;
@@ -80,12 +77,7 @@ export default function AppNavigator() {
         screenOptions={{ headerShown: false }}
       >
         <Stack.Screen name="Index" component={IndexScreen} />
-        <Stack.Screen
-          name="MobileAuth"
-          component={require("../screens/MobileAuthScreen").default}
-        />
         <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="Register" component={RegisterScreen} />
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="Profile" component={ProfileScreen} />
         <Stack.Screen name="EditProfile" component={ProfileEditScreen} />

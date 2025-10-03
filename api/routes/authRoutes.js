@@ -3,6 +3,7 @@ import authController from "../controllers/authController.js";
 
 const router = express.Router();
 
+// TODO: Delete this file. Not used anymore.
 router.post("/register", authController.register);
 router.post("/login", authController.login);
 
