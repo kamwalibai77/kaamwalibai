@@ -24,6 +24,7 @@ export type RootStackParamList = {
   Index: undefined;
   Login: undefined;
   Register: undefined;
+  MobileAuth: undefined;
   Home: undefined;
   Profile: undefined;
   EditProfile: undefined;
@@ -79,6 +80,10 @@ export default function AppNavigator() {
         screenOptions={{ headerShown: false }}
       >
         <Stack.Screen name="Index" component={IndexScreen} />
+        <Stack.Screen
+          name="MobileAuth"
+          component={require("../screens/MobileAuthScreen").default}
+        />
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
         <Stack.Screen name="Home" component={HomeScreen} />
