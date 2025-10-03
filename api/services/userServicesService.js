@@ -21,7 +21,15 @@ export const create = async (data) => {
 };
 
 // Get all UserServices with pagination + search + include service types
-export const getAll = async ({ page = 1, limit = 10, searchText = "", area = "", lat, lng, radius }) => {
+export const getAll = async ({
+  page = 1,
+  limit = 10,
+  searchText = "",
+  area = "",
+  lat,
+  lng,
+  radius,
+}) => {
   const offset = (page - 1) * limit;
 
   let where = {};
@@ -41,22 +49,51 @@ export const getAll = async ({ page = 1, limit = 10, searchText = "", area = "",
   }
 
   // If lat, lng and radius are provided, apply Haversine distance filter (radius in kilometers)
-  if (lat && lng && radius) {
+  if (lat !== undefined && lng !== undefined && radius !== undefined) {
     const latNum = parseFloat(lat);
     const lngNum = parseFloat(lng);
     const radiusNum = parseFloat(radius);
 
-    // Haversine formula in SQL to compute distance (in km) between two lat/lng points
-    const haversine = `(
-      6371 * acos(
-        least(1, cos(radians(${latNum})) * cos(radians("provider"."latitude")) * cos(radians("provider"."longitude") - radians(${lngNum})) + sin(radians(${latNum})) * sin(radians("provider"."latitude")) )
-      )
-    )`;
+    if (
+      !Number.isNaN(latNum) &&
+      !Number.isNaN(lngNum) &&
+      !Number.isNaN(radiusNum)
+    ) {
+      // Bounding-box approximation: compute min/max lat/lng for the given radius (in km)
+      // 1 deg latitude ~= 110.574 km
+      const latDegreeKm = 110.574;
+      const deltaLat = radiusNum / latDegreeKm;
 
-    providerConditions.push(db.Sequelize.where(db.Sequelize.literal(haversine), { [Op.lte]: radiusNum }));
+      // 1 deg longitude ~= 111.320*cos(lat)
+      const lngDegreeKm = 111.32 * Math.cos((latNum * Math.PI) / 180);
+      const deltaLng = lngDegreeKm > 0 ? radiusNum / lngDegreeKm : 0;
+
+      const minLat = latNum - deltaLat;
+      const maxLat = latNum + deltaLat;
+      const minLng = lngNum - deltaLng;
+      const maxLng = lngNum + deltaLng;
+
+      // match providers inside bounding-box OR providers missing coordinates (fallback)
+      const bboxAnd = {
+        [Op.and]: [
+          { latitude: { [Op.between]: [minLat, maxLat] } },
+          { longitude: { [Op.between]: [minLng, maxLng] } },
+        ],
+      };
+
+      providerConditions.push({
+        [Op.or]: [
+          bboxAnd,
+          { latitude: { [Op.is]: null } },
+          { longitude: { [Op.is]: null } },
+        ],
+      });
+    }
   }
 
-  const providerWhere = providerConditions.length ? { [Op.and]: providerConditions } : undefined;
+  const providerWhere = providerConditions.length
+    ? { [Op.and]: providerConditions }
+    : undefined;
 
   const { rows, count } = await UserServices.findAndCountAll({
     where,

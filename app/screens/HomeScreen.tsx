@@ -70,19 +70,32 @@ export default function HomeScreen({ navigation }: Props) {
     }
   };
 
-  const fetchProviders = async (reset = false) => {
+  const fetchProviders = async (
+    reset = false,
+    explicitLat?: number | null,
+    explicitLng?: number | null,
+    explicitRadius = 10
+  ) => {
     try {
       setLoading(true);
 
       // include user's lat/lng and radius (10 km default) when available
+      console.log("fetchProviders called with", {
+        reset,
+        explicitLat,
+        explicitLng,
+        explicitRadius,
+        userLat,
+        userLng,
+      });
       const response = await providersApi.getAllServices({
         page: reset ? 1 : page,
         limit: 6,
         search: searchQuery,
         area: selectedArea,
-        lat: userLat ?? undefined,
-        lng: userLng ?? undefined,
-        radius: 10,
+        lat: explicitLat ?? userLat ?? undefined,
+        lng: explicitLng ?? userLng ?? undefined,
+        radius: explicitRadius,
       });
 
       const data = response.data;
@@ -107,37 +120,68 @@ export default function HomeScreen({ navigation }: Props) {
 
   useEffect(() => {
     const init = async () => {
-      // Try to get stored user profile coordinates
+      // local coords to use immediately (avoid relying on async state update)
+      let latToUse: number | null = null;
+      let lngToUse: number | null = null;
+
+      // First try device location (priority)
       try {
-        const userId = await AsyncStorage.getItem("userId");
-        if (userId) {
-          const res = await api.get(`/users/${userId}`);
-          const u = res.data;
-          if (u.latitude && u.longitude) {
-            setUserLat(Number(u.latitude));
-            setUserLng(Number(u.longitude));
-            setSelectedArea(u.address || selectedArea);
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === "granted") {
+          const loc = await Location.getCurrentPositionAsync({});
+          latToUse = loc.coords.latitude;
+          lngToUse = loc.coords.longitude;
+          setUserLat(latToUse);
+          setUserLng(lngToUse);
+          console.log("Home:init - using device coords", latToUse, lngToUse);
+
+          // best-effort reverse geocode to set friendly area name
+          try {
+            const rev = await Location.reverseGeocodeAsync({
+              latitude: latToUse,
+              longitude: lngToUse,
+            });
+            if (rev && rev.length > 0) {
+              const r = rev[0];
+              const pretty =
+                r.name || r.street || r.city || r.region || r.postalCode;
+              if (pretty) setSelectedArea(pretty as string);
+            }
+          } catch (e) {
+            // ignore reverse geocode errors
           }
         }
       } catch (e) {
-        // ignore
+        // ignore permission or location errors
       }
 
-      // If we still don't have coords, request device location permission
-      if (userLat == null || userLng == null) {
+      // Fallback: if device location unavailable, use profile coords
+      if (latToUse == null || lngToUse == null) {
         try {
-          const { status } = await Location.requestForegroundPermissionsAsync();
-          if (status === "granted") {
-            const loc = await Location.getCurrentPositionAsync({});
-            setUserLat(loc.coords.latitude);
-            setUserLng(loc.coords.longitude);
+          const userId = await AsyncStorage.getItem("userId");
+          if (userId) {
+            const res = await api.get(`/users/${userId}`);
+            const u = res.data;
+            if (u.latitude && u.longitude) {
+              latToUse = Number(u.latitude);
+              lngToUse = Number(u.longitude);
+              setUserLat(latToUse);
+              setUserLng(lngToUse);
+              setSelectedArea(u.address || selectedArea);
+              console.log(
+                "Home:init - using profile coords fallback",
+                latToUse,
+                lngToUse
+              );
+            }
           }
         } catch (e) {
-          // ignore permission failures
+          // ignore
         }
       }
 
-      fetchProviders(true);
+      // Call fetchProviders with explicit coords (device or profile) so the API receives them immediately
+      await fetchProviders(true, latToUse ?? null, lngToUse ?? null, 10);
       fetchServiceTypes();
     };
     init();
@@ -152,7 +196,7 @@ export default function HomeScreen({ navigation }: Props) {
       fetchProviders(true);
     }, 400);
     return () => clearTimeout(timeout);
-  }, [searchQuery, selectedArea]);
+  }, [searchQuery, selectedArea, userLat, userLng]);
 
   useEffect(() => {
     if (page > 1) fetchProviders();
