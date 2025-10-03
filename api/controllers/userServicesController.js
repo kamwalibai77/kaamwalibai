@@ -11,7 +11,13 @@ export const create = async (req, res) => {
 
 export const getAll = async (req, res) => {
   try {
-    const serviceTypes = await services.getAll(req.params);
+    // Use query params for GET requests (page, limit, search, area, etc.)
+    const params = { ...(req.query || {}) };
+
+    // Frontend may send `search` param; service layer expects `searchText`.
+    if (params.search && !params.searchText) params.searchText = params.search;
+
+    const serviceTypes = await services.getAll(params);
     res.json(serviceTypes);
   } catch (err) {
     res.status(500).json({ error: err.message });

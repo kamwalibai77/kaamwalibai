@@ -5,9 +5,25 @@ const getAllServices = async ({
   limit = 10,
   search = "",
   area = "",
+  lat, // optional user latitude
+  lng, // optional user longitude
+  radius, // optional radius in km
+}: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  area?: string;
+  lat?: number | string;
+  lng?: number | string;
+  radius?: number | string;
 }) => {
+  const params: any = { page, limit, search, area };
+  if (lat !== undefined) params.lat = lat;
+  if (lng !== undefined) params.lng = lng;
+  if (radius !== undefined) params.radius = radius;
+
   return await api.get("/service-provider", {
-    params: { page, limit, search, area },
+    params,
   });
 };
 

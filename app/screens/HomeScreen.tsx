@@ -3,6 +3,7 @@ import BottomTab from "@/components/BottomTabs";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useEffect, useState } from "react";
+import * as Location from "expo-location";
 import {
   ActivityIndicator,
   Alert,
@@ -32,6 +33,8 @@ type Props = NativeStackScreenProps<RootStackParamList, "Home">;
 
 export default function HomeScreen({ navigation }: Props) {
   const [selectedArea, setSelectedArea] = useState("Trimurti Nagar");
+  const [userLat, setUserLat] = useState<number | null>(null);
+  const [userLng, setUserLng] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [providers, setProviders] = useState([] as any[]);
   const [page, setPage] = useState(1);
@@ -71,11 +74,15 @@ export default function HomeScreen({ navigation }: Props) {
     try {
       setLoading(true);
 
+      // include user's lat/lng and radius (10 km default) when available
       const response = await providersApi.getAllServices({
         page: reset ? 1 : page,
         limit: 6,
         search: searchQuery,
         area: selectedArea,
+        lat: userLat ?? undefined,
+        lng: userLng ?? undefined,
+        radius: 10,
       });
 
       const data = response.data;
@@ -99,8 +106,41 @@ export default function HomeScreen({ navigation }: Props) {
   );
 
   useEffect(() => {
-    fetchProviders(true);
-    fetchServiceTypes();
+    const init = async () => {
+      // Try to get stored user profile coordinates
+      try {
+        const userId = await AsyncStorage.getItem("userId");
+        if (userId) {
+          const res = await api.get(`/users/${userId}`);
+          const u = res.data;
+          if (u.latitude && u.longitude) {
+            setUserLat(Number(u.latitude));
+            setUserLng(Number(u.longitude));
+            setSelectedArea(u.address || selectedArea);
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+
+      // If we still don't have coords, request device location permission
+      if (userLat == null || userLng == null) {
+        try {
+          const { status } = await Location.requestForegroundPermissionsAsync();
+          if (status === "granted") {
+            const loc = await Location.getCurrentPositionAsync({});
+            setUserLat(loc.coords.latitude);
+            setUserLng(loc.coords.longitude);
+          }
+        } catch (e) {
+          // ignore permission failures
+        }
+      }
+
+      fetchProviders(true);
+      fetchServiceTypes();
+    };
+    init();
 
     AsyncStorage.getItem("isSubscribed").then((res) => {
       setIsSubscribed(res === "true");

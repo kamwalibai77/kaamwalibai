@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/AppNavigator";
 import {
@@ -9,6 +9,9 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE_URL } from "../utills/config";
@@ -21,10 +24,14 @@ export default function LoginScreen({ navigation }: Props) {
   const [needsRole, setNeedsRole] = useState(false);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<"phone" | "otp">("phone");
-  const [otp, setOtp] = useState("");
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const otpInputs = useRef<any[]>([]);
   const [cooldown, setCooldown] = useState(0);
 
-  React.useEffect(() => {
+  const COUNTRY_FLAG = "🇮🇳";
+  const COUNTRY_CODE = "91";
+
+  useEffect(() => {
     let t: any = null;
     if (cooldown > 0) {
       t = setTimeout(() => setCooldown((c) => c - 1), 1000);
@@ -39,7 +46,7 @@ export default function LoginScreen({ navigation }: Props) {
       const resp = await fetch(`${API_BASE_URL}/auth/send-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone }),
+        body: JSON.stringify({ phone: `+${COUNTRY_CODE}${phone}` }),
       });
       const json = await resp.json();
       if (resp.ok) {
@@ -47,7 +54,7 @@ export default function LoginScreen({ navigation }: Props) {
         setNeedsRole(false);
         setStep("otp");
         setCooldown(60);
-        Alert.alert("OTP sent", `OTP sent to ${phone}`);
+        Alert.alert("OTP sent", `OTP sent to +${COUNTRY_CODE}${phone}`);
       } else {
         Alert.alert("Error", json?.error || "Failed to send OTP");
       }
@@ -59,10 +66,16 @@ export default function LoginScreen({ navigation }: Props) {
   };
 
   const verify = async () => {
-    if (!otp || otp.length < 4) return Alert.alert("Enter OTP");
+    const enteredOtp = otp.join("");
+    if (!enteredOtp || enteredOtp.length < 6)
+      return Alert.alert("Enter full OTP");
+
     setLoading(true);
     try {
-      const payload: any = { phone, otp };
+      const payload: any = {
+        phone: `+${COUNTRY_CODE}${phone}`,
+        otp: enteredOtp,
+      };
       if (role) payload.role = role === "provider" ? "provider" : "user";
 
       const resp = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
@@ -74,20 +87,18 @@ export default function LoginScreen({ navigation }: Props) {
       if (resp.ok && json) {
         if (json.token) {
           await AsyncStorage.setItem("token", json.token);
-          if (json.user?.id) {
+          if (json.user?.id)
             await AsyncStorage.setItem("userId", String(json.user.id));
-          }
-          if (json.user?.role) {
+          if (json.user?.role)
             await AsyncStorage.setItem(
               "userRole",
               json.user.role === "ServiceProvider" ? "serviceProvider" : "user"
             );
-          } else if (role) {
+          else if (role)
             await AsyncStorage.setItem(
               "userRole",
               role === "provider" ? "serviceProvider" : "user"
             );
-          }
 
           if (json.isNewUser) {
             navigation.reset({ index: 0, routes: [{ name: "EditProfile" }] });
@@ -96,13 +107,11 @@ export default function LoginScreen({ navigation }: Props) {
           }
           return;
         }
-
         if (json.needsRole) {
           setNeedsRole(true);
           return;
         }
       }
-
       Alert.alert("Error", json?.error || "Verification failed");
     } catch (e) {
       Alert.alert("Error", "Verification failed");
@@ -111,21 +120,52 @@ export default function LoginScreen({ navigation }: Props) {
     }
   };
 
+  const handleOtpChange = (text: string, index: number) => {
+    const newOtp = [...otp];
+    newOtp[index] = text;
+    setOtp(newOtp);
+
+    if (text && index < otp.length - 1) otpInputs.current[index + 1]?.focus();
+    if (!text && index > 0) otpInputs.current[index - 1]?.focus();
+  };
+
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
       <View style={styles.card}>
-        <Text style={styles.title}>Welcome 👋</Text>
-        <Text style={styles.subtitle}>Sign in / Sign up with mobile</Text>
+        {/* Logo + App Name + Tagline */}
+        <Image
+          source={require("../../assets/images/logo.png")}
+          style={styles.logo}
+        />
+        <Text style={styles.appName}>MyKaamwalibai</Text>
+        <Text style={styles.tagline}>Trusted help at your doorstep</Text>
+
+        <Text style={styles.title}>
+          {step === "phone" ? "Welcome 👋" : "Enter OTP"}
+        </Text>
+        <Text style={styles.subtitle}>
+          {step === "phone"
+            ? "Sign in / Sign up with mobile"
+            : `OTP sent to ${COUNTRY_FLAG} +${COUNTRY_CODE} ${phone}`}
+        </Text>
 
         {step === "phone" ? (
           <>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter mobile number"
-              keyboardType="phone-pad"
-              value={phone}
-              onChangeText={setPhone}
-            />
+            <View style={styles.phoneContainer}>
+              <Text style={styles.flag}>{COUNTRY_FLAG}</Text>
+              <Text style={styles.callingCode}>+{COUNTRY_CODE}</Text>
+              <TextInput
+                style={styles.phoneInput}
+                placeholder="Enter mobile number"
+                keyboardType="phone-pad"
+                value={phone}
+                onChangeText={setPhone}
+                maxLength={10}
+              />
+            </View>
 
             <TouchableOpacity
               style={styles.button}
@@ -141,13 +181,19 @@ export default function LoginScreen({ navigation }: Props) {
           </>
         ) : (
           <>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter OTP"
-              keyboardType="number-pad"
-              value={otp}
-              onChangeText={setOtp}
-            />
+            <View style={styles.otpContainer}>
+              {otp.map((digit, index) => (
+                <TextInput
+                  key={index}
+                  ref={(ref) => (otpInputs.current[index] = ref)}
+                  style={styles.otpInput}
+                  value={digit}
+                  onChangeText={(text) => handleOtpChange(text, index)}
+                  maxLength={1}
+                  keyboardType="number-pad"
+                />
+              ))}
+            </View>
 
             <TouchableOpacity
               style={styles.button}
@@ -235,14 +281,14 @@ export default function LoginScreen({ navigation }: Props) {
           </>
         )}
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f3f4f6", // soft gray bg
+    backgroundColor: "#f3f4f6",
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
@@ -252,32 +298,58 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 24,
     width: "100%",
-    maxWidth: 400,
+    maxWidth: 420,
     shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowRadius: 10,
     elevation: 5,
     alignItems: "center",
   },
-  title: {
-    fontSize: 26,
+  logo: { width: 120, height: 120, resizeMode: "contain", marginBottom: 8 },
+  appName: {
+    fontSize: 22,
     fontWeight: "700",
-    color: "#111827",
-    marginBottom: 6,
+    color: "#4f46e5",
+    marginBottom: 4,
   },
+  tagline: { fontSize: 14, color: "#6b7280", marginBottom: 12 },
+  title: { fontSize: 22, fontWeight: "700", color: "#111827", marginBottom: 6 },
   subtitle: {
     fontSize: 14,
     color: "#6b7280",
     marginBottom: 20,
+    textAlign: "center",
   },
-  input: {
-    width: "100%",
+  phoneContainer: {
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
     borderColor: "#d1d5db",
-    padding: 14,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    marginBottom: 20,
+    width: "100%",
+    backgroundColor: "#f9fafb",
+    height: 55,
+  },
+  flag: { fontSize: 24 },
+  callingCode: { fontSize: 16, marginHorizontal: 6, fontWeight: "600" },
+  phoneInput: { flex: 1, fontSize: 16, padding: 10 },
+  otpContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 30,
+    width: "85%",
+  },
+  otpInput: {
+    width: 48,
+    height: 55,
+    borderWidth: 1,
+    borderColor: "#ccc",
     borderRadius: 10,
-    marginBottom: 14,
-    fontSize: 16,
+    textAlign: "center",
+    fontSize: 20,
+    fontWeight: "600",
     backgroundColor: "#f9fafb",
   },
   button: {
@@ -298,16 +370,8 @@ const styles = StyleSheet.create({
     marginHorizontal: 6,
     borderRadius: 8,
   },
-  roleActive: {
-    backgroundColor: "#4f46e5",
-    borderColor: "#4f46e5",
-  },
+  roleActive: { backgroundColor: "#4f46e5", borderColor: "#4f46e5" },
   roleText: { color: "#374151", fontWeight: "500" },
   roleTextActive: { color: "#fff", fontWeight: "600" },
-  link: {
-    color: "#4f46e5",
-    fontSize: 14,
-    fontWeight: "500",
-  },
+  link: { color: "#4f46e5", fontSize: 14, fontWeight: "500" },
 });
-// Other styles from different files for reference
