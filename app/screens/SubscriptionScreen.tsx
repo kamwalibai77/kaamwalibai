@@ -15,11 +15,12 @@ import * as WebBrowser from "expo-web-browser";
 import { API_BASE_URL } from "../utills/config";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import BottomTabs from "@/components/BottomTabs";
+import BottomTab from "../../components/BottomTabs";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width } = Dimensions.get("window");
 
-export default function SubscriptionScreen() {
+export default function SubscriptionScreen({ navigation }: any) {
   const [selectedRole, setSelectedRole] = useState<"user" | "provider">("user");
   const [purchasedPlan, setPurchasedPlan] = useState<string | null>(null);
 
@@ -131,12 +132,10 @@ export default function SubscriptionScreen() {
   };
 
   const handleSubscribe = async (plan: any) => {
-    // Force fallback for Expo Go
     if (Platform.OS !== "web") {
       return fallbackToPaymentLink(plan);
     }
 
-    // Web SDK
     const res = await loadRazorpayScript();
     if (!res) return alert("Razorpay SDK failed to load");
 
@@ -169,96 +168,127 @@ export default function SubscriptionScreen() {
   };
 
   return (
-    <LinearGradient colors={["#eef2ff", "#e0e7ff"]} style={{ flex: 1 }}>
-      <View style={styles.toggleContainer}>
-        <TouchableOpacity
-          style={[
-            styles.toggleButton,
-            selectedRole === "user" && styles.toggleActive,
-          ]}
-          onPress={() => setSelectedRole("user")}
-        >
-          <Ionicons
-            name="person-outline"
-            size={20}
-            color={selectedRole === "user" ? "#fff" : "#6366f1"}
-          />
-          <Text
-            style={[
-              styles.toggleText,
-              selectedRole === "user" && styles.toggleTextActive,
-            ]}
-          >
-            User
-          </Text>
+    <SafeAreaView style={styles.safeArea}>
+      {/* ✅ Header same style as ChatScreen */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          {/* <Ionicons name="arrow-back" size={28} color="#4f46e5" /> */}
         </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.toggleButton,
-            selectedRole === "provider" && styles.toggleActive,
-          ]}
-          onPress={() => setSelectedRole("provider")}
-        >
-          <Ionicons
-            name="briefcase-outline"
-            size={20}
-            color={selectedRole === "provider" ? "#fff" : "#6366f1"}
-          />
-          <Text
-            style={[
-              styles.toggleText,
-              selectedRole === "provider" && styles.toggleTextActive,
-            ]}
-          >
-            Service Provider
-          </Text>
-        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Subscriptions</Text>
+        <View style={{ width: 28 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll}>
-        {plans.map((plan) => (
-          <View key={plan.id} style={styles.card}>
-            <Text style={styles.price}>{plan.price}</Text>
-            {selectedRole === "user" ? (
-              <Text style={styles.details}>
-                {(plan as any).contacts ?? 0} Contacts • {plan.duration}
-              </Text>
-            ) : (
-              <Text style={styles.details}>{plan.duration}</Text>
-            )}
-
-            {purchasedPlan === plan.duration ? (
-              <Text style={{ color: "green", fontWeight: "700" }}>
-                Purchased ✅
-              </Text>
-            ) : (
-              <TouchableOpacity
-                style={styles.subscribeButton}
-                onPress={() => handleSubscribe(plan)}
+      <View style={styles.container}>
+        <LinearGradient colors={["#eef2ff", "#e0e7ff"]} style={{ flex: 1 }}>
+          {/* Toggle */}
+          <View style={styles.toggleContainer}>
+            <TouchableOpacity
+              style={[
+                styles.toggleButton,
+                selectedRole === "user" && styles.toggleActive,
+              ]}
+              onPress={() => setSelectedRole("user")}
+            >
+              <Ionicons
+                name="person-outline"
+                size={20}
+                color={selectedRole === "user" ? "#fff" : "#6366f1"}
+              />
+              <Text
+                style={[
+                  styles.toggleText,
+                  selectedRole === "user" && styles.toggleTextActive,
+                ]}
               >
-                <LinearGradient
-                  colors={["#6366f1", "#4f46e5"]}
-                  style={styles.subscribeGradient}
-                >
-                  <Text style={styles.subscribeText}>Subscribe</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            )}
-          </View>
-        ))}
-      </ScrollView>
+                User
+              </Text>
+            </TouchableOpacity>
 
-      <BottomTabs />
-    </LinearGradient>
+            <TouchableOpacity
+              style={[
+                styles.toggleButton,
+                selectedRole === "provider" && styles.toggleActive,
+              ]}
+              onPress={() => setSelectedRole("provider")}
+            >
+              <Ionicons
+                name="briefcase-outline"
+                size={20}
+                color={selectedRole === "provider" ? "#fff" : "#6366f1"}
+              />
+              <Text
+                style={[
+                  styles.toggleText,
+                  selectedRole === "provider" && styles.toggleTextActive,
+                ]}
+              >
+                Service Provider
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Plans */}
+          <ScrollView contentContainerStyle={styles.scroll}>
+            {plans.map((plan) => (
+              <View key={plan.id} style={styles.card}>
+                <Text style={styles.price}>{plan.price}</Text>
+                {selectedRole === "user" ? (
+                  <Text style={styles.details}>
+                    {(plan as any).contacts ?? 0} Contacts • {plan.duration}
+                  </Text>
+                ) : (
+                  <Text style={styles.details}>{plan.duration}</Text>
+                )}
+
+                {purchasedPlan === plan.duration ? (
+                  <Text style={{ color: "green", fontWeight: "700" }}>
+                    Purchased ✅
+                  </Text>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.subscribeButton}
+                    onPress={() => handleSubscribe(plan)}
+                  >
+                    <LinearGradient
+                      colors={["#6366f1", "#4f46e5"]}
+                      style={styles.subscribeGradient}
+                    >
+                      <Text style={styles.subscribeText}>Subscribe</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ))}
+          </ScrollView>
+        </LinearGradient>
+
+        {/* ✅ BottomTab exactly like ChatScreen */}
+        <BottomTab />
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1, backgroundColor: "#fff" },
+
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    backgroundColor: "#fff",
+    borderBottomWidth: 0.5,
+    borderBottomColor: "#d1d5db",
+  },
+  headerTitle: { fontSize: 18, fontWeight: "700", color: "#4f46e5" },
+
   toggleContainer: {
     flexDirection: "row",
     justifyContent: "center",
-    marginTop: 20,
+    marginTop: 15,
     marginBottom: 10,
   },
   toggleButton: {
@@ -280,7 +310,7 @@ const styles = StyleSheet.create({
     color: "#6366f1",
   },
   toggleTextActive: { color: "#fff", fontWeight: "700" },
-  scroll: { padding: 20, alignItems: "center" },
+  scroll: { padding: 20, alignItems: "center", paddingBottom: 100 },
   card: {
     width: width * 0.85,
     backgroundColor: "#fff",

@@ -17,9 +17,11 @@ import {
   TextInput,
   TouchableOpacity,
   Platform,
+  // SafeAreaView removed from react-native; use the context below
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import DropDownPicker from "react-native-dropdown-picker";
-import api from "../services/api"; // make sure api.ts is configured with your local IP
+import api from "../services/api";
 
 type Props = NativeStackScreenProps<RootStackParamList, "EditProfile">;
 
@@ -70,7 +72,6 @@ export default function ProfileEditScreen({ navigation }: Props) {
   };
 
   const fetchSuggestions = async (text: string) => {
-    // Do not trigger API for backslash or empty text
     if (text.includes("\\") || text.length < 3) {
       setSuggestions([]);
       setQuery(text);
@@ -78,7 +79,6 @@ export default function ProfileEditScreen({ navigation }: Props) {
       return;
     }
 
-    // Avoid API trigger if user is deleting text (backspace)
     if (text.length < lastQueryRef.current.length) {
       setQuery(text);
       lastQueryRef.current = text;
@@ -102,30 +102,8 @@ export default function ProfileEditScreen({ navigation }: Props) {
     setQuery(item.placeName);
     setAddress(item.placeName);
     setSuggestions([]);
-    // set lat/lng if available from the suggestion
     if (item.lat) setLatitude(Number(item.lat));
     if (item.lng) setLongitude(Number(item.lng));
-  };
-
-  const handleCurrentLocation = async () => {
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert("Permission denied", "Location permission is required.");
-        return;
-      }
-      const location = await Location.getCurrentPositionAsync({});
-      const currentLoc = {
-        placeName: "Current Location",
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      };
-      setQuery(currentLoc.placeName);
-      setAddress(`${currentLoc.latitude},${currentLoc.longitude}`);
-    } catch (err) {
-      console.error("Error getting location:", err);
-      Alert.alert("Error", "Could not fetch current location.");
-    }
   };
 
   const handleSave = async () => {
@@ -145,39 +123,31 @@ export default function ProfileEditScreen({ navigation }: Props) {
       formData.append("gender", gender || "");
       formData.append("age", age?.toString() || "");
 
-      if (profilePhoto) {
-        const fileName = profilePhoto.split("/").pop() || "profile.jpg";
-
-        if (Platform.OS === "web") {
-          try {
-            const resp = await fetch(profilePhoto);
-            const blob = await resp.blob();
-            const webFile: any = new File([blob], fileName, {
-              type: blob.type || "image/jpeg",
-            });
-            formData.append("profilePhoto", webFile);
-          } catch (webErr) {
-            console.error("Failed to prepare web image for upload:", webErr);
-            throw new Error("Failed to read selected image for upload (web)");
-          }
-        } else {
-          const file: any = {
-            uri: profilePhoto,
-            name: fileName,
-            type: "image/jpeg",
-          };
-          formData.append("profilePhoto", file as any);
-        }
+      // ✅ Upload only if user picked a new image
+      if (
+        profilePhoto &&
+        (profilePhoto.startsWith("file://") ||
+          profilePhoto.startsWith("content://"))
+      ) {
+        const file: any = {
+          uri: profilePhoto,
+          name: "profile.jpg",
+          type: "image/jpeg",
+        };
+        formData.append("profilePhoto", file as any);
       }
 
-      await api.put("/profile/update", formData);
+      await api.put("/profile/update", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
       Alert.alert("Success", "Profile updated successfully!");
       navigation.navigate("Profile");
     } catch (e) {
       console.error("Profile update failed:", e);
-      const errMsg =
-        (e as any)?.response?.data?.error || (e as any)?.message || String(e);
-      Alert.alert("Error", `Failed to update profile: ${errMsg}`);
+      Alert.alert("Error", "Failed to update profile.");
     } finally {
       setLoading(false);
     }
@@ -222,146 +192,183 @@ export default function ProfileEditScreen({ navigation }: Props) {
   }
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.scrollContainer}
-      showsVerticalScrollIndicator={false}
-    >
-      <Text style={styles.title}>Profile</Text>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={styles.title}>Profile</Text>
 
-      <View style={styles.profileHeader}>
-        {profilePhoto ? (
-          <Image source={{ uri: profilePhoto }} style={styles.profileImage} />
-        ) : (
+        <View style={styles.profileHeader}>
+          {profilePhoto ? (
+            <Image source={{ uri: profilePhoto }} style={styles.profileImage} />
+          ) : (
+            <View
+              style={[
+                styles.profileImage,
+                {
+                  backgroundColor: "#e6e7ee",
+                  justifyContent: "center",
+                  alignItems: "center",
+                },
+              ]}
+            >
+              <Ionicons name="person" size={36} color="#9ca3af" />
+            </View>
+          )}
+          <TouchableOpacity style={styles.editIcon} onPress={pickImage}>
+            <Ionicons name="camera" size={16} color="#fff" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.formContainer}>
+          <Text style={styles.label}>Name</Text>
+          <TextInput
+            placeholder="Enter your name"
+            value={name}
+            onChangeText={setName}
+            style={styles.input}
+          />
+
+          <Text style={styles.label}>Address</Text>
+          <View style={styles.searchRow}>
+            <Ionicons
+              name="search-outline"
+              size={20}
+              color="gray"
+              style={{ marginRight: 8 }}
+            />
+            <TextInput
+              style={styles.inputNoBorder}
+              value={query}
+              placeholder="Search city, area or locality"
+              onChangeText={fetchSuggestions}
+            />
+            {/* 📍 Use Current Location Button */}
+            <TouchableOpacity
+              onPress={async () => {
+                let { status } =
+                  await Location.requestForegroundPermissionsAsync();
+                if (status !== "granted") {
+                  Alert.alert(
+                    "Permission denied",
+                    "Location access is needed."
+                  );
+                  return;
+                }
+                let loc = await Location.getCurrentPositionAsync({});
+                setLatitude(loc.coords.latitude);
+                setLongitude(loc.coords.longitude);
+
+                let [reverse] = await Location.reverseGeocodeAsync(loc.coords);
+                if (reverse) {
+                  const fullAddress = `${reverse.name || ""} ${
+                    reverse.street || ""
+                  }, ${reverse.city || ""}, ${reverse.region || ""}, ${
+                    reverse.country || ""
+                  }`;
+                  setAddress(fullAddress);
+                  setQuery(fullAddress);
+                }
+              }}
+            >
+              <Ionicons name="locate-outline" size={22} color="#2563eb" />
+            </TouchableOpacity>
+          </View>
+
+          {suggestions.length > 0 && (
+            <View style={[styles.dropdown, { width: "100%" }]}>
+              {suggestions.map((item, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  style={styles.item}
+                  onPress={() => handleSelectAddress(item)}
+                >
+                  <Text style={styles.itemText}>{item.placeName}</Text>
+                  <Text style={styles.itemSubText}>
+                    {item.placeAddress || ""}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          <Text style={styles.label}>Mobile Number</Text>
+          <TextInput
+            placeholder="Enter mobile number"
+            value={phoneNumber}
+            onChangeText={(text) => {
+              let clean = text.replace(/\D/g, "");
+              if (clean.startsWith("91")) clean = clean.substring(2);
+              if (clean.length > 10) clean = clean.substring(0, 10);
+              setPhoneNumber(`+91${clean}`);
+            }}
+            style={styles.input}
+            keyboardType="phone-pad"
+            maxLength={13}
+            editable={false} // phone number is not editable
+          />
+
+          <Text style={styles.label}>Role</Text>
+          <TextInput
+            placeholder="Role"
+            value={role}
+            editable={false}
+            style={[styles.input, { backgroundColor: "#f8fafc" }]}
+          />
+
+          <Text style={styles.label}>Gender</Text>
           <View
             style={[
-              styles.profileImage,
-              {
-                backgroundColor: "#e6e7ee",
-                justifyContent: "center",
-                alignItems: "center",
-              },
+              styles.dropdownWrapper,
+              { zIndex: genderOpen ? 3000 : 1000 },
             ]}
           >
-            <Ionicons name="person" size={36} color="#9ca3af" />
+            <DropDownPicker
+              open={genderOpen}
+              setOpen={setGenderOpen}
+              value={gender}
+              setValue={setGender}
+              items={genderItems}
+              placeholder="Select Gender"
+              style={styles.dropdown}
+              textStyle={styles.dropdownText}
+              dropDownContainerStyle={styles.dropDownContainer}
+            />
           </View>
-        )}
-        <TouchableOpacity style={styles.editIcon} onPress={pickImage}>
-          <Ionicons name="create-outline" size={18} color="#fff" />
-        </TouchableOpacity>
-      </View>
 
-      <View style={styles.formContainer}>
-        <Text style={styles.label}>Name</Text>
-        <TextInput
-          placeholder="Enter your name"
-          value={name}
-          onChangeText={setName}
-          style={styles.input}
-        />
-
-        <Text style={styles.label}>Address</Text>
-
-        <View style={styles.searchRow}>
-          <Ionicons
-            name="search-outline"
-            size={20}
-            color="gray"
-            style={{ marginRight: 8 }}
-          />
-          <TextInput
-            style={styles.inputNoBorder}
-            value={query}
-            placeholder="Search city, area or locality"
-            onChangeText={fetchSuggestions}
-          />
-        </View>
-
-        {suggestions.length > 0 && (
-          <View style={[styles.dropdown, { width: "100%" }]}>
-            {suggestions.map((item, idx) => (
-              <TouchableOpacity
-                key={idx}
-                style={styles.item}
-                onPress={() => handleSelectAddress(item)}
-              >
-                <Text style={styles.itemText}>{item.placeName}</Text>
-                <Text style={styles.itemSubText}>
-                  {item.placeAddress || ""}
-                </Text>
-              </TouchableOpacity>
-            ))}
+          <Text style={styles.label}>Age</Text>
+          <View
+            style={[styles.dropdownWrapper, { zIndex: ageOpen ? 2000 : 500 }]}
+          >
+            <DropDownPicker
+              open={ageOpen}
+              setOpen={setAgeOpen}
+              value={age}
+              setValue={setAge}
+              items={ageItems}
+              placeholder="Select Age"
+              style={styles.dropdown}
+              textStyle={styles.dropdownText}
+              dropDownContainerStyle={styles.dropDownContainer}
+            />
           </View>
-        )}
-
-        <Text style={styles.label}>Mobile Number</Text>
-        <TextInput
-          placeholder="Enter mobile number"
-          value={phoneNumber}
-          onChangeText={(text) => {
-            let clean = text.replace(/\D/g, "");
-            if (clean.startsWith("91")) clean = clean.substring(2);
-            if (clean.length > 10) clean = clean.substring(0, 10);
-            setPhoneNumber(`+91${clean}`);
-          }}
-          style={styles.input}
-          keyboardType="phone-pad"
-          maxLength={13}
-        />
-
-        <Text style={styles.label}>Role</Text>
-        <TextInput
-          placeholder="Role"
-          value={role}
-          editable={false}
-          style={[styles.input, { backgroundColor: "#f8fafc" }]}
-        />
-
-        <Text style={styles.label}>Gender</Text>
-        <View
-          style={[styles.dropdownWrapper, { zIndex: genderOpen ? 3000 : 1000 }]}
-        >
-          <DropDownPicker
-            open={genderOpen}
-            setOpen={setGenderOpen}
-            value={gender}
-            setValue={setGender}
-            items={genderItems}
-            placeholder="Select Gender"
-            style={styles.dropdown}
-            textStyle={styles.dropdownText}
-            dropDownContainerStyle={styles.dropDownContainer}
-          />
         </View>
 
-        <Text style={styles.label}>Age</Text>
-        <View
-          style={[styles.dropdownWrapper, { zIndex: ageOpen ? 2000 : 500 }]}
-        >
-          <DropDownPicker
-            open={ageOpen}
-            setOpen={setAgeOpen}
-            value={age}
-            setValue={setAge}
-            items={ageItems}
-            placeholder="Select Age"
-            style={styles.dropdown}
-            textStyle={styles.dropdownText}
-            dropDownContainerStyle={styles.dropDownContainer}
-          />
+        {/* Save button wrapped in container */}
+        <View style={{ width: "100%", marginBottom: 20 }}>
+          <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+            <Text style={styles.saveButtonText}>Save</Text>
+          </TouchableOpacity>
         </View>
-      </View>
-
-      <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-        <Text style={styles.saveButtonText}>Save</Text>
-      </TouchableOpacity>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
-// ...styles remain the same
-
 const styles = StyleSheet.create({
   scrollContainer: {
+    flexGrow: 1,
     paddingVertical: 20,
     paddingHorizontal: 20,
     alignItems: "center",
@@ -388,10 +395,12 @@ const styles = StyleSheet.create({
   editIcon: {
     position: "absolute",
     bottom: 0,
-    right: "35%",
+    right: 0,
     backgroundColor: "#2563eb",
-    padding: 6,
+    padding: 8,
     borderRadius: 20,
+    borderWidth: 2,
+    borderColor: "#fff",
   },
   formContainer: {
     width: "100%",
@@ -427,19 +436,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     marginBottom: 12,
     height: 45,
-  },
-  currentLocationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-    marginBottom: 12,
-  },
-  currentLocationText: {
-    marginLeft: 8,
-    color: "#003580",
-    fontWeight: "500",
   },
   dropdown: { maxHeight: 200, marginBottom: 12 },
   item: {
@@ -479,18 +475,5 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 6,
-  },
-  pingContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    width: "100%",
-    marginBottom: 12,
-  },
-  pingButton: {
-    backgroundColor: "#2563eb",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
   },
 });

@@ -57,7 +57,6 @@ export default function ChatBoxScreen() {
 
   // 🚨 Restricted words (multi-language)
   const restrictedWords: string[] = [
-    // English
     "sex",
     "nude",
     "naked",
@@ -86,13 +85,8 @@ export default function ChatBoxScreen() {
     "orgy",
     "prostitute",
     "whore",
-
-    // Hindi (Roman + Devanagari)
     "chutiya",
     "asshole",
-    "boobs",
-    "boob",
-    "ass",
     "chut",
     "chutiye",
     "chudai",
@@ -109,8 +103,7 @@ export default function ChatBoxScreen() {
     "harami",
     "kamina",
     "suar",
-    "randi",
-    "randi khana",
+    "रंडी",
     "बलात्कार",
     "रेप",
     "सेक्स",
@@ -123,8 +116,6 @@ export default function ChatBoxScreen() {
     "लंड",
     "रंडी",
     "कमिना",
-
-    // Marathi (Roman + Devanagari)
     "chod",
     "chodna",
     "lavda",
@@ -141,7 +132,6 @@ export default function ChatBoxScreen() {
     "लवडा",
     "गांड",
     "भडवा",
-    "रंडी",
     "साली",
     "हरामखोर",
     "आईचा लौडा",
@@ -149,13 +139,11 @@ export default function ChatBoxScreen() {
     "तुझ्या बहिणीला",
   ];
 
-  // 🚨 Function to check restricted words
   const containsRestrictedWords = (text: string) => {
     const lowerText = text.toLowerCase();
     return restrictedWords.some((word) => lowerText.includes(word));
   };
 
-  // If no userId in params → navigate back
   useEffect(() => {
     if (!userId) {
       try {
@@ -172,7 +160,6 @@ export default function ChatBoxScreen() {
     }
   }, [userId, navigation]);
 
-  // Load my user id + token from storage
   useEffect(() => {
     const fetchUser = async () => {
       const storedId = await AsyncStorage.getItem("userId");
@@ -183,10 +170,8 @@ export default function ChatBoxScreen() {
     fetchUser();
   }, []);
 
-  // Setup socket connection
   useEffect(() => {
     if (!myId) return;
-
     const socket = io(SOCKET_URL, { transports: ["websocket"] });
     socketRef.current = socket;
 
@@ -212,7 +197,6 @@ export default function ChatBoxScreen() {
     };
   }, [myId]);
 
-  // Fetch chat history
   useEffect(() => {
     if (!myId || !token || !userId) return;
 
@@ -221,7 +205,9 @@ export default function ChatBoxScreen() {
         await axios.put(
           `${SOCKET_URL}/api/chat/read/${userId}`,
           {},
-          { headers: { Authorization: `Bearer ${token}` } }
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
         );
 
         const res = await axios.get(`${SOCKET_URL}/api/chat/${userId}`, {
@@ -239,15 +225,13 @@ export default function ChatBoxScreen() {
     fetchMessages();
   }, [myId, userId, token]);
 
-  // 🚨 Updated sendMessage with filter
   const sendMessage = async () => {
     if (!input.trim() || !token || !myId) return;
 
-    // Check for restricted words
     if (containsRestrictedWords(input)) {
       Alert.alert(
         "⚠️ Warning",
-        "Your message contains inappropriate or restricted words. Please modify it."
+        "Your message contains inappropriate or restricted words."
       );
       return;
     }
@@ -346,6 +330,16 @@ export default function ChatBoxScreen() {
       keyboardVerticalOffset={90}
     >
       <View style={styles.header}>
+        {/* 🔙 Back Button */}
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Ionicons
+            name="arrow-back"
+            size={24}
+            color="white"
+            style={{ marginRight: 10 }}
+          />
+        </TouchableOpacity>
+
         <Image
           source={{
             uri:

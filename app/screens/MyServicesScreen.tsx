@@ -10,6 +10,7 @@ import {
   Modal,
   Platform,
   Alert,
+  ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -19,8 +20,10 @@ import BottomTab from "@/components/BottomTabs";
 import FloatingAddButton from "@/components/FloatingAddButton";
 import AddService from "./AddServiceScreen";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { openModal, closeModal } from "@/components/ModalHost";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import serviceProviders from "../services/serviceProviders";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width } = Dimensions.get("window");
 
@@ -124,72 +127,47 @@ export default function MyserviceScreen({ navigation }: Props) {
   );
 
   return (
-    <>
+    <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <Text style={styles.headerTitle}>My Services</Text>
         <FlatList
           data={jobList}
           keyExtractor={(item) => item.id}
           renderItem={renderJob}
-          contentContainerStyle={{ paddingHorizontal: 15, paddingBottom: 20 }}
+          contentContainerStyle={{ paddingHorizontal: 15, paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
         />
 
         {/* ✅ Floating Add Button */}
+        {/* Floating Add Button */}
         <FloatingAddButton
           onPress={() => {
-            try {
-              const {
-                openModal,
-                closeModal,
-              } = require("@/components/ModalHost");
-              openModal(
-                <View style={styles.modalContent}>
-                  <View style={styles.modalHeader}>
-                    <Text style={styles.modalTitle}>
-                      {editingService ? "Edit Service" : "Add Service"}
-                    </Text>
-                    <TouchableOpacity onPress={() => closeModal()}>
-                      <Ionicons name="close" size={24} color="#1e293b" />
-                    </TouchableOpacity>
-                  </View>
-                  <ErrorBoundary>
-                    <AddService
-                      serviceData={editingService}
-                      afterSubmit={() => {
-                        closeModal();
-                        setEditingService(null);
-                        fetchProviderPostedServices();
-                      }}
-                    />
-                  </ErrorBoundary>
-                </View>
-              );
-            } catch (e) {
-              console.warn("ModalHost failed, using RN Modal fallback:", e);
-              // ✅ FIX: Don't reset editingService here
-              setModalOpen(true);
-            }
+            console.log("FAB pressed → opening native modal");
+            setEditingService(null);
+            setModalOpen(true);
           }}
         />
 
-        {/* ✅ Added Mobile Modal */}
+        {/* ✅ Native Add Service Modal (always visible on Android/iOS) */}
         <Modal
           visible={modalOpen}
           animationType="slide"
-          transparent={true}
+          transparent={false}
           onRequestClose={() => setModalOpen(false)}
         >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>
-                  {editingService ? "Edit Service" : "Add Service"}
-                </Text>
-                <TouchableOpacity onPress={() => setModalOpen(false)}>
-                  <Ionicons name="close" size={24} color="#1e293b" />
-                </TouchableOpacity>
-              </View>
+          <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity
+                onPress={() => setModalOpen(false)}
+                style={{ padding: 8 }}
+              >
+                <Ionicons name="arrow-back" size={24} color="#1e293b" />
+              </TouchableOpacity>
+              <Text style={styles.modalTitle}>Add Service</Text>
+              <View style={{ width: 32 }} /> {/* empty right spacer */}
+            </View>
+
+            <ScrollView contentContainerStyle={{ padding: 16 }}>
               <ErrorBoundary>
                 <AddService
                   serviceData={editingService}
@@ -200,11 +178,11 @@ export default function MyserviceScreen({ navigation }: Props) {
                   }}
                 />
               </ErrorBoundary>
-            </View>
-          </View>
+            </ScrollView>
+          </SafeAreaView>
         </Modal>
 
-        {/* ✅ Web-only Delete Confirmation Modal */}
+        {/* ✅ Web Delete Confirm Modal */}
         {Platform.OS === "web" && (
           <Modal
             visible={confirmVisible}
@@ -240,13 +218,16 @@ export default function MyserviceScreen({ navigation }: Props) {
           </Modal>
         )}
       </View>
+
+      {/* ✅ Consistent bottom tab */}
       <BottomTab />
-    </>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f8fafc", paddingTop: 10 },
+  safeArea: { flex: 1, backgroundColor: "#f8fafc" },
+  container: { flex: 1, paddingTop: 10 },
   headerTitle: {
     fontSize: 22,
     fontWeight: "bold",

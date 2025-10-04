@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState } from "react";
-import { Modal, View, StyleSheet } from "react-native";
+import { Modal, View, StyleSheet, Platform } from "react-native";
 
 type ModalHostContextType = {
   open: (content: React.ReactNode) => void;
@@ -19,11 +19,13 @@ export function ModalHostProvider({ children }: { children: React.ReactNode }) {
   const [content, setContent] = useState<React.ReactNode | null>(null);
 
   const open = (c: React.ReactNode) => {
+    console.debug("ModalHost: open() called");
     setContent(c);
     setVisible(true);
   };
 
   const close = () => {
+    console.debug("ModalHost: close() called");
     setVisible(false);
     setContent(null);
   };
@@ -37,9 +39,11 @@ export function ModalHostProvider({ children }: { children: React.ReactNode }) {
       {children}
       <Modal
         visible={visible}
-        transparent={false}
-        animationType="slide"
+        transparent={true}
+        animationType={Platform.OS === "android" ? "slide" : "slide"}
         presentationStyle="overFullScreen"
+        statusBarTranslucent={true}
+        hardwareAccelerated={true}
         onRequestClose={close}
       >
         <View style={styles.overlay}>{content}</View>

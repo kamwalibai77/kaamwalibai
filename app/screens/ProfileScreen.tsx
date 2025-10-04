@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE_URL } from "../utills/config";
 import BottomTab from "../../components/BottomTabs";
@@ -43,17 +44,17 @@ export default function ProfileScreen({ navigation }: Props) {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
+      <SafeAreaView style={styles.centered}>
         <ActivityIndicator size="large" color="#6366f1" />
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (!user) {
     return (
-      <View style={styles.centered}>
+      <SafeAreaView style={styles.centered}>
         <Text>No user found</Text>
-      </View>
+      </SafeAreaView>
     );
   }
 
@@ -63,114 +64,124 @@ export default function ProfileScreen({ navigation }: Props) {
   };
 
   return (
-    <LinearGradient colors={["#f9fafb", "#eef2ff"]} style={styles.gradient}>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        {/* Profile Header */}
-        <View style={styles.profileCard}>
-          <Image
-            source={{
-              uri: user.profilePhoto || "https://via.placeholder.com/150",
-            }}
-            style={styles.profileImage}
-          />
-          <Text style={styles.userName}>{user.name}</Text>
-          <Text style={styles.userRole}>{user.role}</Text>
-          <Text style={styles.userLocation}>
-            {user.address || "Add Location"}
-          </Text>
-        </View>
-
-        {/* Info Section */}
-        <View style={styles.infoCard}>
-          <Text style={styles.sectionTitle}>Personal Information</Text>
-
-          <View style={styles.infoRow}>
-            <Ionicons name="call-outline" size={18} color="#6366f1" />
-            <Text style={styles.infoText}>{user.phoneNumber || "NA"}</Text>
-          </View>
-
-          <View style={styles.infoRow}>
-            <Ionicons name="home-outline" size={18} color="#6366f1" />
-            <Text style={styles.infoText}>{user.address || "NA"}</Text>
-          </View>
-
-          <View style={styles.infoRow}>
-            <Ionicons name="male-female-outline" size={18} color="#6366f1" />
-            <Text style={styles.infoText}>
-              {user.gender || "NA"}, {user.age || "NA"} yrs
+    <SafeAreaView style={styles.safeArea}>
+      <LinearGradient colors={["#f9fafb", "#eef2ff"]} style={styles.gradient}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Profile Header */}
+          <View style={styles.profileCard}>
+            <Image
+              source={{
+                uri: user.profilePhoto || "https://via.placeholder.com/150",
+              }}
+              style={styles.profileImage}
+            />
+            <Text style={styles.userName}>{user.name}</Text>
+            <Text style={styles.userRole}>{user.role}</Text>
+            <Text style={styles.userLocation}>
+              {user.address || "Add Location"}
             </Text>
           </View>
-        </View>
 
-        {/* Action Section */}
-        <View style={styles.actionCard}>
-          <TouchableOpacity
-            style={styles.actionRow}
-            onPress={() => navigation.navigate("EditProfile")}
-          >
-            <Ionicons name="create-outline" size={20} color="#6366f1" />
-            <Text style={styles.actionText}>Edit Profile</Text>
-            <Ionicons
-              name="chevron-forward-outline"
-              size={18}
-              color="#cbd5e1"
-            />
-          </TouchableOpacity>
+          {/* Info Section */}
+          <View style={styles.infoCard}>
+            <Text style={styles.sectionTitle}>Personal Information</Text>
 
-          {/* Only show Complete KYC for Service Provider */}
-          {user.role === "ServiceProvider" && (
+            <View style={styles.infoRow}>
+              <Ionicons name="call-outline" size={18} color="#6366f1" />
+              <Text style={styles.infoText}>{user.phoneNumber || "NA"}</Text>
+            </View>
+
+            <View style={styles.infoRow}>
+              <Ionicons name="home-outline" size={18} color="#6366f1" />
+              <Text style={styles.infoText}>{user.address || "NA"}</Text>
+            </View>
+
+            <View style={styles.infoRow}>
+              <Ionicons name="male-female-outline" size={18} color="#6366f1" />
+              <Text style={styles.infoText}>
+                {user.gender || "NA"}, {user.age || "NA"} yrs
+              </Text>
+            </View>
+          </View>
+
+          {/* Action Section */}
+          <View style={styles.actionCard}>
             <TouchableOpacity
               style={styles.actionRow}
-              onPress={() => navigation.navigate("KYC")}
+              onPress={() => navigation.navigate("EditProfile")}
             >
-              <Ionicons
-                name="document-text-outline"
-                size={20}
-                color="#6366f1"
-              />
-              <Text style={styles.actionText}>Complete KYC</Text>
+              <Ionicons name="create-outline" size={20} color="#6366f1" />
+              <Text style={styles.actionText}>Edit Profile</Text>
               <Ionicons
                 name="chevron-forward-outline"
                 size={18}
                 color="#cbd5e1"
               />
             </TouchableOpacity>
-          )}
 
-          <TouchableOpacity
-            style={styles.actionRow}
-            onPress={() => navigation.navigate("Settings")}
-          >
-            <Ionicons name="settings-outline" size={20} color="#6366f1" />
-            <Text style={styles.actionText}>Settings</Text>
-            <Ionicons
-              name="chevron-forward-outline"
-              size={18}
-              color="#cbd5e1"
-            />
-          </TouchableOpacity>
+            {/* Only show Complete KYC for Service Provider */}
+            {user.role === "ServiceProvider" && (
+              <TouchableOpacity
+                style={styles.actionRow}
+                onPress={() => navigation.navigate("KYC")}
+              >
+                <Ionicons
+                  name="document-text-outline"
+                  size={20}
+                  color="#6366f1"
+                />
+                <Text style={styles.actionText}>Complete KYC</Text>
+                <Ionicons
+                  name="chevron-forward-outline"
+                  size={18}
+                  color="#cbd5e1"
+                />
+              </TouchableOpacity>
+            )}
 
-          <TouchableOpacity style={styles.actionRow} onPress={handleLogout}>
-            <Ionicons name="log-out-outline" size={20} color="#ef4444" />
-            <Text style={[styles.actionText, { color: "#ef4444" }]}>
-              Logout
-            </Text>
-            <Ionicons
-              name="chevron-forward-outline"
-              size={18}
-              color="#cbd5e1"
-            />
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+            <TouchableOpacity
+              style={styles.actionRow}
+              onPress={() => navigation.navigate("Settings")}
+            >
+              <Ionicons name="settings-outline" size={20} color="#6366f1" />
+              <Text style={styles.actionText}>Settings</Text>
+              <Ionicons
+                name="chevron-forward-outline"
+                size={18}
+                color="#cbd5e1"
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.actionRow} onPress={handleLogout}>
+              <Ionicons name="log-out-outline" size={20} color="#ef4444" />
+              <Text style={[styles.actionText, { color: "#ef4444" }]}>
+                Logout
+              </Text>
+              <Ionicons
+                name="chevron-forward-outline"
+                size={18}
+                color="#cbd5e1"
+              />
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </LinearGradient>
       <BottomTab />
-    </LinearGradient>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: "#f9fafb" },
   gradient: { flex: 1 },
-  scrollContainer: { paddingVertical: 20, paddingHorizontal: 16 },
+  scrollContainer: {
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    paddingBottom: 100, // ✅ space for BottomTab
+  },
 
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
 

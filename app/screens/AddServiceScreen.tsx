@@ -32,6 +32,12 @@ export default function AddServiceScreen({
   serviceData: any;
   afterSubmit: () => void;
 }) {
+  React.useEffect(() => {
+    console.debug("AddServiceScreen: mounted");
+    return () => {
+      console.debug("AddServiceScreen: unmounted");
+    };
+  }, []);
   const [servicesOpen, setServicesOpen] = useState(false);
   const [rateOpen, setRateOpen] = useState(false);
   const [loading, setLoading] = useState(false);

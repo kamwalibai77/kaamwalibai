@@ -12,12 +12,14 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons"; // ✅ back button
 import io from "socket.io-client";
 import { SOCKET_URL } from "../utills/config";
 import BottomTab from "../../components/BottomTabs";
 
 interface Chat {
-  id: string; // other user id
+  id: string;
   name: string;
   profilePhoto?: string;
   lastMessage: string;
@@ -80,14 +82,11 @@ export default function ChatScreen({ navigation }: Props) {
 
         let newList = [...prev];
         if (existingIndex >= 0) {
-          // Update existing chat
           newList[existingIndex] = updatedChat;
         } else {
-          // Add new chat if not exist
           newList.push(updatedChat);
         }
 
-        // Sort by latest message
         newList.sort(
           (a, b) =>
             new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
@@ -160,7 +159,9 @@ export default function ChatScreen({ navigation }: Props) {
       />
       <View style={styles.chatInfo}>
         <View style={styles.chatTop}>
-          <Text style={styles.chatName}>{item.name}</Text>
+          <Text style={styles.chatName} numberOfLines={1}>
+            {item.name}
+          </Text>
           <View style={styles.chatRight}>
             <Text style={styles.chatTime}>
               {new Date(item.updatedAt).toLocaleTimeString([], {
@@ -184,38 +185,67 @@ export default function ChatScreen({ navigation }: Props) {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#075e54" />
-      </View>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#075e54" />
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
-      {chatList.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>
-            No chats yet. Start a conversation!
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={chatList}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={renderChatItem}
-          contentContainerStyle={{ paddingVertical: 10 }}
-        />
-      )}
-      <BottomTab />
-    </View>
+    <SafeAreaView style={styles.safeArea}>
+      {/* ✅ Header with Back button */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          {/* <Ionicons name="arrow-back" size={28} color="#075e54" /> */}
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Chats</Text>
+        <View style={{ width: 28 }} />
+      </View>
+
+      <View style={styles.container}>
+        {chatList.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>
+              No chats yet. Start a conversation!
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={chatList}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={renderChatItem}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 100, paddingTop: 10 }}
+          />
+        )}
+        <BottomTab />
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#ece5dd" },
+  safeArea: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1, backgroundColor: "#fff" },
+
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    backgroundColor: "#fff",
+    borderBottomWidth: 0.5,
+    borderBottomColor: "#d1d5db",
+  },
+  headerTitle: { fontSize: 18, fontWeight: "700", color: "#075e54" },
+
   loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   emptyContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   emptyText: { fontSize: 16, color: "#555" },
+
   chatItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -228,12 +258,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   avatar: { width: 55, height: 55, borderRadius: 28, marginRight: 12 },
-  chatInfo: {
-    flex: 1,
-    borderBottomColor: "#e2e8f0",
-    borderBottomWidth: 0.5,
-    paddingBottom: 10,
-  },
+  chatInfo: { flex: 1 },
   chatTop: {
     flexDirection: "row",
     justifyContent: "space-between",

@@ -10,14 +10,15 @@ import {
   Text,
   TouchableOpacity,
   View,
+  ScrollView,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import BottomTab from "../../components/BottomTabs";
 import api from "../services/api";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Settings">;
 
 export default function SettingsScreen({ navigation }: Props) {
-  // Web-only confirmation modal
   const [confirmVisible, setConfirmVisible] = useState(false);
 
   const deleteAccount = async () => {
@@ -35,66 +36,66 @@ export default function SettingsScreen({ navigation }: Props) {
       setConfirmVisible(true);
     } else {
       Alert.alert(
-        "Confirm Delete",
-        "Are you sure you want to delete this service?",
+        "Delete Account",
+        "Are you sure you want to delete your account? This action cannot be undone.",
         [
           { text: "Cancel", style: "cancel" },
           {
-            text: "Delete",
+            text: "Yes, Delete",
             style: "destructive",
-            onPress: () => deleteAccount(),
+            onPress: () => {
+              deleteAccount();
+              navigation.replace("Login");
+            },
           },
         ]
       );
     }
-    Alert.alert(
-      "Delete Account",
-      "Are you sure you want to delete your account? This action cannot be undone.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Yes, Delete",
-          style: "destructive",
-          onPress: () => {
-            console.log("Account deleted");
-            navigation.replace("Login"); // ✅ matches AppNavigator
-          },
-        },
-      ]
-    );
   };
 
   return (
-    <>
-      <View style={styles.container}>
-        {/* Reviews & Ratings */}
+    <SafeAreaView style={styles.safeArea}>
+      {/* ✅ Scrollable content */}
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        {/* 🔙 Back Button */}
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="arrow-back" size={24} color="#2563eb" />
+        </TouchableOpacity>
+
+        {/* 🔷 Page Title */}
+        <Text style={styles.title}>Settings</Text>
+
+        {/* ⭐ Reviews & Ratings */}
         <TouchableOpacity
           style={styles.option}
-          onPress={() => navigation.navigate("ReveiwForm")} // 👈 only works if added in AppNavigator
+          onPress={() => navigation.navigate("ReveiwForm")}
         >
           <Ionicons name="star" size={22} color="#333" />
           <Text style={styles.optionText}>Reviews & Ratings</Text>
         </TouchableOpacity>
 
-        {/* Privacy & Policy */}
+        {/* 🛡 Privacy Policy */}
         <TouchableOpacity
           style={styles.option}
-          onPress={() => navigation.navigate("PrivacyPolicy")} // ✅ exact match
+          onPress={() => navigation.navigate("PrivacyPolicy")}
         >
           <Ionicons name="shield-checkmark-outline" size={22} color="#333" />
           <Text style={styles.optionText}>Privacy & Policy</Text>
         </TouchableOpacity>
 
-        {/* About Us */}
+        {/* ℹ️ About Us */}
         <TouchableOpacity
           style={styles.option}
-          onPress={() => navigation.navigate("Aboutus")} // ✅ exact match
+          onPress={() => navigation.navigate("Aboutus")}
         >
           <Ionicons name="information-circle-outline" size={22} color="#333" />
           <Text style={styles.optionText}>About Us</Text>
         </TouchableOpacity>
 
-        {/* Delete Account */}
+        {/* 🗑 Delete Account */}
         <TouchableOpacity
           style={[styles.option, { backgroundColor: "#ffe6e6" }]}
           onPress={handleDeleteAccount}
@@ -104,7 +105,8 @@ export default function SettingsScreen({ navigation }: Props) {
             Delete Account
           </Text>
         </TouchableOpacity>
-        {/* ✅ Web-only Delete Confirmation Modal */}
+
+        {/* ✅ Web-only confirmation modal */}
         {Platform.OS === "web" && (
           <Modal
             visible={confirmVisible}
@@ -115,14 +117,14 @@ export default function SettingsScreen({ navigation }: Props) {
             <View style={styles.modalOverlay}>
               <View style={styles.confirmBox}>
                 <Text style={styles.confirmText}>
-                  Are you sure you want to delete this service?
+                  Are you sure you want to delete this account?
                 </Text>
                 <View style={styles.confirmButtons}>
                   <TouchableOpacity
                     style={[styles.confirmBtn, { backgroundColor: "#ef4444" }]}
                     onPress={() => {
                       deleteAccount();
-                      navigation.replace("Login"); // ✅ matches AppNavigator
+                      navigation.replace("Login");
                     }}
                   >
                     <Text style={styles.confirmBtnText}>Yes</Text>
@@ -138,17 +140,35 @@ export default function SettingsScreen({ navigation }: Props) {
             </View>
           </Modal>
         )}
-      </View>
+      </ScrollView>
+
+      {/* 🔻 Bottom Tab (consistent with Home/Chat/Profile) */}
       <BottomTab />
-    </>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    padding: 20,
     backgroundColor: "#fff",
+  },
+  scrollContainer: {
+    padding: 20,
+    paddingBottom: 100, // space for bottom tab
+  },
+  backButton: {
+    position: "absolute",
+    top: 10,
+    left: 20,
+    zIndex: 10,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#2563eb",
+    textAlign: "center",
+    marginVertical: 40,
   },
   option: {
     flexDirection: "row",
@@ -171,19 +191,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 10,
   },
-  modalContent: {
-    width: "100%",
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    maxHeight: "80%",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 15,
-  },
-  modalTitle: { fontSize: 18, fontWeight: "600" },
   confirmBox: {
     width: "90%",
     backgroundColor: "#fff",
