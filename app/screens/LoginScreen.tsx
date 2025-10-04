@@ -185,7 +185,9 @@ export default function LoginScreen({ navigation }: Props) {
               {otp.map((digit, index) => (
                 <TextInput
                   key={index}
-                  ref={(ref) => (otpInputs.current[index] = ref)}
+                  ref={(ref) => {
+                    otpInputs.current[index] = ref;
+                  }}
                   style={styles.otpInput}
                   value={digit}
                   onChangeText={(text) => handleOtpChange(text, index)}

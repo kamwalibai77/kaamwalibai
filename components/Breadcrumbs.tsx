@@ -23,7 +23,7 @@ export default function Breadcrumbs({ state }: Props) {
 
     return (
       <View style={styles.container} pointerEvents="none">
-        <Text style={styles.text}>{path}</Text>
+        {/* <Text style={styles.text}>{path}</Text> */}
       </View>
     );
   } catch (_) {

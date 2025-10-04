@@ -11,7 +11,6 @@ import {
   useNavigation,
   useRoute,
   NavigationProp,
-  StackActions,
 } from "@react-navigation/native";
 
 export default function BottomTabs() {
@@ -41,9 +40,8 @@ export default function BottomTabs() {
     fetchRole();
   }, []);
 
-  if (loading) return null; // optional: show loader/spinner here
-  // Match the same role string AppNavigator expects ("serviceProvider").
-  // Allow common case variants (case-insensitive) but prefer the camelCase value
+  if (loading) return null;
+
   const isServiceProvider =
     role === "serviceProvider" ||
     (role || "").toLowerCase() === "serviceprovider";
@@ -53,7 +51,7 @@ export default function BottomTabs() {
       {/* Home */}
       <TouchableOpacity
         style={styles.tabItem}
-        onPress={() => navigation.dispatch(StackActions.replace("Home"))}
+        onPress={() => navigation.navigate("Home")}
       >
         <Ionicons
           name="home-outline"
@@ -73,7 +71,7 @@ export default function BottomTabs() {
       {/* Chat */}
       <TouchableOpacity
         style={styles.tabItem}
-        onPress={() => navigation.dispatch(StackActions.replace("Chat"))}
+        onPress={() => navigation.navigate("Chat")}
       >
         <MaterialCommunityIcons
           name="chat-processing-outline"
@@ -90,12 +88,10 @@ export default function BottomTabs() {
         </Text>
       </TouchableOpacity>
 
-      {/* My Services */}
+      {/* Subscriptions */}
       <TouchableOpacity
         style={styles.tabItem}
-        onPress={() =>
-          navigation.dispatch(StackActions.replace("Subscription"))
-        }
+        onPress={() => navigation.navigate("Subscription")}
       >
         <FontAwesome5
           name="briefcase"
@@ -114,28 +110,11 @@ export default function BottomTabs() {
         </Text>
       </TouchableOpacity>
 
-      {/* My Services */}
+      {/* My Services (for Service Providers only) */}
       {isServiceProvider && (
         <TouchableOpacity
           style={styles.tabItem}
-          onPress={() => {
-            // Verify that the top-level navigator actually registered the
-            // `MyServices` route before dispatching a REPLACE. AppNavigator
-            // conditionally registers the screen for service providers, so
-            // this avoids the "action not handled by any navigator" error.
-            try {
-              const state: any = navigation.getState();
-              const routeNames: string[] = (state && state.routeNames) || [];
-              if (routeNames.includes("MyServices")) {
-                navigation.dispatch(StackActions.replace("MyServices"));
-                return;
-              }
-            } catch (e) {
-              // getState may not be available in some navigation contexts;
-              // fall through to a safe fallback.
-            }
-            navigation.dispatch(StackActions.replace("Subscription"));
-          }}
+          onPress={() => navigation.navigate("MyServices")}
         >
           <FontAwesome5
             name="briefcase"
@@ -154,10 +133,11 @@ export default function BottomTabs() {
           </Text>
         </TouchableOpacity>
       )}
+
       {/* Profile */}
       <TouchableOpacity
         style={styles.tabItem}
-        onPress={() => navigation.dispatch(StackActions.replace("Profile"))}
+        onPress={() => navigation.navigate("Profile")}
       >
         <Ionicons
           name="person-circle-outline"
@@ -189,7 +169,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: -3 },
     shadowRadius: 8,
-    elevation: 15,
+    elevation: 4,
   },
   tabItem: { alignItems: "center" },
   tabText: { fontSize: 12, color: "#64748b", marginTop: 3, fontWeight: "700" },

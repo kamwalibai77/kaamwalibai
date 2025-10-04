@@ -53,8 +53,8 @@ export default function AppNavigator() {
         let normalized: string | null = storedRole;
         if (storedRole) {
           const compact = storedRole.replace(/[^a-zA-Z]/g, "").toLowerCase();
-          if (compact === "serviceprovider") {
-            normalized = "serviceProvider"; // canonical form used across the app
+          if (compact === "Serviceprovider") {
+            normalized = "ServiceProvider"; // canonical form used across the app
           }
         }
         setRole(normalized);

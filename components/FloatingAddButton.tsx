@@ -1,5 +1,6 @@
 import React from "react";
 import { View, TouchableOpacity, StyleSheet } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
 export default function FloatingAddButton({
@@ -7,10 +8,18 @@ export default function FloatingAddButton({
 }: {
   onPress: () => void;
 }) {
+  const insets = useSafeAreaInsets();
   return (
     <TouchableOpacity
-      style={styles.fab}
-      onPress={onPress} // 👈 navigate to AddJob screen
+      style={[styles.fab, { bottom: 16 + Math.max(0, insets.bottom) }]}
+      onPress={() => {
+        console.log("FloatingAddButton pressed (platform)");
+        try {
+          onPress();
+        } catch (e) {
+          console.warn("FloatingAddButton onPress error:", e);
+        }
+      }} // 👈 navigate to AddJob screen
     >
       <Ionicons name="add" size={28} color="#fff" />
     </TouchableOpacity>

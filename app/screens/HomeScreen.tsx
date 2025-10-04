@@ -12,7 +12,6 @@ import {
   Image,
   Linking,
   Modal,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -50,6 +49,23 @@ export default function HomeScreen({ navigation }: Props) {
   // ✅ NEW: for location search suggestions
   const [locationQuery, setLocationQuery] = useState("");
   const [suggestions, setSuggestions] = useState<any[]>([]);
+  const initializedRef = React.useRef(false);
+
+  // ✅ NEW: helper function for cleaner location fetching
+  const getUserLocation = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") return null;
+
+      const loc = await Location.getCurrentPositionAsync({});
+      return {
+        lat: loc.coords.latitude,
+        lng: loc.coords.longitude,
+      };
+    } catch {
+      return null;
+    }
+  };
 
   const handleLogout = async () => {
     await AsyncStorage.clear();
@@ -79,15 +95,6 @@ export default function HomeScreen({ navigation }: Props) {
     try {
       setLoading(true);
 
-      // include user's lat/lng and radius (10 km default) when available
-      console.log("fetchProviders called with", {
-        reset,
-        explicitLat,
-        explicitLng,
-        explicitRadius,
-        userLat,
-        userLng,
-      });
       const response = await providersApi.getAllServices({
         page: reset ? 1 : page,
         limit: 6,
@@ -120,68 +127,61 @@ export default function HomeScreen({ navigation }: Props) {
 
   useEffect(() => {
     const init = async () => {
-      // local coords to use immediately (avoid relying on async state update)
-      let latToUse: number | null = null;
-      let lngToUse: number | null = null;
-
-      // First try device location (priority)
+      // Redirect to Login if no token
       try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status === "granted") {
-          const loc = await Location.getCurrentPositionAsync({});
-          latToUse = loc.coords.latitude;
-          lngToUse = loc.coords.longitude;
-          setUserLat(latToUse);
-          setUserLng(lngToUse);
-          console.log("Home:init - using device coords", latToUse, lngToUse);
-
-          // best-effort reverse geocode to set friendly area name
-          try {
-            const rev = await Location.reverseGeocodeAsync({
-              latitude: latToUse,
-              longitude: lngToUse,
-            });
-            if (rev && rev.length > 0) {
-              const r = rev[0];
-              const pretty =
-                r.name || r.street || r.city || r.region || r.postalCode;
-              if (pretty) setSelectedArea(pretty as string);
-            }
-          } catch (e) {
-            // ignore reverse geocode errors
-          }
+        const token = await AsyncStorage.getItem("token");
+        if (!token) {
+          navigation.reset({ index: 0, routes: [{ name: "Login" }] });
+          return;
         }
-      } catch (e) {
-        // ignore permission or location errors
+      } catch {}
+
+      // ✅ First try device location
+      let coords = await getUserLocation();
+
+      if (coords) {
+        setUserLat(coords.lat);
+        setUserLng(coords.lng);
+        console.log("Home:init - using device coords", coords.lat, coords.lng);
+
+        try {
+          const rev = await Location.reverseGeocodeAsync({
+            latitude: coords.lat,
+            longitude: coords.lng,
+          });
+          if (rev && rev.length > 0) {
+            const r = rev[0];
+            const pretty =
+              r.name || r.street || r.city || r.region || r.postalCode;
+            if (pretty) setSelectedArea(pretty as string);
+          }
+        } catch {}
       }
 
-      // Fallback: if device location unavailable, use profile coords
-      if (latToUse == null || lngToUse == null) {
+      // ✅ Fallback: user profile coords
+      if (!coords) {
         try {
           const userId = await AsyncStorage.getItem("userId");
           if (userId) {
             const res = await api.get(`/users/${userId}`);
             const u = res.data;
             if (u.latitude && u.longitude) {
-              latToUse = Number(u.latitude);
-              lngToUse = Number(u.longitude);
-              setUserLat(latToUse);
-              setUserLng(lngToUse);
+              coords = { lat: Number(u.latitude), lng: Number(u.longitude) };
+              setUserLat(coords.lat);
+              setUserLng(coords.lng);
               setSelectedArea(u.address || selectedArea);
               console.log(
                 "Home:init - using profile coords fallback",
-                latToUse,
-                lngToUse
+                coords.lat,
+                coords.lng
               );
             }
           }
-        } catch (e) {
-          // ignore
-        }
+        } catch {}
       }
 
-      // Call fetchProviders with explicit coords (device or profile) so the API receives them immediately
-      await fetchProviders(true, latToUse ?? null, lngToUse ?? null, 10);
+      // ✅ Call providers with whichever coords we got
+      await fetchProviders(true, coords?.lat ?? null, coords?.lng ?? null, 10);
       fetchServiceTypes();
     };
     init();
@@ -189,9 +189,11 @@ export default function HomeScreen({ navigation }: Props) {
     AsyncStorage.getItem("isSubscribed").then((res) => {
       setIsSubscribed(res === "true");
     });
+    initializedRef.current = true;
   }, []);
 
   useEffect(() => {
+    if (!initializedRef.current) return;
     const timeout = setTimeout(() => {
       fetchProviders(true);
     }, 400);
@@ -228,7 +230,7 @@ export default function HomeScreen({ navigation }: Props) {
     }
   };
 
-  // ✅ NEW: fetch location suggestions
+  // ✅ fetch location suggestions
   const fetchSuggestions = async (text: string) => {
     setLocationQuery(text);
     if (text.length < 2) {
@@ -241,7 +243,7 @@ export default function HomeScreen({ navigation }: Props) {
       });
       setSuggestions(res.data.suggestedLocations || []);
     } catch (err) {
-      console.error("Error fetching suggestions:", err);
+      setSuggestions([]);
     }
   };
 
@@ -293,7 +295,7 @@ export default function HomeScreen({ navigation }: Props) {
         </TouchableOpacity>
       </View>
 
-      {/* ✅ NEW: Location Search Filter */}
+      {/* Location Search Filter */}
       <View style={styles.searchContainer}>
         <Ionicons name="location-outline" size={20} color="gray" />
         <TextInput
@@ -321,10 +323,11 @@ export default function HomeScreen({ navigation }: Props) {
           )}
           style={styles.suggestionDropdown}
           keyboardShouldPersistTaps="handled"
+          nestedScrollEnabled
         />
       )}
 
-      {/* SEARCH SERVICES */}
+      {/* Search Services */}
       <View style={styles.searchContainer}>
         <Ionicons name="search" size={20} color="#94a3b8" />
         <TextInput
@@ -335,11 +338,7 @@ export default function HomeScreen({ navigation }: Props) {
         />
       </View>
 
-      {/* Service Type LIST + Providers
-          Use a single vertical FlatList for providers and render the
-          horizontal services list inside ListHeaderComponent. This avoids
-          nesting VirtualizedLists inside a ScrollView which causes the
-          runtime warning and breaks windowing. */}
+      {/* Service + Providers */}
       <FlatList
         data={providers}
         keyExtractor={(item) => item.id.toString()}
@@ -347,10 +346,10 @@ export default function HomeScreen({ navigation }: Props) {
         columnWrapperStyle={{ justifyContent: "space-between" }}
         renderItem={renderProvider}
         showsVerticalScrollIndicator={false}
+        nestedScrollEnabled
         ListHeaderComponent={() => (
           <>
             <Text style={styles.sectionTitle}>Services</Text>
-
             <FlatList
               data={filteredServices}
               keyExtractor={(item) => item.name}
@@ -382,7 +381,6 @@ export default function HomeScreen({ navigation }: Props) {
                 </TouchableOpacity>
               )}
             />
-
             <Text style={styles.sectionTitle}>Nearby Providers</Text>
           </>
         )}
@@ -459,7 +457,6 @@ export default function HomeScreen({ navigation }: Props) {
                 elevation: 10,
               }}
             >
-              {/* Profile Image */}
               <Image
                 source={{ uri: selectedProvider.provider.profilePhoto }}
                 style={{
@@ -471,8 +468,6 @@ export default function HomeScreen({ navigation }: Props) {
                   marginBottom: 15,
                 }}
               />
-
-              {/* Name */}
               <Text
                 style={{
                   fontSize: 20,
@@ -483,8 +478,6 @@ export default function HomeScreen({ navigation }: Props) {
               >
                 {selectedProvider.provider.name}
               </Text>
-
-              {/* Service Type */}
               <Text
                 style={{
                   fontSize: 14,
@@ -498,7 +491,7 @@ export default function HomeScreen({ navigation }: Props) {
                   .join(", ")}
               </Text>
 
-              {/* Contact Box */}
+              {/* Contact Buttons */}
               <View
                 style={{
                   flexDirection: "row",
@@ -510,11 +503,8 @@ export default function HomeScreen({ navigation }: Props) {
                   marginBottom: 20,
                 }}
               >
-                {/* Phone */}
                 <TouchableOpacity
-                  style={{
-                    alignItems: "center",
-                  }}
+                  style={{ alignItems: "center" }}
                   onPress={() => {
                     const phone = selectedProvider.provider.phoneNumber;
                     if (phone) Linking.openURL(`tel:${phone}`);
@@ -532,16 +522,10 @@ export default function HomeScreen({ navigation }: Props) {
                   </Text>
                 </TouchableOpacity>
 
-                {/* Message */}
                 <TouchableOpacity
-                  style={{
-                    alignItems: "center",
-                  }}
+                  style={{ alignItems: "center" }}
                   onPress={() => {
-                    // Close modal first
                     setModalVisible(false);
-
-                    // Redirect to ChatBoxScreen with provider's ID and name
                     navigation.navigate("ChatBox", {
                       userId: selectedProvider.provider.id,
                       name: selectedProvider.provider.name,
@@ -565,7 +549,6 @@ export default function HomeScreen({ navigation }: Props) {
                 </TouchableOpacity>
               </View>
 
-              {/* Close Button */}
               <TouchableOpacity
                 style={{
                   backgroundColor: "#6366f1",
@@ -605,17 +588,6 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 25,
   },
   headerTitle: { fontSize: 20, fontWeight: "bold", color: "#6a1010ff" },
-  filterContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginHorizontal: 15,
-    marginTop: 15,
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    elevation: 3,
-  },
-  dropdown: { flex: 1, height: 40 },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -632,105 +604,72 @@ const styles = StyleSheet.create({
     height: width * 0.2,
     backgroundColor: "#fff",
     borderRadius: 15,
-    marginRight: 12,
     alignItems: "center",
     justifyContent: "center",
-    padding: 10,
+    marginHorizontal: 8,
     elevation: 3,
   },
-  serviceIcon: {
-    width: width * 0.12,
-    height: width * 0.12,
-    marginBottom: 8,
-    borderRadius: (width * 0.12) / 2,
-  },
-  serviceName: { fontSize: 12, fontWeight: "600", textAlign: "center" },
+  serviceIcon: { width: 40, height: 40, borderRadius: 20 },
+  serviceName: { fontSize: 12, marginTop: 5, textAlign: "center" },
   providerCard: {
     backgroundColor: "#fff",
     borderRadius: 15,
     padding: 10,
     marginBottom: 15,
-    marginHorizontal: 7,
-    width: (width - 60) / 2,
-    height: (width - 60) / 2 + 40,
+    width: "48%",
+    elevation: 3,
+  },
+  providerImage: { width: "100%", height: 100, borderRadius: 10 },
+  providerName: { fontWeight: "bold", marginTop: 5 },
+  providerService: { color: "gray", fontSize: 12 },
+  providerArea: { fontSize: 12, marginTop: 2 },
+  loadMoreBtn: {
+    margin: 20,
+    padding: 12,
+    backgroundColor: "#6366f1",
+    borderRadius: 8,
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 3 },
-    shadowRadius: 4,
-    elevation: 2,
   },
-  providerImage: {
-    width: "80%",
-    height: "65%",
-    borderRadius: 50,
-    marginBottom: 8,
-  },
-  providerName: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#1e293b",
-    textAlign: "center",
-  },
-  providerService: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: "#6366f1",
-    textAlign: "center",
-  },
-  providerArea: {
-    fontSize: 12,
-    color: "#64748b",
-    textAlign: "center",
-    marginBottom: 4,
-  },
-  loadMoreBtn: { padding: 10, alignItems: "center", justifyContent: "center" },
-  loadMoreText: { color: "#6366f1", fontWeight: "600" },
+  loadMoreText: { color: "#fff", fontWeight: "600" },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    backgroundColor: "rgba(0,0,0,0.7)",
     justifyContent: "center",
     alignItems: "center",
   },
   modalContent: {
-    width: width * 0.8,
+    width: "85%",
     backgroundColor: "#fff",
-    borderRadius: 15,
     padding: 20,
+    borderRadius: 15,
     alignItems: "center",
   },
-  modalImage: { width: 80, height: 80, borderRadius: 40, marginBottom: 15 },
-  modalName: { fontSize: 18, fontWeight: "700", marginBottom: 8 },
-  modalNumber: { fontSize: 16, color: "#64748b" },
   subscribeButton: {
-    backgroundColor: "#facc15",
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 8,
-    marginLeft: 15,
-  },
-  subscribeText: { color: "#1e293b", fontWeight: "600" },
-  closeButton: {
     backgroundColor: "#6366f1",
-    paddingVertical: 8,
+    paddingVertical: 12,
     paddingHorizontal: 25,
-    borderRadius: 10,
-    marginTop: 10,
-  },
-  // ✅ suggestion styles
-  suggestionDropdown: {
-    maxHeight: 200,
-    marginHorizontal: 15,
-    backgroundColor: "#fff",
     borderRadius: 8,
-    elevation: 3,
+  },
+  subscribeText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
+  closeButton: {
+    backgroundColor: "#ef4444",
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    borderRadius: 8,
+  },
+  suggestionDropdown: {
+    backgroundColor: "#fff",
+    marginHorizontal: 15,
+    borderRadius: 10,
+    elevation: 5,
+    maxHeight: 200,
+    marginBottom: 10,
   },
   suggestionItem: {
-    paddingVertical: 12,
+    padding: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
-    paddingHorizontal: 10,
   },
-  suggestionText: { fontSize: 15, fontWeight: "500", color: "#1e293b" },
+  suggestionText: { fontSize: 14, fontWeight: "600" },
   suggestionSubText: { fontSize: 12, color: "gray" },
 });

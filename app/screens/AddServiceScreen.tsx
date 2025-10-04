@@ -13,9 +13,11 @@ import {
   ActivityIndicator,
 } from "react-native";
 import DropDownPicker from "react-native-dropdown-picker";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { SafeAreaView } from "react-native-safe-area-context";
+
 import serviceTypesApi from "../services/serviceTypes";
 import serviceprovidersApi from "../services/serviceProviders";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const RATE_OPTIONS = [
   { label: "Per Hour", value: "hourly" },
@@ -52,7 +54,7 @@ export default function AddServiceScreen({
       const data = await response.data;
       setServiceItems(data.map((s: any) => ({ label: s.name, value: s.id })));
     } catch (err) {
-      console.log(err);
+      console.log("Error fetching services:", err);
     } finally {
       setLoading(false);
     }
@@ -61,6 +63,7 @@ export default function AddServiceScreen({
   useEffect(() => {
     setLoading(true);
     fetchServiceTypes();
+
     if (serviceData) {
       setSelectedServices(
         serviceData.serviceTypes.map((st: any) => st.id) || []
@@ -114,24 +117,24 @@ export default function AddServiceScreen({
       }
 
       const payload = {
-        // providerId is expected to be a number by the API client
         providerId: providerIdNum,
         serviceTypeIds: selectedServices,
-        // API expects a string for rateType; default to empty string if null
         rateType: selectedRate || "",
         amount: costVal,
         contactNumber: phoneOnly,
         currency: "INR",
       };
 
-      const response = serviceData
-        ? await serviceprovidersApi.editService(serviceData.id, payload)
-        : await serviceprovidersApi.createService(payload);
+      if (serviceData) {
+        await serviceprovidersApi.editService(serviceData.id, payload);
+      } else {
+        await serviceprovidersApi.createService(payload);
+      }
 
       Alert.alert("Success", "Your service has been posted!");
       afterSubmit();
     } catch (error) {
-      console.error(error);
+      console.error("Error posting service:", error);
       Alert.alert("Error", "Failed to post service. Please try again.");
     } finally {
       setPosting(false);
@@ -139,23 +142,18 @@ export default function AddServiceScreen({
   };
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
-    >
-      <ScrollView
-        contentContainerStyle={styles.container}
-        keyboardShouldPersistTaps="handled"
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#f3f4f6" }}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
       >
-        <View style={styles.card}>
-          <Text style={styles.sectionLabel}>Service Type</Text>
-          <View
-            style={[
-              styles.dropdownWrapper,
-              { zIndex: servicesOpen ? 5000 : 3000 },
-            ]}
-          >
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.card}>
+            <Text style={styles.sectionLabel}>Service Type</Text>
             <DropDownPicker
               open={servicesOpen}
               setOpen={setServicesOpen}
@@ -169,19 +167,14 @@ export default function AddServiceScreen({
               items={serviceItems}
               setItems={setServiceItems}
               placeholder="Select Services"
-              listMode="SCROLLVIEW"
+              listMode={Platform.OS === "android" ? "MODAL" : "SCROLLVIEW"}
               dropDownDirection="AUTO"
               dropDownContainerStyle={styles.dropDownContainer}
               style={styles.dropdown}
               textStyle={styles.dropdownText}
-              scrollViewProps={{ nestedScrollEnabled: true }}
             />
-          </View>
 
-          <Text style={styles.sectionLabel}>Rate Type</Text>
-          <View
-            style={[styles.dropdownWrapper, { zIndex: rateOpen ? 4000 : 2000 }]}
-          >
+            <Text style={styles.sectionLabel}>Rate Type</Text>
             <DropDownPicker
               open={rateOpen}
               setOpen={setRateOpen}
@@ -192,68 +185,67 @@ export default function AddServiceScreen({
               items={rateItems}
               setItems={setRateItems}
               placeholder="Select Rate Type"
-              listMode="SCROLLVIEW"
+              listMode={Platform.OS === "android" ? "MODAL" : "SCROLLVIEW"}
               dropDownDirection="AUTO"
               dropDownContainerStyle={styles.dropDownContainer}
               style={styles.dropdown}
               textStyle={styles.dropdownText}
             />
+
+            <Text style={styles.sectionLabel}>Cost</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter Cost"
+              placeholderTextColor="#888"
+              keyboardType="numeric"
+              value={cost}
+              onChangeText={(text) => {
+                const numericText = text.replace(/[^0-9]/g, "");
+                setCost(numericText);
+              }}
+            />
+            {errCost && <Text style={styles.errText}>{errCost}</Text>}
+
+            <Text style={styles.sectionLabel}>Contact Number</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Active Contact Number"
+              placeholderTextColor="#888"
+              keyboardType="phone-pad"
+              value={contactNumber}
+              onChangeText={(text) => {
+                const numericText = text.replace(/[^0-9]/g, "").slice(0, 10);
+                setContactNumber(numericText);
+              }}
+              maxLength={15}
+            />
+            {errContact && <Text style={styles.errText}>{errContact}</Text>}
           </View>
 
-          <Text style={styles.sectionLabel}>Cost</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter Cost"
-            placeholderTextColor="#888"
-            keyboardType="numeric"
-            value={cost}
-            onChangeText={(text) => {
-              const numericText = text.replace(/[^0-9]/g, "");
-              setCost(numericText);
-            }}
-          />
-          {errCost && <Text style={styles.errText}>{errCost}</Text>}
+          <TouchableOpacity
+            style={[styles.button, posting && { opacity: 0.7 }]}
+            onPress={validateAndSubmit}
+            disabled={posting}
+          >
+            {posting ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>
+                🚀 {(serviceData && "Update") || "Post"} Service
+              </Text>
+            )}
+          </TouchableOpacity>
 
-          <Text style={styles.sectionLabel}>Contact Number</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Active Contact Number"
-            placeholderTextColor="#888"
-            keyboardType="phone-pad"
-            value={contactNumber}
-            onChangeText={(text) => {
-              const numericText = text.replace(/[^0-9]/g, "").slice(0, 10);
-              setContactNumber(numericText);
-            }}
-            maxLength={15}
-          />
-          {errContact && <Text style={styles.errText}>{errContact}</Text>}
-        </View>
-
-        <TouchableOpacity
-          style={[styles.button, posting && { opacity: 0.7 }]}
-          onPress={validateAndSubmit}
-          disabled={posting}
-        >
-          {posting ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>
-              🚀 {(serviceData && "Update") || "Post"} Service
-            </Text>
-          )}
-        </TouchableOpacity>
-
-        <View style={{ height: 120 }} />
-      </ScrollView>
-    </KeyboardAvoidingView>
+          <View style={{ height: 120 }} />
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     padding: 20,
-    backgroundColor: "#f3f4f6",
   },
   card: {
     backgroundColor: "#fff",
@@ -273,15 +265,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginTop: 12,
   },
-  dropdownWrapper: {
-    marginBottom: 14,
-    position: "relative",
-  },
   dropdown: {
     borderColor: "#e5e7eb",
     borderRadius: 12,
     paddingVertical: 10,
     backgroundColor: "#f9fafb",
+    marginBottom: 14,
   },
   dropdownText: {
     fontSize: 14,
@@ -290,12 +279,7 @@ const styles = StyleSheet.create({
   dropDownContainer: {
     borderColor: "#e5e7eb",
     borderRadius: 12,
-    maxHeight: 200,
-    elevation: 8,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 6,
+    maxHeight: 250,
   },
   input: {
     borderWidth: 1,

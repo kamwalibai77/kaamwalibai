@@ -39,9 +39,9 @@ if (inferred) {
   HOST = inferred;
 } else if (Platform.OS === "android") {
   // Default emulator loopback for Android emulator
-  HOST = "192.168.1.4";
+  HOST = "192.168.1.13";
 } else {
-  HOST = "192.168.1.4";
+  HOST = "192.168.1.13";
 }
 
 // If MANUAL_HOST is a full host (contains protocol), callers may want to use it directly.
