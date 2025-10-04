@@ -1,6 +1,5 @@
-// app/screens/FindJobScreen.tsx
+// app/screens/MyserviceScreen.tsx
 import React, { useState, useEffect } from "react";
-import { useRef } from "react";
 import {
   View,
   Text,
@@ -28,26 +27,11 @@ const { width } = Dimensions.get("window");
 type Props = NativeStackScreenProps<RootStackParamList, "MyServices">;
 
 export default function MyserviceScreen({ navigation }: Props) {
-  // Toggle this to true to render a simple placeholder instead of AddService
-  // Useful when debugging whether AddService itself is failing to mount.
-  const TEST_RENDER = false;
-  // Small inner component to log when modal content actually renders/mounts
-  const ModalInner: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    useEffect(() => {
-      console.log("MyServicesScreen: ModalInner mounted");
-      return () => console.log("MyServicesScreen: ModalInner unmounted");
-    }, []);
-    return <>{children}</>;
-  };
   const [jobList, setJobList] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [editingService, setEditingService] = useState<any>(null);
-  // We'll use the imperative openModal/closeModal API exported by ModalHost
-  // (this avoids calling hooks conditionally and avoids invalid hook call errors)
-  // ...existing code...
 
-  // Web-only confirmation modal
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(
     null
@@ -110,11 +94,6 @@ export default function MyserviceScreen({ navigation }: Props) {
     fetchProviderPostedServices();
   }, []);
 
-  // Debug modal open state changes (helps on-device)
-  useEffect(() => {
-    console.log("MyServicesScreen: modalOpen =>", modalOpen);
-  }, [modalOpen]);
-
   const renderJob = ({ item }: { item: any }) => (
     <LinearGradient colors={["#eef2ff", "#e0e7ff"]} style={styles.jobCard}>
       <View style={styles.jobInfo}>
@@ -155,13 +134,15 @@ export default function MyserviceScreen({ navigation }: Props) {
           contentContainerStyle={{ paddingHorizontal: 15, paddingBottom: 20 }}
           showsVerticalScrollIndicator={false}
         />
+
+        {/* ✅ Floating Add Button */}
         <FloatingAddButton
           onPress={() => {
-            console.log(
-              "MyServicesScreen: FloatingAddButton onPress - opening modal via ModalHost"
-            );
             try {
-              const { openModal, closeModal } = require("@/components/ModalHost");
+              const {
+                openModal,
+                closeModal,
+              } = require("@/components/ModalHost");
               openModal(
                 <View style={styles.modalContent}>
                   <View style={styles.modalHeader}>
@@ -185,11 +166,43 @@ export default function MyserviceScreen({ navigation }: Props) {
                 </View>
               );
             } catch (e) {
-              console.warn("ModalHost open failed, falling back to inline modal:", e);
+              console.warn("ModalHost failed, using RN Modal fallback:", e);
+              // ✅ FIX: Don't reset editingService here
               setModalOpen(true);
             }
           }}
         />
+
+        {/* ✅ Added Mobile Modal */}
+        <Modal
+          visible={modalOpen}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setModalOpen(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>
+                  {editingService ? "Edit Service" : "Add Service"}
+                </Text>
+                <TouchableOpacity onPress={() => setModalOpen(false)}>
+                  <Ionicons name="close" size={24} color="#1e293b" />
+                </TouchableOpacity>
+              </View>
+              <ErrorBoundary>
+                <AddService
+                  serviceData={editingService}
+                  afterSubmit={() => {
+                    setModalOpen(false);
+                    setEditingService(null);
+                    fetchProviderPostedServices();
+                  }}
+                />
+              </ErrorBoundary>
+            </View>
+          </View>
+        </Modal>
 
         {/* ✅ Web-only Delete Confirmation Modal */}
         {Platform.OS === "web" && (
