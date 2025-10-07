@@ -17,6 +17,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE_URL } from "../utills/config";
 import BottomTab from "../../components/BottomTabs";
+const PlaceholderImg = require("../../assets/images/logo.png");
 
 type Props = NativeStackScreenProps<RootStackParamList, "Profile">;
 
@@ -73,9 +74,9 @@ export default function ProfileScreen({ navigation }: Props) {
           {/* Profile Header */}
           <View style={styles.profileCard}>
             <Image
-              source={{
-                uri: user.profilePhoto || "https://via.placeholder.com/150",
-              }}
+              source={
+                user.profilePhoto ? { uri: user.profilePhoto } : PlaceholderImg
+              }
               style={styles.profileImage}
             />
             <Text style={styles.userName}>{user.name}</Text>

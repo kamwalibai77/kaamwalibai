@@ -35,7 +35,7 @@ export default function LoginScreen({ navigation }: Props) {
   const COUNTRY_CODE = "91";
 
   useEffect(() => {
-    let t: NodeJS.Timeout | null = null;
+    let t: ReturnType<typeof setTimeout> | null = null;
     if (cooldown > 0) {
       t = setTimeout(() => setCooldown((c) => c - 1), 1000);
     }

@@ -22,6 +22,7 @@ import api from "../services/api";
 import providersApi from "../services/serviceProviders";
 import serviceTypesApi from "../services/serviceTypes";
 import userApi from "../services/user";
+const PlaceholderImg = require("../../assets/images/logo.png");
 
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/AppNavigator";
@@ -237,7 +238,7 @@ export default function HomeScreen({ navigation }: Props) {
       onPress={() => openProviderModal(item)}
     >
       <Image
-        source={{ uri: item.provider.profilePhoto }}
+        source={getProfileSource(item.provider.profilePhoto)}
         style={styles.providerImage}
         resizeMode="cover"
       />
@@ -255,6 +256,11 @@ export default function HomeScreen({ navigation }: Props) {
       >{`${item.amount} ${item.currency}/${item.rateType}`}</Text>
     </TouchableOpacity>
   );
+
+  const getProfileSource = (uri: string | undefined | null) => {
+    if (uri && typeof uri === "string" && uri.trim() !== "") return { uri };
+    return PlaceholderImg;
+  };
 
   if (loading) {
     return (
@@ -441,7 +447,9 @@ export default function HomeScreen({ navigation }: Props) {
             <View style={styles.modalOverlay}>
               <View style={styles.providerModal}>
                 <Image
-                  source={{ uri: selectedProvider.provider.profilePhoto }}
+                  source={getProfileSource(
+                    selectedProvider.provider.profilePhoto
+                  )}
                   style={styles.providerModalImage}
                 />
                 <Text style={styles.providerModalName}>

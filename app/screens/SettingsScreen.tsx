@@ -95,6 +95,15 @@ export default function SettingsScreen({ navigation }: Props) {
           <Text style={styles.optionText}>About Us</Text>
         </TouchableOpacity>
 
+        {/* ❓ FAQ */}
+        <TouchableOpacity
+          style={styles.option}
+          onPress={() => navigation.navigate("FAQ")}
+        >
+          <Ionicons name="help-circle-outline" size={22} color="#333" />
+          <Text style={styles.optionText}>FAQ</Text>
+        </TouchableOpacity>
+
         {/* 🗑 Delete Account */}
         <TouchableOpacity
           style={[styles.option, { backgroundColor: "#ffe6e6" }]}

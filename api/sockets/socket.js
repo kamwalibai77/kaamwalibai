@@ -16,17 +16,25 @@ export function initSocket(server) {
 
     // Register user
     socket.on("register", (userId) => {
-      onlineUsers[userId] = socket.id;
-      socket.join(userId);
-      console.log("✅ User registered:", userId);
+      const uid = String(userId);
+      onlineUsers[uid] = socket.id;
+      socket.join(uid);
+      console.log("✅ User registered:", uid, "socketId:", socket.id);
     });
 
     // Send message
     socket.on("sendMessage", (data) => {
       const { receiverId, senderId } = data;
-      console.log("📩 Message from", senderId, "to", receiverId, "-----", data);
-      io.to(receiverId).emit("receiveMessage", data); // Send to receiver
-      // io.to(senderId).emit("receiveMessage", data); // Echo to sender
+      const rid = String(receiverId);
+      const sid = String(senderId);
+      console.log("📩 Message from", sid, "to", rid, "-----", data);
+
+      // Send to receiver
+      io.to(rid).emit("receiveMessage", data);
+
+      // Also emit to sender (echo) so sender's UI can be updated from server-side
+      // (useful when server assigns a canonical id or enriches message)
+      io.to(sid).emit("receiveMessage", data);
     });
 
     // Disconnect

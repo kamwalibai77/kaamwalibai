@@ -15,7 +15,6 @@ export default (sequelize, DataTypes) => {
     },
     role: {
       type: DataTypes.ENUM("user", "ServiceProvider", "superadmin"), // ✅ role column
-      defaultValue: "user", // default role
     },
     address: {
       type: DataTypes.STRING,

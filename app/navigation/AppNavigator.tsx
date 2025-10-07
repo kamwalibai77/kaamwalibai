@@ -34,6 +34,7 @@ export type RootStackParamList = {
   Aboutus: undefined; // ✅ Added About Us
   PrivacyPolicy: undefined; // ✅ Added Privacy Policy
   ReveiwForm: undefined; // ✅ Added Privacy Policy
+  FAQ: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -88,6 +89,10 @@ export default function AppNavigator() {
         <Stack.Screen name="Aboutus" component={AboutUsScreen} />
         <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
         <Stack.Screen name="ReveiwForm" component={ReveiwFormScreen} />
+        <Stack.Screen
+          name="FAQ"
+          component={require("../screens/FAQScreen").default}
+        />
         <Stack.Screen name="ChatBox" component={ChatBoxScreen} />
         {/* 👇 Only Service Providers can access MyServices */}
         {role === "serviceProvider" && (

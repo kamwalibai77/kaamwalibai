@@ -56,7 +56,6 @@ export const sendOtp = async (req, res) => {
     const expires_at = new Date(Date.now() + OTP_EXPIRY_MIN * 60 * 1000);
 
     // store plain OTP (dev behavior - ensure this is not used in production)
-    // write the plain OTP into both otp_plain and otp_hash so it's visible in either column
     await Otp.create({
       phone: String(phone),
       otp_hash: otp,
@@ -73,7 +72,7 @@ export const sendOtp = async (req, res) => {
       cooldownSecs,
     });
   } catch (err) {
-    console.error("sendOtp error:", err && err.stack ? err.stack : err);
+    console.error("sendOtp error:", err);
     return res.status(500).json({ error: "Failed to send OTP" });
   }
 };
@@ -100,12 +99,11 @@ export const verifyOtp = async (req, res) => {
       return res.status(400).json({ error: "OTP expired" });
 
     await record.update({ attempts: record.attempts + 1 });
-    // Compare against otp_plain when available, otherwise fall back to comparing otp_hash (legacy)
+
     let valid = false;
     if (record.otp_plain) {
       valid = String(otp) === String(record.otp_plain);
     } else if (record.otp_hash) {
-      // legacy hashed OTP support (unlikely in dev)
       const bcrypt = await import("bcryptjs");
       valid = await bcrypt.compare(String(otp), record.otp_hash);
     }
@@ -124,10 +122,8 @@ export const verifyOtp = async (req, res) => {
       return res.json({ ok: true, token, user, isNewUser: false });
     }
 
-    // user does not exist
-    // If caller provided role, create user now; otherwise ask client to provide role
+    // user does not exist → ask for role if not provided
     if (!role) {
-      // do not consume OTP yet; client should prompt for role and re-call verify with role
       return res.json({ ok: true, needsRole: true });
     }
 
@@ -139,7 +135,6 @@ export const verifyOtp = async (req, res) => {
       role: role === "provider" ? "ServiceProvider" : "user",
     });
 
-    // consume OTP and return token + indicate new user
     await record.update({ used: true });
     const token = jwt.sign(
       { id: user.id },

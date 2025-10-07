@@ -20,10 +20,18 @@ import {
   View,
   Alert,
 } from "react-native";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import io from "socket.io-client";
 import { SOCKET_URL } from "../utills/config";
 import { RootStackParamList } from "../navigation/AppNavigator";
 import { Ionicons } from "@expo/vector-icons";
+import {
+  widthPercentageToDP as wp,
+  heightPercentageToDP as hp,
+} from "react-native-responsive-screen";
 
 type ChatBoxRouteProp = RouteProp<RootStackParamList, "ChatBox">;
 
@@ -41,6 +49,7 @@ export default function ChatBoxScreen() {
   const route = useRoute<ChatBoxRouteProp>();
   const navigation =
     useNavigation<NavigationProp<Record<string, object | undefined>>>();
+  const insets = useSafeAreaInsets();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -55,7 +64,7 @@ export default function ChatBoxScreen() {
   const name = params?.name;
   const profilePhoto = params?.profilePhoto;
 
-  // 🚨 Restricted words (multi-language)
+  // 🚨 Restricted words
   const restrictedWords: string[] = [
     "sex",
     "nude",
@@ -149,13 +158,7 @@ export default function ChatBoxScreen() {
       try {
         navigation.dispatch(StackActions.replace("Chat"));
       } catch {
-        try {
-          navigation.goBack();
-        } catch {
-          console.warn(
-            "Unable to navigate away from ChatBox when params are missing."
-          );
-        }
+        navigation.goBack();
       }
     }
   }, [userId, navigation]);
@@ -176,7 +179,7 @@ export default function ChatBoxScreen() {
     socketRef.current = socket;
 
     socket.on("connect", () => {
-      console.log("Connected to socket server:", socket.id);
+      console.log("Connected:", socket.id);
       socket.emit("register", myId);
     });
 
@@ -188,11 +191,7 @@ export default function ChatBoxScreen() {
     });
 
     return () => {
-      try {
-        socket.disconnect();
-      } catch (e) {
-        console.warn("Error disconnecting socket:", e);
-      }
+      socket.disconnect();
       socketRef.current = null;
     };
   }, [myId]);
@@ -209,14 +208,10 @@ export default function ChatBoxScreen() {
             headers: { Authorization: `Bearer ${token}` },
           }
         );
-
         const res = await axios.get(`${SOCKET_URL}/api/chat/${userId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-
-        if (res.data.success) {
-          setMessages(res.data.messages);
-        }
+        if (res.data.success) setMessages(res.data.messages);
       } catch (err) {
         console.error("Error fetching messages:", err);
       }
@@ -229,10 +224,7 @@ export default function ChatBoxScreen() {
     if (!input.trim() || !token || !myId) return;
 
     if (containsRestrictedWords(input)) {
-      Alert.alert(
-        "⚠️ Warning",
-        "Your message contains inappropriate or restricted words."
-      );
+      Alert.alert("⚠️ Warning", "Your message contains inappropriate words.");
       return;
     }
 
@@ -263,7 +255,6 @@ export default function ChatBoxScreen() {
         read: false,
         liked: false,
       };
-
       socketRef.current?.emit("sendMessage", newMessage);
       setMessages((prev) => [...prev, newMessage]);
       setInput("");
@@ -286,7 +277,6 @@ export default function ChatBoxScreen() {
 
   const renderMessage = ({ item }: { item: Message }) => {
     const isMe = String(item.senderId) === String(myId);
-
     return (
       <TouchableOpacity
         onLongPress={() => {
@@ -316,7 +306,9 @@ export default function ChatBoxScreen() {
               })}
             </Text>
             {isMe && item.read && <Text style={styles.readText}>✓✓</Text>}
-            <Text style={{ marginLeft: 4 }}>{item.liked ? "❤️" : "🤍"}</Text>
+            <Text style={{ marginLeft: wp(1.5) }}>
+              {item.liked ? "❤️" : "🤍"}
+            </Text>
           </View>
         </View>
       </TouchableOpacity>
@@ -324,140 +316,134 @@ export default function ChatBoxScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={90}
-    >
-      <View style={styles.header}>
-        {/* 🔙 Back Button */}
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons
-            name="arrow-back"
-            size={24}
-            color="white"
-            style={{ marginRight: 10 }}
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={hp(1)}
+      >
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={hp(3)} color="white" />
+          </TouchableOpacity>
+          <Image
+            source={{
+              uri:
+                profilePhoto ||
+                "https://randomuser.me/api/portraits/lego/1.jpg",
+            }}
+            style={styles.userImage}
           />
-        </TouchableOpacity>
+          <Text style={styles.headerText}>{name}</Text>
+        </View>
 
-        <Image
-          source={{
-            uri:
-              profilePhoto || "https://randomuser.me/api/portraits/lego/1.jpg",
-          }}
-          style={styles.userImage}
+        <FlatList
+          ref={flatListRef}
+          data={messages}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={renderMessage}
+          contentContainerStyle={styles.chatContainer}
+          onContentSizeChange={() =>
+            flatListRef.current?.scrollToEnd({ animated: true })
+          }
+          onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
         />
-        <Text style={styles.headerText}>{name}</Text>
-      </View>
 
-      <FlatList
-        ref={flatListRef}
-        data={messages}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={renderMessage}
-        contentContainerStyle={styles.chatContainer}
-        onContentSizeChange={() =>
-          flatListRef.current?.scrollToEnd({ animated: true })
-        }
-        onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
-      />
-
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Type your message..."
-          value={input}
-          onChangeText={setInput}
-        />
-        <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
-          <Ionicons
-            name={editingMessage ? "pencil-outline" : "send-outline"}
-            size={24}
-            color="#fff"
+        <View
+          style={[
+            styles.inputContainer,
+            { paddingBottom: Math.max(insets.bottom, hp(1.5)) },
+          ]}
+        >
+          <TextInput
+            style={styles.input}
+            placeholder="Type your message..."
+            value={input}
+            onChangeText={setInput}
+            returnKeyType="send"
+            onSubmitEditing={sendMessage}
           />
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+          <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
+            <Ionicons
+              name={editingMessage ? "pencil-outline" : "send-outline"}
+              size={hp(3)}
+              color="#fff"
+            />
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#ece5dd" },
+  safeArea: { flex: 1, backgroundColor: "#ece5dd" },
+  container: { flex: 1 },
   header: {
-    paddingTop: Platform.OS === "ios" ? 50 : 20,
-    paddingBottom: 15,
+    paddingTop: Platform.OS === "ios" ? hp(5) : hp(2.5),
+    paddingBottom: hp(1.8),
     backgroundColor: "#075e54",
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 10,
-    borderBottomWidth: 0.5,
+    paddingHorizontal: wp(3),
+    borderBottomWidth: 0.3,
     borderBottomColor: "#ccc",
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 2,
     elevation: 4,
   },
-  userImage: { width: 40, height: 40, borderRadius: 20, marginRight: 10 },
-  headerText: { color: "white", fontSize: 18, fontWeight: "bold" },
-  chatContainer: { paddingHorizontal: 10, paddingVertical: 5 },
-  messageWrapper: { marginVertical: 4 },
+  userImage: {
+    width: hp(4.5),
+    height: hp(4.5),
+    borderRadius: hp(2.25),
+    marginLeft: wp(3),
+    marginRight: wp(2),
+  },
+  headerText: { color: "white", fontSize: hp(2.1), fontWeight: "600" },
+  chatContainer: { paddingHorizontal: wp(3), paddingVertical: hp(1) },
+  messageWrapper: { marginVertical: hp(0.5) },
   alignRight: { alignSelf: "flex-end" },
   alignLeft: { alignSelf: "flex-start" },
   messageBubble: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 20,
+    paddingVertical: hp(1),
+    paddingHorizontal: wp(3),
+    borderRadius: wp(3),
     maxWidth: "80%",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
-    shadowRadius: 1.5,
     elevation: 2,
   },
   myMessage: { backgroundColor: "#b7ffa5ff", borderTopRightRadius: 5 },
   theirMessage: { backgroundColor: "#fff", borderTopLeftRadius: 5 },
-  messageText: { fontSize: 16, color: "#000" },
+  messageText: { fontSize: hp(1.9), color: "#000" },
   timeWrapper: {
     flexDirection: "row",
     justifyContent: "flex-end",
-    marginTop: 2,
+    marginTop: hp(0.4),
   },
-  timeText: { fontSize: 10, color: "#555", marginRight: 4 },
-  readText: { fontSize: 10, color: "#007aff" },
+  timeText: { fontSize: hp(1.3), color: "#555" },
+  readText: { fontSize: hp(1.3), color: "#007aff" },
   inputContainer: {
     flexDirection: "row",
-    padding: 10,
     backgroundColor: "#f0f0f0",
     alignItems: "center",
     borderTopWidth: 0.5,
     borderColor: "#ddd",
+    paddingHorizontal: wp(3),
+    paddingTop: hp(1),
+    elevation: 6,
   },
   input: {
     flex: 1,
-    borderRadius: 25,
+    borderRadius: wp(6),
     backgroundColor: "#fff",
-    paddingHorizontal: 15,
-    fontSize: 16,
-    height: 45,
-    marginRight: 10,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 1 },
-    shadowRadius: 2,
-    elevation: 1,
+    paddingHorizontal: wp(4),
+    fontSize: hp(2),
+    height: hp(6),
+    marginRight: wp(2),
   },
   sendButton: {
-    width: 45,
-    height: 45,
-    borderRadius: 25,
+    width: hp(5),
+    height: hp(5),
+    borderRadius: hp(2.5),
     backgroundColor: "#128c7e",
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 2,
-    elevation: 2,
   },
 });

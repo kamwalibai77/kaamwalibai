@@ -17,12 +17,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import BottomTab from "../../components/BottomTabs";
 import { SafeAreaView } from "react-native-safe-area-context";
+import api from "../services/api";
 
 const { width } = Dimensions.get("window");
 
 export default function SubscriptionScreen({ navigation }: any) {
   const [selectedRole, setSelectedRole] = useState<"user" | "provider">("user");
   const [purchasedPlan, setPurchasedPlan] = useState<string | null>(null);
+  const [role, setRole] = useState<string | null>(null);
 
   const userPlans = [
     { id: 1, price: "₹99", contacts: 3, duration: "7 Days" },
@@ -44,9 +46,25 @@ export default function SubscriptionScreen({ navigation }: any) {
     const load = async () => {
       try {
         const plan = await AsyncStorage.getItem("purchasedPlan");
+        const storedRole = await AsyncStorage.getItem("userRole");
         if (plan) setPurchasedPlan(plan);
+        if (storedRole) {
+          setRole(storedRole);
+          const compact = (storedRole || "")
+            .replace(/[^a-zA-Z]/g, "")
+            .toLowerCase();
+          if (
+            compact === "serviceprovider" ||
+            compact === "provider" ||
+            compact.includes("service")
+          ) {
+            setSelectedRole("provider");
+          } else {
+            setSelectedRole("user");
+          }
+        }
       } catch (e) {
-        console.warn("Failed to read purchasedPlan from storage", e);
+        console.warn("Failed to read purchasedPlan or role from storage", e);
       }
     };
     load();
@@ -111,20 +129,13 @@ export default function SubscriptionScreen({ navigation }: any) {
     try {
       const token = await AsyncStorage.getItem("token");
       const numeric = Number(String(plan.price).replace(/[^0-9]/g, ""));
-      const res = await fetch(`${API_BASE_URL}/payments/verify`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: token ? `Bearer ${token}` : "",
-        },
-        body: JSON.stringify({
-          razorpay_payment_id: paymentId,
-          plan_id: plan.id,
-          amount: numeric,
-        }),
+      const res = await api.post("/payments/verify", {
+        razorpay_payment_id: paymentId,
+        plan_id: plan.id,
+        amount: numeric,
       });
-      const json = await res.json();
-      if (res.ok) console.log("Subscription saved on backend:", json);
+      const json = await res.data;
+      if (res.data) console.log("Subscription saved on backend:", json);
       else console.warn("Failed to save subscription:", json);
     } catch (err) {
       console.error("Error saving subscription:", err);
@@ -180,52 +191,54 @@ export default function SubscriptionScreen({ navigation }: any) {
 
       <View style={styles.container}>
         <LinearGradient colors={["#eef2ff", "#e0e7ff"]} style={{ flex: 1 }}>
-          {/* Toggle */}
-          <View style={styles.toggleContainer}>
-            <TouchableOpacity
-              style={[
-                styles.toggleButton,
-                selectedRole === "user" && styles.toggleActive,
-              ]}
-              onPress={() => setSelectedRole("user")}
-            >
-              <Ionicons
-                name="person-outline"
-                size={20}
-                color={selectedRole === "user" ? "#fff" : "#6366f1"}
-              />
-              <Text
+          {/* Toggle: only show when role is not defined (e.g., guest or switchable) */}
+          {!role && (
+            <View style={styles.toggleContainer}>
+              <TouchableOpacity
                 style={[
-                  styles.toggleText,
-                  selectedRole === "user" && styles.toggleTextActive,
+                  styles.toggleButton,
+                  selectedRole === "user" && styles.toggleActive,
                 ]}
+                onPress={() => setSelectedRole("user")}
               >
-                User
-              </Text>
-            </TouchableOpacity>
+                <Ionicons
+                  name="person-outline"
+                  size={20}
+                  color={selectedRole === "user" ? "#fff" : "#6366f1"}
+                />
+                <Text
+                  style={[
+                    styles.toggleText,
+                    selectedRole === "user" && styles.toggleTextActive,
+                  ]}
+                >
+                  User
+                </Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[
-                styles.toggleButton,
-                selectedRole === "provider" && styles.toggleActive,
-              ]}
-              onPress={() => setSelectedRole("provider")}
-            >
-              <Ionicons
-                name="briefcase-outline"
-                size={20}
-                color={selectedRole === "provider" ? "#fff" : "#6366f1"}
-              />
-              <Text
+              <TouchableOpacity
                 style={[
-                  styles.toggleText,
-                  selectedRole === "provider" && styles.toggleTextActive,
+                  styles.toggleButton,
+                  selectedRole === "provider" && styles.toggleActive,
                 ]}
+                onPress={() => setSelectedRole("provider")}
               >
-                Service Provider
-              </Text>
-            </TouchableOpacity>
-          </View>
+                <Ionicons
+                  name="briefcase-outline"
+                  size={20}
+                  color={selectedRole === "provider" ? "#fff" : "#6366f1"}
+                />
+                <Text
+                  style={[
+                    styles.toggleText,
+                    selectedRole === "provider" && styles.toggleTextActive,
+                  ]}
+                >
+                  Service Provider
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* Plans */}
           <ScrollView contentContainerStyle={styles.scroll}>

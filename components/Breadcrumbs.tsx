@@ -1,5 +1,13 @@
 import React from "react";
-import { View, Text, StyleSheet, Platform } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Platform,
+  TouchableOpacity,
+} from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 
 type Props = {
   state?: any;
@@ -11,6 +19,7 @@ export default function Breadcrumbs({ state }: Props) {
     return null;
 
   try {
+    const navigation = useNavigation<any>();
     const index =
       typeof state.index === "number" ? state.index : state.routes.length - 1;
     const segments = state.routes
@@ -22,8 +31,18 @@ export default function Breadcrumbs({ state }: Props) {
     if (!path) return null;
 
     return (
-      <View style={styles.container} pointerEvents="none">
-        {/* <Text style={styles.text}>{path}</Text> */}
+      <View style={styles.container} pointerEvents="box-none">
+        {navigation?.canGoBack && navigation.canGoBack() && (
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="arrow-back" size={18} color="#111827" />
+          </TouchableOpacity>
+        )}
+        {/* <Text style={styles.text} numberOfLines={1} ellipsizeMode="tail">
+          {path}
+        </Text> */}
       </View>
     );
   } catch (_) {
@@ -37,7 +56,7 @@ const styles = StyleSheet.create({
     top: Platform.OS === "ios" ? 50 : 12,
     left: 12,
     right: 12,
-    backgroundColor: "rgba(255,255,255,0.9)",
+    // backgroundColor: "rgba(255,255,255,0.9)",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
@@ -49,6 +68,12 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 6,
     zIndex: 1000,
+  },
+  backBtn: {
+    position: "absolute",
+    left: 8,
+    top: Platform.OS === "ios" ? 8 : 6,
+    padding: 6,
   },
   text: {
     fontSize: 12,

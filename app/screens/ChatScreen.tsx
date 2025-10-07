@@ -58,7 +58,8 @@ export default function ChatScreen({ navigation }: Props) {
     });
 
     socket.on("receiveMessage", (msg: any) => {
-      const otherUserId = msg.senderId === myId ? msg.receiverId : msg.senderId;
+      console.log("Received message:", msg);
+      const otherUserId = msg.senderId == myId ? msg.receiverId : msg.senderId;
 
       setChatList((prev) => {
         const existingIndex = prev.findIndex((chat) => chat.id == otherUserId);
@@ -66,14 +67,14 @@ export default function ChatScreen({ navigation }: Props) {
         const updatedChat: Chat = {
           id: otherUserId,
           name:
-            (msg.senderId === myId ? msg.receiverName : msg.senderName) ||
+            (msg.senderId == myId ? msg.receiverName : msg.senderName) ||
             prev[existingIndex]?.name,
           profilePhoto:
             msg.senderProfilePhoto || prev[existingIndex]?.profilePhoto,
           lastMessage: msg.message,
           updatedAt: msg.createdAt,
           unreadCount:
-            msg.receiverId === myId
+            msg.receiverId == myId
               ? existingIndex >= 0
                 ? prev[existingIndex].unreadCount + 1
                 : 1

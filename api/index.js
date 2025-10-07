@@ -17,6 +17,7 @@ import userRoutes from "./routes/userRoutes.js";
 import userServicesRoutes from "./routes/userServicesRoutes.js";
 import paymentsRoutes from "./routes/payments.js";
 import webhookRoutes from "./routes/webhook.js";
+import faqRoutes from "./routes/faqRoutes.js";
 
 // Socket handler
 
@@ -43,6 +44,7 @@ app.use("/api/service-types", serviceTypeRoutes);
 app.use("/api/service-provider", userServicesRoutes);
 app.use("/api/service-provider/availability", availabilityRoutes);
 app.use("/api/payments", paymentsRoutes);
+app.use("/api/faqs", faqRoutes);
 
 // Test route
 app.get("/", (req, res) => res.send("Server running"));
