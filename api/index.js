@@ -57,7 +57,8 @@ initSocket(server);
 
 // Sync DB & Start server
 const PORT = process.env.PORT || 5000;
-db.sequelize.sync()
+db.sequelize
+  .sync()
   .then(() => {
     server.listen(PORT, () =>
       console.log(`🚀 Server running with WebSocket on port ${PORT}`)
@@ -67,24 +68,23 @@ db.sequelize.sync()
     console.error("❌ DB sync failed:", err);
     process.exit(1);
   });
-  // Periodic cleanup: remove expired OTPs every hour
-  const cleanupIntervalMs = Number(
-    process.env.OTP_CLEANUP_INTERVAL_MS || 60 * 60 * 1000
-  );
-  setInterval(async () => {
-    try {
-      const Op = db.Sequelize.Op;
-      const now = new Date();
-      const deleted = await db.Otp.destroy({
-        where: { expires_at: { [Op.lt]: now } },
-      });
-      if (deleted)
-        console.log(`[otp cleanup] removed ${deleted} expired OTP records`);
-    } catch (e) {
-      console.error("[otp cleanup] error:", e && e.stack ? e.stack : e);
-    }
-  }, cleanupIntervalMs);
-});
+// Periodic cleanup: remove expired OTPs every hour
+const cleanupIntervalMs = Number(
+  process.env.OTP_CLEANUP_INTERVAL_MS || 60 * 60 * 1000
+);
+setInterval(async () => {
+  try {
+    const Op = db.Sequelize.Op;
+    const now = new Date();
+    const deleted = await db.Otp.destroy({
+      where: { expires_at: { [Op.lt]: now } },
+    });
+    if (deleted)
+      console.log(`[otp cleanup] removed ${deleted} expired OTP records`);
+  } catch (e) {
+    console.error("[otp cleanup] error:", e && e.stack ? e.stack : e);
+  }
+}, cleanupIntervalMs);
 
 const listener = await ngrok.forward({
   addr: 5000,
