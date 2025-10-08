@@ -57,10 +57,16 @@ initSocket(server);
 
 // Sync DB & Start server
 const PORT = process.env.PORT || 5000;
-db.sequelize.sync().then(() => {
-  server.listen(PORT, () =>
-    console.log(`🚀 Server running with WebSocket on port ${PORT}`)
-  );
+db.sequelize.sync()
+  .then(() => {
+    server.listen(PORT, () =>
+      console.log(`🚀 Server running with WebSocket on port ${PORT}`)
+    );
+  })
+  .catch((err) => {
+    console.error("❌ DB sync failed:", err);
+    process.exit(1);
+  });
   // Periodic cleanup: remove expired OTPs every hour
   const cleanupIntervalMs = Number(
     process.env.OTP_CLEANUP_INTERVAL_MS || 60 * 60 * 1000
