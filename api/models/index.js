@@ -1,68 +1,49 @@
-import fs from "fs";
-import path from "path";
-import { fileURLToPath, pathToFileURL } from "url";
-import Sequelize from "sequelize";
+import express from "express";
+import db from "./models/index.js";
+import dotenv from "dotenv";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const basename = path.basename(__filename);
+dotenv.config();
 
-const db = {};
+const app = express();
+const PORT = process.env.PORT || 5000;
 
-// Determine environment
-const env = process.env.NODE_ENV || "development";
+// Middleware
+app.use(express.json());
 
-// Read config.json
-const configPath = path.resolve(__dirname, "../config/config.json");
-const configFile = JSON.parse(fs.readFileSync(configPath, "utf-8"));
-const config = configFile[env];
-
-// Initialize Sequelize
-let sequelize;
-
-if (process.env.DATABASE_URL) {
-  // ✅ Render / Production
-  sequelize = new Sequelize(process.env.DATABASE_URL, {
-    dialect: "postgres",
-    protocol: "postgres",
-    dialectOptions: {
-      ssl: {
-        require: true,
-        rejectUnauthorized: false,
-      },
-    },
-    logging: false,
-  });
-} else {
-  // ✅ Local development
-  sequelize = new Sequelize(config.database, config.username, config.password, {
-    host: config.host,
-    dialect: "postgres",
-    logging: console.log,
-  });
-}
-
-// Load all models dynamically
-const files = fs
-  .readdirSync(__dirname)
-  .filter(
-    (file) =>
-      file.indexOf(".") !== 0 && file !== basename && file.slice(-3) === ".js"
-  );
-
-for (const file of files) {
-  const fileUrl = pathToFileURL(path.join(__dirname, file)).href;
-  const { default: modelFunc } = await import(fileUrl);
-  const model = modelFunc(sequelize, Sequelize.DataTypes);
-  db[model.name] = model;
-}
-
-// Run associations if defined
-Object.keys(db).forEach((modelName) => {
-  if (db[modelName].associate) db[modelName].associate(db);
+// Example route
+app.get("/", (req, res) => {
+  res.send("API is running...");
 });
 
-db.sequelize = sequelize;
-db.Sequelize = Sequelize;
+// Start server
+const startServer = async () => {
+  try {
+    // Connect & sync DB
+    await db.sequelize.authenticate();
+    console.log("✅ Database connected");
 
-export default db;
+    // Sync models (optional: force: true only for dev)
+    await db.sequelize.sync({ alter: true });
+    console.log("✅ Database synced");
+
+    // Start Express
+    const server = app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+    });
+
+    // 🌟 Local ngrok only (for testing)
+    if (process.env.NODE_ENV !== "production" && process.env.NGROK === "true") {
+      const ngrok = await import("ngrok");
+      const url = await ngrok.connect({
+        addr: PORT,
+        authtoken: process.env.NGROK_AUTHTOKEN, // optional
+      });
+      console.log(`🔗 ngrok tunnel running at ${url}`);
+    }
+  } catch (err) {
+    console.error("❌ Failed to start server:", err);
+    process.exit(1);
+  }
+};
+
+startServer();
