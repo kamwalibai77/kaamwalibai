@@ -4,7 +4,6 @@ import express from "express";
 import http from "http";
 import db from "./models/index.js";
 import { initSocket } from "./sockets/socket.js";
-import ngrok from "@ngrok/ngrok";
 
 // Routes
 import authRoutes from "./routes/authRoutes.js";
@@ -19,19 +18,14 @@ import paymentsRoutes from "./routes/payments.js";
 import webhookRoutes from "./routes/webhook.js";
 import faqRoutes from "./routes/faqRoutes.js";
 
-// Socket handler
-
 dotenv.config();
 
 const app = express();
+const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors());
-
-// Mount webhook early so its raw body middleware can access the raw request
-// before other body parsers (like express.json) consume the stream.
-app.use("/api/webhook", webhookRoutes);
-
+app.use("/api/webhook", webhookRoutes); // must be before express.json
 app.use(express.json());
 
 // REST API Routes
@@ -49,47 +43,54 @@ app.use("/api/faqs", faqRoutes);
 // Test route
 app.get("/", (req, res) => res.send("Server running"));
 
-// Create HTTP server
+// Create HTTP server & init WebSocket
 const server = http.createServer(app);
-
-// init socket
 initSocket(server);
 
-// Sync DB & Start server
-const PORT = process.env.PORT || 5000;
-db.sequelize
-  .sync()
-  .then(() => {
+// Function to start server
+const startServer = async () => {
+  try {
+    // Sync DB
+    await db.sequelize.sync();
+    console.log("✅ Database synced");
+
+    // Start server
     server.listen(PORT, () =>
       console.log(`🚀 Server running with WebSocket on port ${PORT}`)
     );
-  })
-  .catch((err) => {
-    console.error("❌ DB sync failed:", err);
+
+    // Periodic cleanup: remove expired OTPs
+    const cleanupIntervalMs = Number(
+      process.env.OTP_CLEANUP_INTERVAL_MS || 60 * 60 * 1000
+    );
+    setInterval(async () => {
+      try {
+        const Op = db.Sequelize.Op;
+        const now = new Date();
+        const deleted = await db.Otp.destroy({
+          where: { expires_at: { [Op.lt]: now } },
+        });
+        if (deleted)
+          console.log(`[otp cleanup] removed ${deleted} expired OTP records`);
+      } catch (e) {
+        console.error("[otp cleanup] error:", e && e.stack ? e.stack : e);
+      }
+    }, cleanupIntervalMs);
+
+    // 🌟 Start ngrok only for local dev if enabled
+    if (process.env.NODE_ENV !== "production" && process.env.NGROK === "true") {
+      const ngrok = await import("@ngrok/ngrok");
+      const url = await ngrok.connect({
+        addr: PORT,
+        authtoken_from_env: true,
+      });
+      console.log(`🔗 ngrok tunnel running at: ${url}`);
+    }
+  } catch (err) {
+    console.error("❌ Failed to start server:", err);
     process.exit(1);
-  });
-// Periodic cleanup: remove expired OTPs every hour
-const cleanupIntervalMs = Number(
-  process.env.OTP_CLEANUP_INTERVAL_MS || 60 * 60 * 1000
-);
-setInterval(async () => {
-  try {
-    const Op = db.Sequelize.Op;
-    const now = new Date();
-    const deleted = await db.Otp.destroy({
-      where: { expires_at: { [Op.lt]: now } },
-    });
-    if (deleted)
-      console.log(`[otp cleanup] removed ${deleted} expired OTP records`);
-  } catch (e) {
-    console.error("[otp cleanup] error:", e && e.stack ? e.stack : e);
   }
-}, cleanupIntervalMs);
+};
 
-const listener = await ngrok.forward({
-  addr: 5000,
-  authtoken_from_env: true,
-});
-
-// Output ngrok url to console
-console.log(`Ingress established at: ${listener.url()}`);
+// Start everything
+startServer();
