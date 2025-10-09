@@ -15,15 +15,35 @@ const config = configFile[env];
 const db = {};
 
 let sequelize;
-if (config.use_env_variable) {
-  sequelize = new Sequelize(process.env[config.use_env_variable], config);
+
+if (config.use_env_variable && process.env[config.use_env_variable]) {
+  // ✅ Production (Render) — use DATABASE_URL from environment
+  sequelize = new Sequelize(process.env[config.use_env_variable], {
+    dialect: "postgres",
+    protocol: "postgres",
+    dialectOptions: {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false,
+      },
+    },
+  });
 } else {
-  sequelize = new Sequelize(config.database, config.username, config.password, config);
+  // ✅ Local development
+  sequelize = new Sequelize(config.database, config.username, config.password, {
+    host: config.host,
+    dialect: "postgres",
+    logging: false,
+  });
 }
 
-const files = fs.readdirSync(__dirname).filter(f => {
-  return f.indexOf('.') !== 0 && f !== basename && f.slice(-3) === '.js';
-});
+// Load all models
+const files = fs
+  .readdirSync(__dirname)
+  .filter(
+    (file) =>
+      file.indexOf(".") !== 0 && file !== basename && file.slice(-3) === ".js"
+  );
 
 for (const file of files) {
   const fileUrl = pathToFileURL(path.join(__dirname, file)).href;
@@ -32,8 +52,9 @@ for (const file of files) {
   db[model.name] = model;
 }
 
-Object.keys(db).forEach(name => {
-  if (db[name].associate) db[name].associate(db);
+// Run associations if defined
+Object.keys(db).forEach((modelName) => {
+  if (db[modelName].associate) db[modelName].associate(db);
 });
 
 db.sequelize = sequelize;
