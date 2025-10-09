@@ -7,18 +7,22 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const basename = path.basename(__filename);
 
-const configPath = path.resolve(__dirname, "../config/config.json");
-const configFile = JSON.parse(fs.readFileSync(configPath, "utf-8"));
-const env = process.env.NODE_ENV || "development";
-const config = configFile[env];
-
 const db = {};
 
+// Determine environment
+const env = process.env.NODE_ENV || "development";
+
+// Read config.json
+const configPath = path.resolve(__dirname, "../config/config.json");
+const configFile = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+const config = configFile[env];
+
+// Initialize Sequelize
 let sequelize;
 
-if (config.use_env_variable && process.env[config.use_env_variable]) {
-  // ✅ Production (Render) — use DATABASE_URL from environment
-  sequelize = new Sequelize(process.env[config.use_env_variable], {
+if (process.env.DATABASE_URL) {
+  // ✅ Render / Production
+  sequelize = new Sequelize(process.env.DATABASE_URL, {
     dialect: "postgres",
     protocol: "postgres",
     dialectOptions: {
@@ -27,17 +31,18 @@ if (config.use_env_variable && process.env[config.use_env_variable]) {
         rejectUnauthorized: false,
       },
     },
+    logging: false,
   });
 } else {
   // ✅ Local development
   sequelize = new Sequelize(config.database, config.username, config.password, {
     host: config.host,
     dialect: "postgres",
-    logging: false,
+    logging: console.log,
   });
 }
 
-// Load all models
+// Load all models dynamically
 const files = fs
   .readdirSync(__dirname)
   .filter(
