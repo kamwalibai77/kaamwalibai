@@ -1,26 +1,24 @@
 // screens/ProfileEditScreen.tsx
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
-import React, { useEffect, useState, useRef } from "react";
-import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../navigation/AppNavigator";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  View,
   Image,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  Platform,
-  // SafeAreaView removed from react-native; use the context below
+  View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import DropDownPicker from "react-native-dropdown-picker";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { RootStackParamList } from "../navigation/AppNavigator";
 import api from "../services/api";
 
 type Props = NativeStackScreenProps<RootStackParamList, "EditProfile">;
@@ -142,6 +140,16 @@ export default function ProfileEditScreen({ navigation }: Props) {
           "Content-Type": "multipart/form-data",
         },
       });
+
+      // Persist the role locally once the profile is saved — make it immutable in the UI
+      if (role) {
+        await AsyncStorage.setItem(
+          "userRole",
+          (role || "").toLowerCase().includes("provider")
+            ? "ServiceProvider"
+            : "user"
+        );
+      }
 
       Alert.alert("Success", "Profile updated successfully!");
       navigation.navigate("Profile");
@@ -310,12 +318,50 @@ export default function ProfileEditScreen({ navigation }: Props) {
           />
 
           <Text style={styles.label}>Role</Text>
-          <TextInput
-            placeholder="Role"
-            value={role}
-            editable={false}
-            style={[styles.input, { backgroundColor: "#f8fafc" }]}
-          />
+          {/* If role is missing or we're explicitly required to choose a role, show a selector. */}
+          {!role ||
+          (navigation as any)
+            ?.getState()
+            ?.routes?.some((r: any) => r.params?.needsRole) ? (
+            <View style={{ flexDirection: "row", marginBottom: 18 }}>
+              <TouchableOpacity
+                style={[styles.roleBtn, role === "user" && styles.roleActive]}
+                onPress={() => setRole("user")}
+              >
+                <Text
+                  style={
+                    role === "user" ? styles.roleTextActive : styles.roleText
+                  }
+                >
+                  User
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.roleBtn,
+                  role === "ServiceProvider" && styles.roleActive,
+                ]}
+                onPress={() => setRole("ServiceProvider")}
+              >
+                <Text
+                  style={
+                    role === "ServiceProvider"
+                      ? styles.roleTextActive
+                      : styles.roleText
+                  }
+                >
+                  Service Provider
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TextInput
+              placeholder="Role"
+              value={role}
+              editable={false}
+              style={[styles.input, { backgroundColor: "#f8fafc" }]}
+            />
+          )}
 
           <Text style={styles.label}>Gender</Text>
           <View
@@ -476,4 +522,15 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 6,
   },
+  roleBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    marginRight: 8,
+    borderRadius: 8,
+  },
+  roleActive: { backgroundColor: "#4f46e5", borderColor: "#4f46e5" },
+  roleText: { color: "#374151", fontWeight: "500" },
+  roleTextActive: { color: "#fff", fontWeight: "600" },
 });

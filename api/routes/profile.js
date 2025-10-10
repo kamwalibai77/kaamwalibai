@@ -21,8 +21,16 @@ router.put(
 
     try {
       const userId = req.user.id;
-      const { name, phoneNumber, address, gender, age, latitude, longitude } =
-        req.body;
+      const {
+        name,
+        phoneNumber,
+        address,
+        gender,
+        age,
+        latitude,
+        longitude,
+        role,
+      } = req.body;
 
       // save local path for cleanup
       localFilePath = req.file?.path;
@@ -38,7 +46,7 @@ router.put(
 
       // Save user to DB
       const [rowsUpdated, [updatedUser]] = await User.update(
-        { name, phoneNumber, address, gender, age, latitude, longitude },
+        { name, phoneNumber, address, gender, age, latitude, longitude, role },
         {
           where: { id: userId },
           returning: true,

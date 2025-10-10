@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import api from "../services/api";
 import { RootStackParamList } from "../navigation/AppNavigator";
 import {
   View,
@@ -17,6 +18,7 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE_URL } from "../utills/config";
+import Snackbar from "../../components/Snackbar";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Login">;
 
@@ -26,6 +28,7 @@ export default function LoginScreen({ navigation }: Props) {
   const [role, setRole] = useState<"user" | "provider" | null>(null);
   const [needsRole, setNeedsRole] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [snackbarMsg, setSnackbarMsg] = useState<string | null>(null);
   const [step, setStep] = useState<"phone" | "otp">("phone");
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const otpInputs = useRef<(TextInput | null)[]>([]);
@@ -76,16 +79,16 @@ export default function LoginScreen({ navigation }: Props) {
       }
 
       if (resp.ok) {
-        setRole(null);
-        setNeedsRole(false);
         setStep("otp");
         setCooldown(60);
-        Alert.alert("OTP sent", `OTP sent to +${COUNTRY_CODE}${phone}`);
+        setSnackbarMsg(
+          `OTP sent to +${COUNTRY_CODE}${phone} - OTP is ${json.otp}`
+        );
       } else {
-        Alert.alert("Error", json?.error || "Failed to send OTP");
+        setSnackbarMsg(json?.error || "Failed to send OTP");
       }
     } catch (e) {
-      Alert.alert("Error", "Failed to send OTP");
+      setSnackbarMsg("Failed to send OTP");
     } finally {
       setLoading(false);
     }
@@ -105,20 +108,9 @@ export default function LoginScreen({ navigation }: Props) {
       };
       if (role) payload.role = role === "provider" ? "provider" : "user";
 
-      const resp = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      let json: any = {};
-      try {
-        json = await resp.json();
-      } catch {
-        json = {};
-      }
-
-      if (resp.ok && json) {
+      const resp = await api.post(`${API_BASE_URL}/auth/verify-otp`, payload);
+      const json = resp.data;
+      if (resp.data) {
         if (json.token) {
           await AsyncStorage.setItem("token", json.token);
           if (json.user?.id)
@@ -138,14 +130,21 @@ export default function LoginScreen({ navigation }: Props) {
           }
 
           if (json.isNewUser) {
-            navigation.reset({ index: 0, routes: [{ name: "EditProfile" }] });
+            navigation.reset({
+              index: 0,
+              routes: [{ name: "EditProfile", params: { needsRole: true } }],
+            });
           } else {
             navigation.reset({ index: 0, routes: [{ name: "Home" }] });
           }
           return;
         }
         if (json.needsRole) {
-          setNeedsRole(true);
+          // Move role selection into the profile edit flow for a better UX.
+          navigation.reset({
+            index: 0,
+            routes: [{ name: "EditProfile", params: { needsRole: true } }],
+          });
           return;
         }
       }
@@ -351,6 +350,7 @@ export default function LoginScreen({ navigation }: Props) {
           )}
         </View>
       </ScrollView>
+      <Snackbar message={snackbarMsg} onDismiss={() => setSnackbarMsg(null)} />
     </KeyboardAvoidingView>
   );
 }

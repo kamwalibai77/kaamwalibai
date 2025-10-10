@@ -70,6 +70,7 @@ export const sendOtp = async (req, res) => {
       ok: true,
       expiresInMinutes: OTP_EXPIRY_MIN,
       cooldownSecs,
+      otp,
     });
   } catch (err) {
     console.error("sendOtp error:", err);
@@ -122,17 +123,11 @@ export const verifyOtp = async (req, res) => {
       return res.json({ ok: true, token, user, isNewUser: false });
     }
 
-    // user does not exist → ask for role if not provided
-    if (!role) {
-      return res.json({ ok: true, needsRole: true });
-    }
-
     // create user with provided role
     user = await User.create({
       name: `User_${Date.now()}`,
       phoneNumber: String(phone),
       password: "",
-      role: role === "provider" ? "ServiceProvider" : "user",
     });
 
     await record.update({ used: true });

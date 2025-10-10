@@ -1,6 +1,6 @@
 // Change API_BASE_URL to your backend (use LAN IP for device testing)
-import { Platform } from "react-native";
 import Constants from "expo-constants";
+import { Platform } from "react-native";
 
 // Host resolution rules:
 // 1. If running via Expo/Expo Go during development, Constants.manifest.debuggerHost
@@ -39,16 +39,17 @@ if (inferred) {
   HOST = inferred;
 } else if (Platform.OS === "android") {
   // Default emulator loopback for Android emulator
-  HOST = "192.168.1.9";
+  HOST = "172.20.10.11";
 } else {
-  HOST = "192.168.1.9";
+  HOST = "172.20.10.11";
 }
 
-// If MANUAL_HOST is a full host (contains protocol), callers may want to use it directly.
 export const API_BASE_URL =
-  MANUAL_HOST &&
-  typeof MANUAL_HOST === "string" &&
-  String(MANUAL_HOST).includes(":")
+  process.env.NODE_ENV === "production"
+    ? "https://kaamwalibai.onrender.com/api"
+    : MANUAL_HOST &&
+      typeof MANUAL_HOST === "string" &&
+      String(MANUAL_HOST).includes(":")
     ? `${MANUAL_HOST}/api`
     : `http://${HOST}:5000/api`;
 
