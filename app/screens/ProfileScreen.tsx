@@ -1,23 +1,23 @@
 // screens/ProfileScreen.tsx
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
-import React, { useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../navigation/AppNavigator";
+import { LinearGradient } from "expo-linear-gradient";
+import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
-  View,
-  Image,
   TouchableOpacity,
-  ActivityIndicator,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { API_BASE_URL } from "../utills/config";
 import BottomTab from "../../components/BottomTabs";
-const PlaceholderImg = require("../../assets/images/logo.png");
+import { RootStackParamList } from "../navigation/AppNavigator";
+import { API_BASE_URL } from "../utills/config";
+const PlaceholderImg = require("../../assets/images/default.png");
 
 type Props = NativeStackScreenProps<RootStackParamList, "Profile">;
 

@@ -2,8 +2,8 @@
 import BottomTab from "@/components/BottomTabs";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import React, { useEffect, useState } from "react";
 import * as Location from "expo-location";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -353,6 +353,25 @@ export default function HomeScreen({ navigation }: Props) {
           />
         </View>
 
+        {/* Advertisement Banner */}
+        <TouchableOpacity
+          activeOpacity={0.95}
+          onPress={() => {
+            // open ad link (change to your campaign URL)
+            Linking.openURL("https://your-ad-destination.example.com");
+          }}
+          style={styles.adContainer}
+        >
+          {/* Use a local asset: require('../../assets/images/ad-landscape.jpg')
+      OR a remote URL: { uri: 'https://example.com/ad.jpg' } */}
+          <Image
+            source={require("../../assets/images/offer.png")}
+            // source={{ uri: "https://example.com/ad-landscape.jpg" }}
+            style={styles.adImage}
+            resizeMode="cover"
+          />
+        </TouchableOpacity>
+
         {/* Services + Providers */}
         <FlatList
           data={providers}
@@ -554,6 +573,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     elevation: 3,
   },
+
   searchInput: { flex: 1, height: 40, marginLeft: 8 },
 
   sectionTitle: { fontSize: 18, fontWeight: "700", margin: 15 },
@@ -589,6 +609,17 @@ const styles = StyleSheet.create({
     elevation: 3,
     minWidth: "45%",
   },
+  adContainer: {
+    alignItems: "center",
+    marginVertical: 10,
+  },
+  adImage: {
+    width: "90%", // narrower than screen
+    height: 120, // fixed height
+    borderRadius: 12,
+    backgroundColor: "#e2e8f0",
+  },
+
   providerImage: { width: "100%", aspectRatio: 1.5, borderRadius: 10 },
   providerName: { fontWeight: "bold", marginTop: 5 },
   providerService: { color: "gray", fontSize: 12 },
