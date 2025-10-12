@@ -44,6 +44,12 @@ export default function HomeScreen({ navigation }: Props) {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [subscriptionModalVisible, setSubscriptionModalVisible] =
     useState(false);
+  const [subscriptionLimit, setSubscriptionLimit] = useState<number | null>(
+    null
+  );
+  const [subscriptionRemaining, setSubscriptionRemaining] = useState<
+    number | null
+  >(null);
 
   const [locationQuery, setLocationQuery] = useState("");
   const [suggestions, setSuggestions] = useState<any[]>([]);
@@ -118,6 +124,12 @@ export default function HomeScreen({ navigation }: Props) {
     s.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // If subscriptionLimit is set, show only that many providers
+  const displayedProviders =
+    subscriptionLimit !== null
+      ? providers.slice(0, subscriptionLimit)
+      : providers;
+
   useEffect(() => {
     const init = async () => {
       try {
@@ -163,12 +175,42 @@ export default function HomeScreen({ navigation }: Props) {
       }
 
       await fetchProviders(true, coords?.lat ?? null, coords?.lng ?? null, 10);
-      fetchServiceTypes();
+      // Fetch user's subscription details to enforce contact limits
+      try {
+        const token = await AsyncStorage.getItem("token");
+        if (token) {
+          const me = await api.get("/payments/me", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (me && me.data && me.data.subscription) {
+            const sub = me.data.subscription;
+            // If backend returns remaining contacts as numberOfContacts, use that.
+            const remaining =
+              typeof sub.numberOfContacts !== "undefined" &&
+              sub.numberOfContacts !== null
+                ? Number(sub.numberOfContacts)
+                : null;
+            const limit =
+              remaining !== null
+                ? remaining
+                : sub.plan && sub.plan.contacts
+                ? Number(sub.plan.contacts)
+                : null;
+            setSubscriptionRemaining(remaining);
+            setSubscriptionLimit(limit);
+            // consider the existence of a subscription as subscribed
+            setIsSubscribed(true);
+          }
+        }
+      } catch (e) {
+        // ignore; subscription info not critical here
+      }
     };
     init();
 
     AsyncStorage.getItem("isSubscribed").then((res) => {
-      setIsSubscribed(res === "true");
+      // preserve local flag if present; API fetch above may override
+      if (res === "true") setIsSubscribed(true);
     });
     initializedRef.current = true;
   }, []);
@@ -186,6 +228,26 @@ export default function HomeScreen({ navigation }: Props) {
   }, [page]);
 
   const openProviderModal = (provider: any) => {
+    // If user has a subscription with remaining count and it's zero, block access
+    if (
+      isSubscribed &&
+      subscriptionRemaining !== null &&
+      subscriptionRemaining <= 0
+    ) {
+      Alert.alert(
+        "Subscription limit reached",
+        "You have reached your contact limit. Buy a new subscription to contact more providers.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Buy Subscription",
+            onPress: () => navigation.navigate("Subscription"),
+          },
+        ]
+      );
+      return;
+    }
+
     setSelectedProvider(provider);
     if (isSubscribed) {
       setModalVisible(true);
@@ -374,7 +436,7 @@ export default function HomeScreen({ navigation }: Props) {
 
         {/* Services + Providers */}
         <FlatList
-          data={providers}
+          data={displayedProviders}
           keyExtractor={(item) => item.id.toString()}
           numColumns={2}
           columnWrapperStyle={{ justifyContent: "space-between" }}
