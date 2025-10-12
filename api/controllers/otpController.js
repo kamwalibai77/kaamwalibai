@@ -1,5 +1,5 @@
-import db from "../models/index.js";
 import jwt from "jsonwebtoken";
+import db from "../models/index.js";
 
 const Otp = db.Otp;
 const User = db.User;
@@ -63,7 +63,46 @@ export const sendOtp = async (req, res) => {
       otp_plain: otp,
     });
 
-    // Log OTP to server console for local dev (no SMS provider configured)
+    // Attempt to send OTP via SMS gateway. By default we assume 2factor.in API
+    // Format: https://2factor.in/API/V1/{API_KEY}/SMS/{MOBILE}/{OTP}
+    // You can override provider/key via env: SMS_GATEWAY_PROVIDER and SMS_GATEWAY_KEY
+    const apiKey =
+      process.env.SMS_GATEWAY_KEY || "a2411f6e-a794-11f0-b922-0200cd936042";
+    const provider = (
+      process.env.SMS_GATEWAY_PROVIDER || "2factor"
+    ).toLowerCase();
+
+    const phoneDigits = String(phone).replace(/\D/g, "");
+    try {
+      if (provider === "2factor") {
+        const smsUrl = `https://2factor.in/API/V1/${apiKey}/SMS/${phoneDigits}/${otp}`;
+        // Node 18+ has global fetch; wrap in try/catch
+        const r = await fetch(smsUrl);
+        let j = null;
+        try {
+          j = await r.json();
+        } catch (e) {
+          j = { status: r.status };
+        }
+        console.log("[otp] sms provider response:", j);
+      } else {
+        // Generic POST interface (if you set SMS_GATEWAY_PROVIDER to 'generic')
+        const url = process.env.SMS_GATEWAY_URL;
+        if (url) {
+          await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ apiKey, phone: phoneDigits, otp }),
+          });
+        } else {
+          console.warn("[otp] No SMS_GATEWAY_URL set for generic provider");
+        }
+      }
+    } catch (err) {
+      console.warn("[otp] Failed to send OTP via SMS gateway:", err);
+    }
+
+    // Log OTP to server console for local dev (still kept for debugging)
     console.log(`[otp] sent OTP for ${phone}: ${otp} (stored in DB otp_plain)`);
 
     return res.json({
