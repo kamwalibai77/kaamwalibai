@@ -22,7 +22,7 @@ import api from "../services/api";
 import providersApi from "../services/serviceProviders";
 import serviceTypesApi from "../services/serviceTypes";
 import userApi from "../services/user";
-const PlaceholderImg = require("../../assets/images/logo.png");
+const PlaceholderImg = require("../../assets/images/default.png");
 
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/AppNavigator";

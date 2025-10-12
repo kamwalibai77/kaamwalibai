@@ -1,23 +1,22 @@
-import React, { useState, useEffect } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import {
-  Platform,
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  Dimensions,
-  Alert,
-  Linking,
-} from "react-native";
-import * as WebBrowser from "expo-web-browser";
-import { API_BASE_URL } from "../utills/config";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
-import BottomTab from "../../components/BottomTabs";
+import * as WebBrowser from "expo-web-browser";
+import { useEffect, useState } from "react";
+import {
+  Alert,
+  Dimensions,
+  Linking,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import BottomTab from "../../components/BottomTabs";
 import api from "../services/api";
+import payments from "../services/payments";
 
 const { width } = Dimensions.get("window");
 
@@ -25,29 +24,27 @@ export default function SubscriptionScreen({ navigation }: any) {
   const [selectedRole, setSelectedRole] = useState<"user" | "provider">("user");
   const [purchasedPlan, setPurchasedPlan] = useState<string | null>(null);
   const [role, setRole] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
-  const userPlans = [
-    { id: 1, price: "₹99", contacts: 3, duration: "7 Days" },
-    { id: 2, price: "₹199", contacts: 10, duration: "15 Days" },
-    { id: 3, price: "₹299", contacts: 20, duration: "30 Days" },
-    { id: 4, price: "₹499", contacts: 50, duration: "45 Days" },
-  ];
-
-  const providerPlans = [
-    { id: 1, price: "₹399", duration: "1 Month" },
-    { id: 2, price: "₹999", duration: "6 Months" },
-    { id: 3, price: "₹1799", duration: "12 Months" },
-    { id: 4, price: "₹2499", duration: "18 Months" },
-  ];
-
-  const plans = selectedRole === "user" ? userPlans : providerPlans;
+  const [plans, setPlans] = useState<any[] | null>(null);
+  const [plansLoading, setPlansLoading] = useState(true);
+  const [plansError, setPlansError] = useState<string | null>(null);
+  const [userSubscription, setUserSubscription] = useState<any | null>(null);
+  const [subLoading, setSubLoading] = useState(false);
+  const [subscriptionDetails, setSubscriptionDetails] = useState<{
+    plan?: any;
+    remainingDays?: number | null;
+    remainingContacts?: number | null;
+  } | null>(null);
 
   useEffect(() => {
     const load = async () => {
       try {
-        const plan = await AsyncStorage.getItem("purchasedPlan");
         const storedRole = await AsyncStorage.getItem("userRole");
-        if (plan) setPurchasedPlan(plan);
+        const storedUserId = await AsyncStorage.getItem("userId");
+        if (storedUserId) {
+          setUserId(storedUserId);
+        }
         if (storedRole) {
           setRole(storedRole);
           const compact = (storedRole || "")
@@ -64,64 +61,117 @@ export default function SubscriptionScreen({ navigation }: any) {
           }
         }
       } catch (e) {
-        console.warn("Failed to read purchasedPlan or role from storage", e);
+        console.warn("Failed to read role from storage", e);
       }
     };
     load();
+
+    // Fetch plans from server only — no local fallback
+    (async () => {
+      setPlansLoading(true);
+      try {
+        const token = await AsyncStorage.getItem("token");
+        const res = await api.get(`/plans`, {
+          headers: { Authorization: token ? `Bearer ${token}` : "" },
+        });
+        if (res && res.data) {
+          setPlans(res.data || []);
+          setPlansError(null);
+        } else {
+          setPlans([]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch plans from server:", err);
+        setPlansError("Failed to load plans. Please try again.");
+        setPlans([]);
+      } finally {
+        setPlansLoading(false);
+      }
+    })();
+
+    // Fetch user's current subscription from server (if authenticated)
+    (async () => {
+      setSubLoading(true);
+      try {
+        const token = await AsyncStorage.getItem("token");
+        if (token) {
+          const r = await api.get("/payments/me", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (r && r.data && r.data.subscription) {
+            setUserSubscription(r.data.subscription);
+            // find matching plan to mark purchasedPlan (string used in UI)
+            const sub = r.data.subscription;
+            if (sub && sub.plan_id && plans) {
+              const match = (plans || []).find(
+                (p) => String(p.id) === String(sub.plan_id)
+              );
+              if (match)
+                setPurchasedPlan(
+                  match.duration || match.name || String(match.id)
+                );
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("Failed to fetch user subscription:", e);
+      } finally {
+        setSubLoading(false);
+      }
+    })();
   }, []);
 
-  const loadRazorpayScript = () => {
-    if (Platform.OS !== "web") return Promise.resolve(false);
-    return new Promise((resolve) => {
-      const script = document.createElement("script");
-      script.src = "https://checkout.razorpay.com/v1/checkout.js";
-      script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
-      document.body.appendChild(script);
-    });
-  };
+  // Recompute subscription details when plans or userSubscription change
+  useEffect(() => {
+    if (!userSubscription || !plans) {
+      setSubscriptionDetails(null);
+      return;
+    }
 
-  const fallbackToPaymentLink = async (plan: any) => {
+    const plan = (plans || []).find(
+      (p) => String(p.id) === String(userSubscription.plan_id)
+    );
+    let remainingDays: number | null = null;
+    let remainingContacts: number | null = null;
+
+    if (userSubscription.end_date) {
+      const end = new Date(userSubscription.end_date);
+      const diff = Math.ceil(
+        (end.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+      );
+      remainingDays = diff > 0 ? diff : 0;
+    }
+
+    if (
+      typeof userSubscription.numberOfContacts !== "undefined" &&
+      userSubscription.numberOfContacts !== null
+    ) {
+      remainingContacts = Number(userSubscription.numberOfContacts);
+    } else if (plan && typeof plan.contacts !== "undefined") {
+      remainingContacts = plan.contacts;
+    }
+
+    setSubscriptionDetails({ plan, remainingDays, remainingContacts });
+  }, [plans, userSubscription]);
+
+  // Server-driven payment flow: create-hosted-link and poll for webhook-driven subscription
+  const createPaymentLink = async (plan: any) => {
     try {
       const numeric = Number(String(plan.price).replace(/[^0-9]/g, ""));
       if (Number.isNaN(numeric) || numeric <= 0) {
         Alert.alert("Invalid amount");
-        return;
+        return null;
       }
-
-      const token = await AsyncStorage.getItem("token");
-      const resp = await fetch(`${API_BASE_URL}/payments/create-link/user`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: token ? `Bearer ${token}` : "",
-        },
-        body: JSON.stringify({
-          amount: numeric,
-          currency: "INR",
-          notes: { role: selectedRole, plan: plan.duration },
-        }),
+      const link = await payments.createPaymentLinkForUser(numeric, {
+        role: selectedRole,
+        plan: plan.id,
+        user: userId,
       });
-
-      const json = await resp.json();
-      if (!resp.ok || !json.link) {
-        Alert.alert(
-          "Payment Error",
-          json?.error || "Failed to create payment link"
-        );
-        return;
-      }
-
-      try {
-        await WebBrowser.openBrowserAsync(json.link);
-      } catch {
-        Linking.openURL(json.link).catch(() =>
-          Alert.alert("Failed to open payment link")
-        );
-      }
+      return link;
     } catch (err) {
-      console.error("payment link error", err);
+      console.error("createPaymentLink error", err);
       Alert.alert("Payment Error", "Failed to initiate payment");
+      return null;
     }
   };
 
@@ -129,53 +179,58 @@ export default function SubscriptionScreen({ navigation }: any) {
     try {
       const token = await AsyncStorage.getItem("token");
       const numeric = Number(String(plan.price).replace(/[^0-9]/g, ""));
-      const res = await api.post("/payments/verify", {
-        razorpay_payment_id: paymentId,
-        plan_id: plan.id,
-        amount: numeric,
-      });
-      const json = await res.data;
-      if (res.data) console.log("Subscription saved on backend:", json);
-      else console.warn("Failed to save subscription:", json);
+      // We avoid client-side verification. Server webhook should mark subscription active.
+      // Optionally, keep a lightweight server record if needed by calling /user/subscriptions
+      // But typically the webhook will create the Subscription record.
     } catch (err) {
       console.error("Error saving subscription:", err);
     }
   };
-
   const handleSubscribe = async (plan: any) => {
-    if (Platform.OS !== "web") {
-      return fallbackToPaymentLink(plan);
+    // Create hosted payment link and open it. Webhook will mark subscription when payment completes.
+    const link = await createPaymentLink(plan);
+    if (!link) return;
+
+    try {
+      await WebBrowser.openBrowserAsync(link);
+    } catch {
+      Linking.openURL(link).catch(() =>
+        Alert.alert("Failed to open payment link")
+      );
     }
 
-    const res = await loadRazorpayScript();
-    if (!res) return alert("Razorpay SDK failed to load");
+    // Poll /payments/me for the subscription to be created by webhook
+    const token = await AsyncStorage.getItem("token");
+    const maxAttempts = 12; // 1 minute if delay=5s
+    const delayMs = 5000;
+    for (let i = 0; i < maxAttempts; i++) {
+      await new Promise((r) => setTimeout(r, delayMs));
+      try {
+        const me = await api.get("/payments/me", {
+          headers: { Authorization: token ? `Bearer ${token}` : "" },
+        });
+        if (me && me.data && me.data.subscription) {
+          setUserSubscription(me.data.subscription);
+          const match = (plans || []).find(
+            (p) => String(p.id) === String(me.data.subscription.plan_id)
+          );
+          if (match)
+            setPurchasedPlan(match.duration || match.name || String(match.id));
+          Alert.alert(
+            "Subscription activated",
+            "Your subscription is now active."
+          );
+          return;
+        }
+      } catch (e) {
+        // keep polling
+      }
+    }
 
-    const amountNumeric = Number(String(plan.price).replace(/[^0-9]/g, ""));
-    const options = {
-      key: "rzp_test_RMakN5bfeyuqEe",
-      amount: amountNumeric * 100,
-      currency: "INR",
-      name: "Maid Service App",
-      description: `Subscription for ${plan.duration}`,
-      prefill: {
-        name: "Test User",
-        email: "test@example.com",
-        contact: "9999999999",
-      },
-      notes: { role: selectedRole, plan: plan.duration },
-      theme: { color: "#6366f1" },
-      handler: async (response: any) => {
-        alert(
-          "Payment Successful! Payment ID: " + response.razorpay_payment_id
-        );
-        AsyncStorage.setItem("purchasedPlan", plan.duration).catch(() => {});
-        setPurchasedPlan(plan.duration);
-        await saveSubscription(response.razorpay_payment_id, plan);
-      },
-    };
-
-    const paymentObject: any = new (window as any).Razorpay(options);
-    paymentObject.open();
+    Alert.alert(
+      "Payment submitted",
+      "We are processing your payment. If it doesn't appear shortly, please contact support."
+    );
   };
 
   return (
@@ -242,36 +297,107 @@ export default function SubscriptionScreen({ navigation }: any) {
 
           {/* Plans */}
           <ScrollView contentContainerStyle={styles.scroll}>
-            {plans.map((plan) => (
-              <View key={plan.id} style={styles.card}>
-                <Text style={styles.price}>{plan.price}</Text>
-                {selectedRole === "user" ? (
-                  <Text style={styles.details}>
-                    {(plan as any).contacts ?? 0} Contacts • {plan.duration}
-                  </Text>
-                ) : (
-                  <Text style={styles.details}>{plan.duration}</Text>
-                )}
-
-                {purchasedPlan === plan.duration ? (
-                  <Text style={{ color: "green", fontWeight: "700" }}>
-                    Purchased ✅
-                  </Text>
-                ) : (
-                  <TouchableOpacity
-                    style={styles.subscribeButton}
-                    onPress={() => handleSubscribe(plan)}
-                  >
-                    <LinearGradient
-                      colors={["#6366f1", "#4f46e5"]}
-                      style={styles.subscribeGradient}
-                    >
-                      <Text style={styles.subscribeText}>Subscribe</Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                )}
+            {subscriptionDetails && (
+              <View
+                style={[
+                  styles.card,
+                  { borderWidth: 1, borderColor: "#e6eefc" },
+                ]}
+              >
+                <Text
+                  style={{ fontSize: 16, fontWeight: "700", marginBottom: 6 }}
+                >
+                  Your Subscription
+                </Text>
+                <Text style={{ fontSize: 14, color: "#334155" }}>
+                  {subscriptionDetails.plan?.name ||
+                    subscriptionDetails.plan?.duration ||
+                    "Custom Plan"}
+                </Text>
+                <Text style={{ marginTop: 8, color: "#065f46" }}>
+                  {subscriptionDetails.remainingContacts != null
+                    ? `${subscriptionDetails.remainingContacts} contacts remaining`
+                    : "Contacts: N/A"}
+                </Text>
+                <Text style={{ marginTop: 6, color: "#0f172a" }}>
+                  {subscriptionDetails.remainingDays != null
+                    ? `${subscriptionDetails.remainingDays} days remaining`
+                    : "Expiry: N/A"}
+                </Text>
               </View>
-            ))}
+            )}
+
+            {plansLoading ? (
+              <Text style={{ marginTop: 40 }}>Loading plans…</Text>
+            ) : plansError ? (
+              <View style={{ alignItems: "center", marginTop: 30 }}>
+                <Text style={{ color: "#ef4444", marginBottom: 8 }}>
+                  {plansError}
+                </Text>
+                <TouchableOpacity
+                  style={[
+                    styles.subscribeButton,
+                    { backgroundColor: "#ddd", paddingVertical: 10 },
+                  ]}
+                  onPress={async () => {
+                    setPlansLoading(true);
+                    setPlansError(null);
+                    try {
+                      const token = await AsyncStorage.getItem("token");
+                      const res = await api.get(`/plans`, {
+                        headers: {
+                          Authorization: token ? `Bearer ${token}` : "",
+                        },
+                      });
+                      setPlans(res.data || []);
+                    } catch (err) {
+                      setPlansError("Failed to load plans. Please try again.");
+                    } finally {
+                      setPlansLoading(false);
+                    }
+                  }}
+                >
+                  <Text style={{ fontWeight: "700" }}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              (plans || [])
+                .filter((p) =>
+                  selectedRole === "user"
+                    ? p.type === "user"
+                    : p.type === "provider"
+                )
+                .map((plan) => (
+                  <View key={plan.id} style={styles.card}>
+                    <Text style={styles.price}>{plan.price}</Text>
+                    {selectedRole === "user" ? (
+                      <Text style={styles.details}>
+                        {plan.contacts ?? 0} Contacts • {plan.duration}
+                      </Text>
+                    ) : (
+                      <Text style={styles.details}>{plan.duration}</Text>
+                    )}
+
+                    {purchasedPlan === plan.duration ? (
+                      <Text style={{ color: "green", fontWeight: "700" }}>
+                        Purchased ✅
+                      </Text>
+                    ) : (
+                      <TouchableOpacity
+                        style={styles.subscribeButton}
+                        onPress={() => handleSubscribe(plan)}
+                      >
+                        <LinearGradient
+                          colors={["#6366f1", "#4f46e5"]}
+                          style={styles.subscribeGradient}
+                        >
+                          <Text style={styles.subscribeText}>Subscribe</Text>
+                        </LinearGradient>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                ))
+            )}
           </ScrollView>
         </LinearGradient>
 

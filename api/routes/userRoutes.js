@@ -1,6 +1,6 @@
 import express from "express";
-import db from "../models/index.js";
 import { authMiddleware } from "../middleware/auth.js";
+import db from "../models/index.js";
 
 const User = db.User;
 const router = express.Router();
@@ -71,6 +71,67 @@ router.put("/subscribe", authMiddleware, async (req, res) => {
     res
       .status(500)
       .json({ error: "Failed to update user", details: err.message });
+  }
+});
+
+// POST /api/users/me/subscriptions
+// body: { planId, paymentId, amount, currency, duration }
+router.post("/me/subscriptions", authMiddleware, async (req, res) => {
+  try {
+    const {
+      planId,
+      paymentId,
+      amount = 0,
+      currency = "INR",
+      duration,
+    } = req.body || {};
+    const user = await User.findByPk(req.user.id);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const Subscription = db.Subscription;
+    if (!paymentId)
+      return res.status(400).json({ error: "paymentId required" });
+
+    // Derive numberOfContacts from Plan if available
+    let numberOfContacts = null;
+    try {
+      const Plan = db.Plan;
+      const planRecord = planId ? await Plan.findByPk(planId) : null;
+      if (planRecord && typeof planRecord.contacts !== "undefined") {
+        numberOfContacts = planRecord.contacts;
+      }
+    } catch (e) {
+      console.warn("Failed to lookup Plan for numberOfContacts:", e);
+    }
+
+    const values = {
+      user_id: String(user.id),
+      plan_id: String(planId || duration || "manual"),
+      payment_id: String(paymentId),
+      amount: Number(amount) || 0,
+      currency: String(currency || "INR"),
+      numberOfContacts: numberOfContacts,
+      start_date: new Date(),
+      status: "active",
+      end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    };
+
+    const [record, created] = await Subscription.findOrCreate({
+      where: { payment_id: String(paymentId) },
+      defaults: values,
+    });
+    if (!created) await record.update(values);
+
+    user.isSubscribed = true;
+    await user.save({ fields: ["isSubscribed"] });
+
+    res.json({ success: true, subscription: record });
+  } catch (err) {
+    console.error(
+      "/me/subscriptions error:",
+      err && err.stack ? err.stack : err
+    );
+    res.status(500).json({ error: "Failed to create subscription" });
   }
 });
 

@@ -1,12 +1,12 @@
 // backend/controllers/authController.js
-import db from "../models/index.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import db from "../models/index.js";
 
 const User = db.User;
 
 export default {
-  // Register
+  // 🟢 Register
   register: async (req, res) => {
     try {
       const { name, phoneNumber, password, role } = req.body;
@@ -28,17 +28,24 @@ export default {
         role,
       });
 
-      // Generate JWT
-      const token = jwt.sign({ id: newUser.id }, process.env.JWT_SECRET, {
-        expiresIn: "7d",
-      });
+      // ✅ Generate JWT with id, phone, name, and role
+      const token = jwt.sign(
+        {
+          id: newUser.id,
+          name: newUser.name,
+          phoneNumber: newUser.phoneNumber,
+          role: newUser.role,
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: "7d" }
+      );
 
       res.status(201).json({
         id: newUser.id,
         name: newUser.name,
         phoneNumber: newUser.phoneNumber,
         role: newUser.role,
-        token, // ✅ send token
+        token,
       });
     } catch (err) {
       console.error("Register Error:", err);
@@ -46,7 +53,7 @@ export default {
     }
   },
 
-  // Login
+  // 🟡 Login
   login: async (req, res) => {
     try {
       const { phoneNumber, password } = req.body;
@@ -61,10 +68,17 @@ export default {
         return res.status(400).json({ error: "Invalid credentials" });
       }
 
-      // Generate JWT
-      const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
-        expiresIn: "7d",
-      });
+      // ✅ Generate JWT with full context
+      const token = jwt.sign(
+        {
+          id: user.id,
+          name: user.name,
+          phoneNumber: user.phoneNumber,
+          role: user.role,
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: "7d" }
+      );
 
       res.json({
         id: user.id,

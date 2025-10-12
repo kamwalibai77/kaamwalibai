@@ -7,16 +7,17 @@ import { initSocket } from "./sockets/socket.js";
 
 // Routes
 import authRoutes from "./routes/authRoutes.js";
-import otpRoutes from "./routes/otpRoutes.js";
 import availabilityRoutes from "./routes/availabilityTimeRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
+import faqRoutes from "./routes/faqRoutes.js";
+import otpRoutes from "./routes/otpRoutes.js";
+import paymentsRoutes from "./routes/payments.js";
+import plansRoutes from "./routes/plans.js";
 import profileRoutes from "./routes/profile.js";
 import serviceTypeRoutes from "./routes/serviceTypeRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import userServicesRoutes from "./routes/userServicesRoutes.js";
-import paymentsRoutes from "./routes/payments.js";
 import webhookRoutes from "./routes/webhook.js";
-import faqRoutes from "./routes/faqRoutes.js";
 
 dotenv.config();
 
@@ -39,6 +40,7 @@ app.use("/api/service-provider", userServicesRoutes);
 app.use("/api/service-provider/availability", availabilityRoutes);
 app.use("/api/payments", paymentsRoutes);
 app.use("/api/faqs", faqRoutes);
+app.use("/api/plans", plansRoutes);
 
 // Test route
 app.get("/", (req, res) => res.send("Server running"));
@@ -84,7 +86,7 @@ const startServer = async () => {
         addr: PORT,
         authtoken_from_env: true,
       });
-      console.log(`🔗 ngrok tunnel running at: ${url}`);
+      console.log(`🔗 ngrok tunnel running at: ${url.url()}`);
     }
   } catch (err) {
     console.error("❌ Failed to start server:", err);

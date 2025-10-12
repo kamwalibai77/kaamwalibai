@@ -1,24 +1,24 @@
-import React, { useState, useRef, useEffect } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import api from "../services/api";
-import { RootStackParamList } from "../navigation/AppNavigator";
+import { useEffect, useRef, useState } from "react";
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
   ActivityIndicator,
+  Alert,
+  Dimensions,
   Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Dimensions,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { API_BASE_URL } from "../utills/config";
 import Snackbar from "../../components/Snackbar";
+import { RootStackParamList } from "../navigation/AppNavigator";
+import api from "../services/api";
+import { API_BASE_URL } from "../utills/config";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Login">;
 
@@ -65,20 +65,11 @@ export default function LoginScreen({ navigation }: Props) {
     setPhoneError("");
     setLoading(true);
     try {
-      const resp = await fetch(`${API_BASE_URL}/auth/send-otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: `+${COUNTRY_CODE}${phone}` }),
+      const resp = await api.post(`${API_BASE_URL}/auth/send-otp`, {
+        phone: `+${COUNTRY_CODE}${phone}`,
       });
-
-      let json: any = {};
-      try {
-        json = await resp.json();
-      } catch {
-        json = {};
-      }
-
-      if (resp.ok) {
+      let json = resp.data;
+      if (json) {
         setStep("otp");
         setCooldown(60);
         setSnackbarMsg(

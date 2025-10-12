@@ -1,9 +1,9 @@
+import axios from "axios";
+import dotenv from "dotenv";
 import express from "express";
 import Razorpay from "razorpay";
-import dotenv from "dotenv";
 import { authMiddleware } from "../middleware/auth.js";
 import db from "../models/index.js";
-import axios from "axios";
 
 dotenv.config();
 
@@ -74,12 +74,25 @@ router.post("/validate", async (req, res) => {
             { payload }
           );
         } else {
+          // Derive numberOfContacts from Plan if available
+          let numberOfContacts = null;
+          try {
+            const Plan = models.default.Plan;
+            const planRecord = planId ? await Plan.findByPk(planId) : null;
+            if (planRecord && typeof planRecord.contacts !== "undefined") {
+              numberOfContacts = planRecord.contacts;
+            }
+          } catch (e) {
+            console.warn("[validate] failed to lookup Plan for contacts:", e);
+          }
+
           const values = {
             user_id: userId ? String(userId) : String(userId || "guest"),
             plan_id: String(planId),
             payment_id: String(paymentId),
             amount: Number(amount),
             currency: String(currency),
+            numberOfContacts: numberOfContacts,
             start_date: new Date(),
             status: "active",
             end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
@@ -145,7 +158,7 @@ router.post("/validate", async (req, res) => {
 // Returns the most recent active subscription for the authenticated user
 router.get("/me", authMiddleware, async (req, res) => {
   try {
-    const Subscription = db.default.Subscription;
+    const Subscription = db.Subscription;
     const userId = String(req.user.id);
     const record = await Subscription.findOne({
       where: { user_id: userId },
@@ -162,125 +175,6 @@ router.get("/me", authMiddleware, async (req, res) => {
   }
 });
 
-// POST /api/payments/create-link
-// body: { amount: number, currency?: string, receipt?: string, notes?: object }
-router.post("/create-link", async (req, res) => {
-  try {
-    const { amount, currency = "INR", receipt, notes } = req.body || {};
-
-    console.log("[payments] create-link called with:", {
-      amount,
-      currency,
-      receipt,
-      notes,
-    });
-
-    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
-      console.error("[payments] missing RAZORPAY_KEY_ID/SECRET");
-      return res
-        .status(500)
-        .json({ error: "Razorpay credentials not configured on server" });
-    }
-
-    const razorpay = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID,
-      key_secret: process.env.RAZORPAY_KEY_SECRET,
-    });
-
-    // validate amount
-    const numeric = Number(amount);
-    if (Number.isNaN(numeric) || numeric <= 0) {
-      console.warn("[payments] invalid amount provided:", amount);
-      return res.status(400).json({ error: "Invalid amount" });
-    }
-
-    // amount in paise
-    const options = {
-      amount: Math.round(numeric * 100),
-      currency,
-      accept_partial: false,
-      reference_id: receipt || `rcpt_${Date.now()}`,
-      notes: notes || {},
-      description: "Maid Service subscription",
-    };
-
-    // Create an order first (recommended) and then create a payment link using that order
-    const order = await razorpay.orders.create({
-      amount: options.amount,
-      currency: options.currency,
-      receipt: options.reference_id,
-      payment_capture: 1,
-    });
-
-    // Only pass a callback_url to Razorpay if it's an HTTPS URL.
-    // Razorpay rejects plain IPs or non-HTTPS hosts — use ngrok or a public HTTPS URL for callbacks.
-    const rawCallback = process.env.RAZORPAY_CALLBACK_URL || "";
-    const callbackUrl =
-      typeof rawCallback === "string" && rawCallback.startsWith("https://")
-        ? rawCallback
-        : undefined;
-    if (rawCallback && !callbackUrl) {
-      console.warn(
-        "[payments] RAZORPAY_CALLBACK_URL is set but not a valid HTTPS URL. Ignoring callback_url to avoid Razorpay errors.",
-        rawCallback
-      );
-    }
-
-    // sanitize notes to avoid sending empty/invalid vpa (UPI) values
-    if (
-      options.notes &&
-      typeof options.notes.vpa !== "undefined" &&
-      !options.notes.vpa
-    ) {
-      delete options.notes.vpa;
-    }
-
-    // sanitize notes.vpa
-    if (
-      options.notes &&
-      typeof options.notes.vpa !== "undefined" &&
-      !options.notes.vpa
-    ) {
-      delete options.notes.vpa;
-    }
-
-    const paymentLink = await razorpay.paymentLink.create({
-      amount: options.amount,
-      currency: options.currency,
-      reference_id: options.reference_id,
-      description: options.description,
-      notes: options.notes,
-      notify: {
-        sms: false,
-        email: false,
-      },
-      callback_url: callbackUrl,
-      callback_method: "get",
-    });
-
-    console.log(
-      "[payments] created link",
-      paymentLink && paymentLink.short_url
-    );
-    return res.json({ link: paymentLink.short_url, payload: paymentLink });
-  } catch (err) {
-    // Log BAD_REQUEST_ERROR detail from Razorpay if present to help debugging invalid fields
-    if (err && err.error && err.error.description) {
-      console.error("Razorpay create link error (razorpay):", err.error);
-    } else {
-      console.error(
-        "Razorpay create link error:",
-        err && err.stack ? err.stack : err
-      );
-    }
-    // Include error message in response for easier debugging (safe in dev).
-    return res.status(500).json({
-      error: "Failed to create payment link",
-      details: err && err.message ? err.message : err,
-    });
-  }
-});
-
 // POST /api/payments/create-link/user
 // Authenticated endpoint: creates a payment link and attaches the authenticated user id in notes
 router.post("/create-link/user", authMiddleware, async (req, res) => {
@@ -292,7 +186,7 @@ router.post("/create-link/user", authMiddleware, async (req, res) => {
       currency,
       receipt,
       notes,
-      user: req.user && req.user.id,
+      user: req.user.id,
     });
 
     if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
@@ -379,7 +273,7 @@ router.get("/status", async (req, res) => {
   try {
     const { payment_id, reference_id } = req.query || {};
     const db = await import("../models/index.js");
-    const Subscription = db.default.Subscription;
+    const Subscription = db.Subscription;
 
     if (!payment_id && !reference_id) {
       return res

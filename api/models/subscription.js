@@ -23,6 +23,11 @@ export default (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
+    // numberOfContacts derived from the plan (nullable)
+    numberOfContacts: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
     currency: {
       type: DataTypes.STRING,
       defaultValue: "INR",
