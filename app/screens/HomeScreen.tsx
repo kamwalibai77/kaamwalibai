@@ -38,7 +38,16 @@ export default function HomeScreen({ navigation }: Props) {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [serviceTypes, setServiceTypes] = useState([{ name: "", icon: "" }]);
+  const [serviceTypes, setServiceTypes] = useState([
+    { id: 0 as number | undefined, name: "", icon: "" },
+  ] as Array<{
+    id?: number | string;
+    name: string;
+    icon?: string;
+  }>);
+  const [selectedServiceTypeIds, setSelectedServiceTypeIds] = useState<
+    number[]
+  >([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<any>(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
@@ -104,6 +113,7 @@ export default function HomeScreen({ navigation }: Props) {
         lat: explicitLat ?? userLat ?? undefined,
         lng: explicitLng ?? userLng ?? undefined,
         radius: explicitRadius,
+        serviceTypeIds: selectedServiceTypeIds,
       });
 
       const data = response.data;
@@ -119,10 +129,6 @@ export default function HomeScreen({ navigation }: Props) {
       setLoading(false);
     }
   };
-
-  const filteredServices = serviceTypes.filter((s) =>
-    s.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   // If subscriptionLimit is set, show only that many providers
   const displayedProviders =
@@ -207,7 +213,7 @@ export default function HomeScreen({ navigation }: Props) {
       }
     };
     init();
-
+    fetchServiceTypes();
     AsyncStorage.getItem("isSubscribed").then((res) => {
       // preserve local flag if present; API fetch above may override
       if (res === "true") setIsSubscribed(true);
@@ -222,6 +228,12 @@ export default function HomeScreen({ navigation }: Props) {
     }, 400);
     return () => clearTimeout(timeout);
   }, [searchQuery, selectedArea, userLat, userLng]);
+
+  // Re-fetch when selected service types change
+  useEffect(() => {
+    if (!initializedRef.current) return;
+    fetchProviders(true);
+  }, [selectedServiceTypeIds]);
 
   useEffect(() => {
     if (page > 1) fetchProviders();
@@ -445,30 +457,64 @@ export default function HomeScreen({ navigation }: Props) {
           contentContainerStyle={{ paddingBottom: 100 }} // ✅ space for BottomTab
           ListHeaderComponent={() => (
             <>
-              <Text style={styles.sectionTitle}>Services</Text>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={styles.sectionTitle}>Services</Text>
+                {selectedServiceTypeIds.length > 0 && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      setSelectedServiceTypeIds([]);
+                      fetchProviders(true);
+                    }}
+                    style={styles.clearButton}
+                  >
+                    <Text style={styles.clearButtonText}>Clear</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
               <FlatList
-                data={filteredServices}
-                keyExtractor={(item) => item.name}
+                data={serviceTypes}
+                keyExtractor={(item) => item.id?.toString() ?? item.name}
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={{ paddingHorizontal: 10 }}
-                renderItem={({ item }) => (
-                  <TouchableOpacity style={styles.serviceCard}>
-                    {item.icon ? (
-                      <Image
-                        source={{ uri: item.icon }}
-                        style={styles.serviceIcon}
-                      />
-                    ) : (
-                      <View style={styles.serviceIconPlaceholder}>
-                        <Ionicons name="construct" size={20} color="#94a3b8" />
-                      </View>
-                    )}
-                    <Text style={styles.serviceName} numberOfLines={1}>
-                      {item.name}
-                    </Text>
-                  </TouchableOpacity>
-                )}
+                renderItem={({ item }) => {
+                  const id = Number(item.id);
+                  const selected = selectedServiceTypeIds.includes(id);
+                  return (
+                    <TouchableOpacity
+                      style={[
+                        styles.serviceCard,
+                        selected && styles.serviceCardSelected,
+                      ]}
+                      onPress={() => {
+                        // toggle selection
+                        setSelectedServiceTypeIds((prev) => {
+                          if (prev.includes(id))
+                            return prev.filter((x) => x !== id);
+                          return [...prev, id];
+                        });
+                      }}
+                    >
+                      {item.icon ? (
+                        <Image
+                          source={{ uri: item.icon }}
+                          style={styles.serviceIcon}
+                        />
+                      ) : (
+                        <View style={styles.serviceIconPlaceholder}>
+                          <Ionicons
+                            name="construct"
+                            size={20}
+                            color="#94a3b8"
+                          />
+                        </View>
+                      )}
+                      <Text style={styles.serviceName} numberOfLines={1}>
+                        {item.name}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                }}
               />
               <Text style={styles.sectionTitle}>Nearby Providers</Text>
             </>
@@ -640,6 +686,20 @@ const styles = StyleSheet.create({
 
   sectionTitle: { fontSize: 18, fontWeight: "700", margin: 15 },
 
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 15,
+  },
+
+  clearButton: {
+    backgroundColor: "transparent",
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+  clearButtonText: { color: "#6366f1", fontWeight: "600" },
+
   serviceCard: {
     flex: 1,
     aspectRatio: 1,
@@ -650,6 +710,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginHorizontal: 8,
     elevation: 3,
+  },
+  serviceCardSelected: {
+    borderWidth: 2,
+    borderColor: "#6366f1",
+    shadowColor: "#6366f1",
   },
   serviceIcon: { width: 40, height: 40, borderRadius: 20 },
   serviceIconPlaceholder: {

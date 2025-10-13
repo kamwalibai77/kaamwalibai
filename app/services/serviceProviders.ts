@@ -8,6 +8,7 @@ const getAllServices = async ({
   lat, // optional user latitude
   lng, // optional user longitude
   radius, // optional radius in km
+  serviceTypeIds, // optional comma-separated ids or array
 }: {
   page?: number;
   limit?: number;
@@ -16,11 +17,18 @@ const getAllServices = async ({
   lat?: number | string;
   lng?: number | string;
   radius?: number | string;
+  serviceTypeIds?: string | number[];
 }) => {
   const params: any = { page, limit, search, area };
   if (lat !== undefined) params.lat = lat;
   if (lng !== undefined) params.lng = lng;
   if (radius !== undefined) params.radius = radius;
+  if (serviceTypeIds !== undefined && serviceTypeIds !== null) {
+    // normalize array or comma string
+    params.serviceTypeIds = Array.isArray(serviceTypeIds)
+      ? serviceTypeIds.join(",")
+      : String(serviceTypeIds);
+  }
 
   return await api.get("/service-provider", {
     params,

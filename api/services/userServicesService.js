@@ -1,5 +1,5 @@
-import db from "../models/index.js";
 import { Op } from "sequelize";
+import db from "../models/index.js";
 
 const UserServices = db.UserService;
 
@@ -29,6 +29,7 @@ export const getAll = async ({
   lat,
   lng,
   radius,
+  serviceTypeIds,
 }) => {
   const offset = (page - 1) * limit;
 
@@ -95,20 +96,40 @@ export const getAll = async ({
     ? { [Op.and]: providerConditions }
     : undefined;
 
-  const { rows, count } = await UserServices.findAndCountAll({
+  // If serviceTypeIds provided, filter services that are associated with any of the given ids
+  const serviceTypeFilter = serviceTypeIds
+    ? {
+        model: db.ServiceType,
+        as: "serviceTypes",
+        through: { attributes: [] },
+        where: {
+          id: Array.isArray(serviceTypeIds)
+            ? serviceTypeIds
+            : String(serviceTypeIds).split(","),
+        },
+      }
+    : {
+        model: db.ServiceType,
+        as: "serviceTypes",
+        through: { attributes: [] },
+      };
+
+  const include = [
+    { model: db.User, as: "provider", where: providerWhere },
+    serviceTypeFilter,
+  ];
+
+  // When filtering by serviceTypeIds we want distinct provider services
+  const findOpts = {
     where,
     limit,
     offset,
     order: [["createdAt", "DESC"]],
-    include: [
-      { model: db.User, as: "provider", where: providerWhere },
-      {
-        model: db.ServiceType,
-        as: "serviceTypes",
-        through: { attributes: [] },
-      },
-    ],
-  });
+    include,
+    distinct: true,
+  };
+
+  const { rows, count } = await UserServices.findAndCountAll(findOpts);
 
   return {
     data: rows,
