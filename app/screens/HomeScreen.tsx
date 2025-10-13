@@ -164,20 +164,34 @@ export default function HomeScreen({ navigation }: Props) {
         } catch {}
       }
 
+      // If we couldn't get GPS coords, try to populate from the logged-in user's profile (/users/me)
       if (!coords) {
         try {
-          const userId = await AsyncStorage.getItem("userId");
-          if (userId) {
-            const res = await api.get(`/users/${userId}`);
-            const u = res.data;
-            if (u.latitude && u.longitude) {
-              coords = { lat: Number(u.latitude), lng: Number(u.longitude) };
-              setUserLat(coords.lat);
-              setUserLng(coords.lng);
-              setSelectedArea(u.address || selectedArea);
+          const token = await AsyncStorage.getItem("token");
+          if (token) {
+            const me = await api.get("/users/me", {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (me && me.data && me.data.user) {
+              const u = me.data.user;
+              // prefer profile latitude/longitude when available
+              if (u.latitude && u.longitude) {
+                coords = { lat: Number(u.latitude), lng: Number(u.longitude) };
+                setUserLat(coords.lat);
+                setUserLng(coords.lng);
+              }
+              // populate address / locationQuery
+              const addr = u.address || u.city || u.region || u.postalCode || null;
+              if (addr) {
+                setSelectedArea(addr);
+                setLocationQuery(addr);
+              }
             }
           }
-        } catch {}
+        } catch (e) {
+          // ignore profile fetch errors
+          console.log("/users/me fetch error", e);
+        }
       }
 
       await fetchProviders(true, coords?.lat ?? null, coords?.lng ?? null, 10);
@@ -415,8 +429,8 @@ export default function HomeScreen({ navigation }: Props) {
             keyboardShouldPersistTaps="handled"
           />
         )}
-
-        {/* Search Services */}
+        {/* 
+        Search Services
         <View style={styles.searchContainer}>
           <Ionicons name="search" size={20} color="#94a3b8" />
           <TextInput
@@ -426,6 +440,7 @@ export default function HomeScreen({ navigation }: Props) {
             onChangeText={(text) => setSearchQuery(text)}
           />
         </View>
+        */}
 
         {/* Advertisement Banner */}
         <TouchableOpacity
@@ -703,7 +718,7 @@ const styles = StyleSheet.create({
   serviceCard: {
     flex: 1,
     aspectRatio: 1,
-    maxWidth: 90,
+    maxWidth: 100,
     backgroundColor: "#fff",
     borderRadius: 15,
     alignItems: "center",
@@ -712,9 +727,11 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   serviceCardSelected: {
-    borderWidth: 2,
-    borderColor: "#6366f1",
-    shadowColor: "#6366f1",
+    // borderWidth: 2,
+    // borderColor: "#6366f1",
+    backgroundColor: "#86c0f7ff",
+    // shadowColor: "#6366f1",
+    elevation: 6,
   },
   serviceIcon: { width: 40, height: 40, borderRadius: 20 },
   serviceIconPlaceholder: {
@@ -725,8 +742,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  serviceName: { fontSize: 12, marginTop: 5, textAlign: "center" },
-
+  serviceName: {
+    fontSize: 12,
+    marginTop: 5,
+    textAlign: "center",
+    paddingHorizontal: 4,
+  },
   providerCard: {
     flex: 1,
     margin: 5,
