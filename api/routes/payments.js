@@ -203,6 +203,97 @@ router.get("/me", authMiddleware, async (req, res) => {
   }
 });
 
+// POST /api/payments/consume
+// Body: { provider_id: string|number, action: 'call'|'message'|'view' }
+// Atomically decrement the user's subscription numberOfContacts (if not null)
+// and record a ContactLog entry. Returns { remaining: number|null }
+router.post("/consume", authMiddleware, async (req, res) => {
+  try {
+    const { provider_id: providerId, action } = req.body || {};
+    if (!providerId) return res.status(400).json({ error: "provider_id is required" });
+    const userId = String(req.user.id);
+
+    const Subscription = db.Subscription;
+    const ContactLog = db.ContactLog;
+
+    // Find latest active subscription
+    const sub = await Subscription.findOne({
+      where: { user_id: userId, status: "active" },
+      order: [["start_date", "DESC"]],
+    });
+
+    if (!sub) {
+      return res.status(403).json({ error: "No active subscription" });
+    }
+
+    // If numberOfContacts is null -> unlimited
+    if (sub.numberOfContacts === null || typeof sub.numberOfContacts === "undefined") {
+      // Log contact but do not decrement
+      if (ContactLog) {
+        try {
+          await ContactLog.create({
+            user_id: userId,
+            subscription_id: sub.id,
+            provider_id: String(providerId),
+            action: String(action || "view"),
+          });
+        } catch (e) {
+          console.warn("[consume] failed to persist ContactLog:", e);
+        }
+      }
+      return res.json({ remaining: null, subscription: sub });
+    }
+
+    // Otherwise decrement atomically using a single UPDATE to avoid lock issues
+    const sequelize = db.sequelize;
+    const Op = db.Sequelize.Op;
+    let remaining = sub.numberOfContacts;
+    await sequelize.transaction(async (t) => {
+      // decrement only when numberOfContacts > 0
+      const [affectedCount, affectedRows] = await Subscription.update(
+        { numberOfContacts: sequelize.literal('"numberOfContacts" - 1') },
+        {
+          where: { id: sub.id, numberOfContacts: { [Op.gt]: 0 } },
+          transaction: t,
+          returning: true,
+        }
+      );
+
+      if (!affectedCount || affectedCount === 0) {
+        throw new Error("limit_exceeded");
+      }
+
+      const updated = Array.isArray(affectedRows) && affectedRows[0] ? affectedRows[0] : null;
+      if (updated) remaining = updated.numberOfContacts;
+
+      // record contact log if model exists
+      if (ContactLog) {
+        try {
+          await ContactLog.create(
+            {
+              user_id: userId,
+              subscription_id: sub.id,
+              provider_id: String(providerId),
+              action: String(action || "view"),
+            },
+            { transaction: t }
+          );
+        } catch (e) {
+          console.warn("[consume] failed to persist ContactLog in tx:", e);
+        }
+      }
+    });
+
+    return res.json({ remaining, subscription: sub });
+  } catch (err) {
+    if (err && err.message === "limit_exceeded") {
+      return res.status(403).json({ error: "Subscription contact limit reached" });
+    }
+    console.error("/consume error:", err && err.stack ? err.stack : err);
+    return res.status(500).json({ error: "Failed to consume contact" });
+  }
+});
+
 // POST /api/payments/create-link/user
 // Authenticated endpoint: creates a payment link and attaches the authenticated user id in notes
 router.post("/create-link/user", authMiddleware, async (req, res) => {
