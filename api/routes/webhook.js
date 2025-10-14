@@ -1,5 +1,5 @@
-import express from "express";
 import crypto from "crypto";
+import express from "express";
 import db from "../models/index.js";
 
 const Subscription = db.Subscription;
@@ -53,14 +53,46 @@ router.post(
       const currency = payload.currency || "INR";
 
       // Upsert subscription record by payment_id
+      // Derive numberOfContacts from Plan if available (robust lookup)
+      let numberOfContacts = null;
+      try {
+        const Plan = db.Plan;
+        let planRecord = null;
+        if (planId) {
+          const maybeNum = Number(planId);
+          if (!Number.isNaN(maybeNum))
+            planRecord = await Plan.findByPk(maybeNum);
+          if (!planRecord)
+            planRecord = await Plan.findOne({ where: { id: planId } });
+          if (!planRecord)
+            planRecord = await Plan.findOne({ where: { name: planId } });
+          if (!planRecord)
+            planRecord = await Plan.findOne({ where: { duration: planId } });
+        }
+        if (planRecord && typeof planRecord.contacts !== "undefined") {
+          numberOfContacts = planRecord.contacts;
+        }
+      } catch (e) {
+        console.warn("[webhook] failed to lookup Plan for contacts:", e);
+      }
+
       const values = {
         user_id: String(userId),
         plan_id: String(planId),
         payment_id: String(paymentId),
         amount: Number(amount),
         currency: String(currency),
+        numberOfContacts: numberOfContacts,
         start_date: new Date(),
       };
+
+      console.log("[webhook] subscription values preview:", {
+        paymentId,
+        userId,
+        planId,
+        numberOfContacts,
+        event,
+      });
 
       if (event === "payment.captured" || event === "payment_link.paid") {
         values.status = "active";
@@ -80,6 +112,14 @@ router.post(
         // update existing
         await record.update(values);
       }
+
+      console.log("[webhook] subscription saved:", {
+        id: record.id,
+        payment_id: record.payment_id,
+        plan_id: record.plan_id,
+        numberOfContacts: record.numberOfContacts,
+        created,
+      });
 
       // Update user's subscription status if payment is successful
       try {

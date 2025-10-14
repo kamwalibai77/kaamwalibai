@@ -181,7 +181,8 @@ export default function HomeScreen({ navigation }: Props) {
                 setUserLng(coords.lng);
               }
               // populate address / locationQuery
-              const addr = u.address || u.city || u.region || u.postalCode || null;
+              const addr =
+                u.address || u.city || u.region || u.postalCode || null;
               if (addr) {
                 setSelectedArea(addr);
                 setLocationQuery(addr);

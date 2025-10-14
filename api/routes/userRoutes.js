@@ -92,11 +92,21 @@ router.post("/me/subscriptions", authMiddleware, async (req, res) => {
     if (!paymentId)
       return res.status(400).json({ error: "paymentId required" });
 
-    // Derive numberOfContacts from Plan if available
+    // Derive numberOfContacts from Plan if available (robust lookup)
     let numberOfContacts = null;
     try {
       const Plan = db.Plan;
-      const planRecord = planId ? await Plan.findByPk(planId) : null;
+      let planRecord = null;
+      if (planId) {
+        const maybeNum = Number(planId);
+        if (!Number.isNaN(maybeNum)) planRecord = await Plan.findByPk(maybeNum);
+        if (!planRecord)
+          planRecord = await Plan.findOne({ where: { id: planId } });
+        if (!planRecord)
+          planRecord = await Plan.findOne({ where: { name: planId } });
+        if (!planRecord)
+          planRecord = await Plan.findOne({ where: { duration: planId } });
+      }
       if (planRecord && typeof planRecord.contacts !== "undefined") {
         numberOfContacts = planRecord.contacts;
       }
@@ -116,11 +126,25 @@ router.post("/me/subscriptions", authMiddleware, async (req, res) => {
       end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     };
 
+    console.log("[userRoutes] creating subscription values:", {
+      userId: user.id,
+      planId,
+      numberOfContacts,
+    });
+
     const [record, created] = await Subscription.findOrCreate({
       where: { payment_id: String(paymentId) },
       defaults: values,
     });
     if (!created) await record.update(values);
+
+    console.log("[userRoutes] subscription saved:", {
+      id: record.id,
+      payment_id: record.payment_id,
+      plan_id: record.plan_id,
+      numberOfContacts: record.numberOfContacts,
+      created,
+    });
 
     user.isSubscribed = true;
     await user.save({ fields: ["isSubscribed"] });

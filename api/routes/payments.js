@@ -74,11 +74,24 @@ router.post("/validate", async (req, res) => {
             { payload }
           );
         } else {
-          // Derive numberOfContacts from Plan if available
+          // Derive numberOfContacts from Plan if available (robust lookup)
           let numberOfContacts = null;
           try {
             const Plan = models.default.Plan;
-            const planRecord = planId ? await Plan.findByPk(planId) : null;
+            let planRecord = null;
+            if (planId) {
+              const maybeNum = Number(planId);
+              if (!Number.isNaN(maybeNum))
+                planRecord = await Plan.findByPk(maybeNum);
+              if (!planRecord)
+                planRecord = await Plan.findOne({ where: { id: planId } });
+              if (!planRecord)
+                planRecord = await Plan.findOne({ where: { name: planId } });
+              if (!planRecord)
+                planRecord = await Plan.findOne({
+                  where: { duration: planId },
+                });
+            }
             if (planRecord && typeof planRecord.contacts !== "undefined") {
               numberOfContacts = planRecord.contacts;
             }
@@ -98,12 +111,27 @@ router.post("/validate", async (req, res) => {
             end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
           };
 
+          console.log("[payments.validate] subscription values preview:", {
+            paymentId,
+            userId,
+            planId,
+            numberOfContacts,
+          });
+
           try {
             const [record, created] = await Subscription.findOrCreate({
               where: { payment_id: String(paymentId) },
               defaults: values,
             });
             if (!created) await record.update(values);
+
+            console.log("[payments.validate] subscription saved:", {
+              id: record.id,
+              payment_id: record.payment_id,
+              plan_id: record.plan_id,
+              numberOfContacts: record.numberOfContacts,
+              created,
+            });
 
             if (userId) {
               try {
