@@ -73,27 +73,63 @@ export const sendOtp = async (req, res) => {
     ).toLowerCase();
 
     const phoneDigits = String(phone).replace(/\D/g, "");
+    let providerResponse = null;
     try {
-      if (provider === "2factor") {
+      // Allow explicit 'twilio' provider or automatic use when TWILIO_AUTH_TOKEN is set
+      const twilioToken = process.env.TWILIO_AUTH_TOKEN || process.env.TWILIO_SECRET;
+      const twilioSid = process.env.TWILIO_ACCOUNT_SID;
+      const twilioFrom = process.env.TWILIO_FROM;
+
+      if (provider === "twilio" || (twilioToken && twilioSid && twilioFrom)) {
+        if (!twilioSid || !twilioToken || !twilioFrom) {
+          console.warn("[otp] Twilio configured but missing TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, or TWILIO_FROM");
+        } else {
+          const toNumber = phoneDigits.startsWith("+") ? phoneDigits : `+${phoneDigits}`;
+          const url = `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`;
+          const params = new URLSearchParams();
+          params.append("To", toNumber);
+          params.append("From", twilioFrom);
+          params.append("Body", `Your OTP is ${otp}`);
+          const auth = Buffer.from(`${twilioSid}:${twilioToken}`).toString("base64");
+          const r = await fetch(url, {
+            method: "POST",
+            headers: {
+              Authorization: `Basic ${auth}`,
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: params.toString(),
+          });
+          try {
+            providerResponse = await r.json();
+          } catch (e) {
+            providerResponse = { status: r.status };
+          }
+          console.log("[otp] twilio provider response:", providerResponse);
+        }
+      } else if (provider === "2factor") {
         const smsUrl = `https://2factor.in/API/V1/${apiKey}/SMS/${phoneDigits}/${otp}`;
         // Node 18+ has global fetch; wrap in try/catch
         const r = await fetch(smsUrl);
-        let j = null;
         try {
-          j = await r.json();
+          providerResponse = await r.json();
         } catch (e) {
-          j = { status: r.status };
+          providerResponse = { status: r.status };
         }
-        console.log("[otp] sms provider response:", j);
+        console.log("[otp] sms provider response:", providerResponse);
       } else {
         // Generic POST interface (if you set SMS_GATEWAY_PROVIDER to 'generic')
         const url = process.env.SMS_GATEWAY_URL;
         if (url) {
-          await fetch(url, {
+          const r = await fetch(url, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ apiKey, phone: phoneDigits, otp }),
           });
+          try {
+            providerResponse = await r.json();
+          } catch (e) {
+            providerResponse = { status: r.status };
+          }
         } else {
           console.warn("[otp] No SMS_GATEWAY_URL set for generic provider");
         }
@@ -105,12 +141,14 @@ export const sendOtp = async (req, res) => {
     // Log OTP to server console for local dev (still kept for debugging)
     console.log(`[otp] sent OTP for ${phone}: ${otp} (stored in DB otp_plain)`);
 
-    return res.json({
+    const responsePayload = {
       ok: true,
       expiresInMinutes: OTP_EXPIRY_MIN,
       cooldownSecs,
       otp,
-    });
+    };
+    if (process.env.DEBUG_OTP === "true") responsePayload.providerResponse = providerResponse;
+    return res.json(responsePayload);
   } catch (err) {
     console.error("sendOtp error:", err);
     return res.status(500).json({ error: "Failed to send OTP" });
