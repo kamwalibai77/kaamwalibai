@@ -23,7 +23,10 @@
         "ACCESS_COARSE_LOCATION",
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE"
+        "WRITE_EXTERNAL_STORAGE",
+        "CALL_PHONE",
+        "RECEIVE_SMS",
+        "READ_SMS"
       ],
       "edgeToEdgeEnabled": true
     },
@@ -53,7 +56,9 @@
       "router": {},
       "eas": {
         "projectId": "d800cc13-e1a9-4ff7-8dfb-a7318b60e726"
-      }
+      },
+      "apiUrl": "https://kaamwalibai.onrender.com",
+      "smsProviderKey": "a2411f6e-a794-11f0-b922-0200cd936042"
     }
   }
 }

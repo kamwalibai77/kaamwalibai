@@ -313,7 +313,8 @@ export default function HomeScreen({ navigation }: Props) {
 
       setModalVisible(true);
     } catch (e) {
-      const errMsg = (e as any)?.response?.data?.error || "Unable to consume contact";
+      const errMsg =
+        (e as any)?.response?.data?.error || "Unable to consume contact";
       if (errMsg === "Subscription contact limit reached") {
         Alert.alert(
           "Subscription limit reached",
@@ -656,95 +657,107 @@ export default function HomeScreen({ navigation }: Props) {
                     .join(", ")}
                 </Text>
 
-                            <View style={styles.providerModalActions}>
-                              <TouchableOpacity
-                                style={{ alignItems: "center" }}
-                                disabled={contactLoading}
-                                onPress={async () => {
-                                  if (contactLoading) return;
-                                  setContactLoading(true);
-                                  try {
-                                    // ask server to consume one contact before opening phone
-                                    const token = await AsyncStorage.getItem("token");
-                                    await api.post(
-                                      "/payments/consume",
-                                      { provider_id: selectedProvider.provider.id, action: "call" },
-                                      { headers: { Authorization: `Bearer ${token}` } }
-                                    );
-                                    const phone = selectedProvider.provider.phoneNumber;
-                                    if (phone) Linking.openURL(`tel:${phone}`);
+                <View style={styles.providerModalActions}>
+                  <TouchableOpacity
+                    style={{ alignItems: "center" }}
+                    disabled={contactLoading}
+                    onPress={async () => {
+                      if (contactLoading) return;
+                      setContactLoading(true);
+                      try {
+                        // ask server to consume one contact before opening phone
+                        const token = await AsyncStorage.getItem("token");
+                        await api.post(
+                          "/payments/consume",
+                          {
+                            provider_id: selectedProvider.provider.id,
+                            action: "call",
+                          },
+                          { headers: { Authorization: `Bearer ${token}` } }
+                        );
+                        const phone = selectedProvider.provider.phoneNumber;
+                        if (phone) Linking.openURL(`tel:${phone}`);
 
-                                    // update local remaining count to reflect server-side change
-                                    setSubscriptionRemaining((prev) => (prev !== null ? prev - 1 : null));
-                                  } catch (e) {
-                                    console.warn("consume error", e);
-                                    Alert.alert(
-                                      "Subscription",
-                                      (e as any)?.response?.data?.error || "Unable to consume contact"
-                                    );
-                                  } finally {
-                                    setContactLoading(false);
-                                  }
-                                }}
-                              >
-                                <Ionicons name="call-outline" size={28} color="#4ade80" />
-                                <Text
-                                  style={{
-                                    marginTop: 5,
-                                    color: "#065f46",
-                                    fontWeight: "600",
-                                  }}
-                                >
-                                  {contactLoading ? "Processing..." : "Call"}
-                                </Text>
-                              </TouchableOpacity>
+                        // update local remaining count to reflect server-side change
+                        setSubscriptionRemaining((prev) =>
+                          prev !== null ? prev - 1 : null
+                        );
+                      } catch (e) {
+                        console.warn("consume error", e);
+                        Alert.alert(
+                          "Subscription",
+                          (e as any)?.response?.data?.error ||
+                            "Unable to consume contact"
+                        );
+                      } finally {
+                        setContactLoading(false);
+                      }
+                    }}
+                  >
+                    <Ionicons name="call-outline" size={28} color="#4ade80" />
+                    <Text
+                      style={{
+                        marginTop: 5,
+                        color: "#065f46",
+                        fontWeight: "600",
+                      }}
+                    >
+                      {contactLoading ? "Processing..." : "Call"}
+                    </Text>
+                  </TouchableOpacity>
 
-                              <TouchableOpacity
-                                style={{ alignItems: "center" }}
-                                disabled={contactLoading}
-                                onPress={async () => {
-                                  if (contactLoading) return;
-                                  setContactLoading(true);
-                                  try {
-                                    const token = await AsyncStorage.getItem("token");
-                                    await api.post(
-                                      "/payments/consume",
-                                      { provider_id: selectedProvider.provider.id, action: "message" },
-                                      { headers: { Authorization: `Bearer ${token}` } }
-                                    );
-                                    setModalVisible(false);
-                                    navigation.navigate("ChatBox", {
-                                      userId: selectedProvider.provider.id,
-                                      name: selectedProvider.provider.name,
-                                    });
-                                    setSubscriptionRemaining((prev) => (prev !== null ? prev - 1 : null));
-                                  } catch (e) {
-                                    console.warn("consume error", e);
-                                    Alert.alert(
-                                      "Subscription",
-                                      (e as any)?.response?.data?.error || "Unable to consume contact"
-                                    );
-                                  } finally {
-                                    setContactLoading(false);
-                                  }
-                                }}
-                              >
-                                <Ionicons
-                                  name="chatbubble-ellipses-outline"
-                                  size={28}
-                                  color="#3b82f6"
-                                />
-                                <Text
-                                  style={{
-                                    marginTop: 5,
-                                    color: "#1e40af",
-                                    fontWeight: "600",
-                                  }}
-                                >
-                                  {contactLoading ? "Processing..." : "Message"}
-                                </Text>
-                              </TouchableOpacity>
-                            </View>
+                  <TouchableOpacity
+                    style={{ alignItems: "center" }}
+                    disabled={contactLoading}
+                    onPress={async () => {
+                      if (contactLoading) return;
+                      setContactLoading(true);
+                      try {
+                        const token = await AsyncStorage.getItem("token");
+                        await api.post(
+                          "/payments/consume",
+                          {
+                            provider_id: selectedProvider.provider.id,
+                            action: "message",
+                          },
+                          { headers: { Authorization: `Bearer ${token}` } }
+                        );
+                        setModalVisible(false);
+                        navigation.navigate("ChatBox", {
+                          userId: selectedProvider.provider.id,
+                          name: selectedProvider.provider.name,
+                        });
+                        setSubscriptionRemaining((prev) =>
+                          prev !== null ? prev - 1 : null
+                        );
+                      } catch (e) {
+                        console.warn("consume error", e);
+                        Alert.alert(
+                          "Subscription",
+                          (e as any)?.response?.data?.error ||
+                            "Unable to consume contact"
+                        );
+                      } finally {
+                        setContactLoading(false);
+                      }
+                    }}
+                  >
+                    <Ionicons
+                      name="chatbubble-ellipses-outline"
+                      size={28}
+                      color="#3b82f6"
+                    />
+                    <Text
+                      style={{
+                        marginTop: 5,
+                        color: "#1e40af",
+                        fontWeight: "600",
+                      }}
+                    >
+                      {contactLoading ? "Processing..." : "Message"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
 
                 <TouchableOpacity
                   style={styles.closeModalButton}

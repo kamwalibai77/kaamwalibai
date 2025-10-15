@@ -164,6 +164,12 @@ export default function ProfileEditScreen({ navigation }: Props) {
   useEffect(() => {
     const fetchUser = async () => {
       try {
+        // Try to get phone number from AsyncStorage first
+        let phone = await AsyncStorage.getItem("phoneNumber");
+        console.log("[profileEdit] phone from AsyncStorage:", phone);
+        if (phone && phone.length >= 10) {
+          setPhoneNumber(phone.startsWith("+91") ? phone : `+91${phone}`);
+        }
         const userId = await AsyncStorage.getItem("userId");
         if (!userId) return;
 
@@ -172,11 +178,14 @@ export default function ProfileEditScreen({ navigation }: Props) {
         setId(data.id);
         setName(data.name);
         setRole(data.role);
-        setPhoneNumber(
-          data.phoneNumber?.startsWith("+91")
+        // If phone not set from AsyncStorage, use API value
+        if (!phone || phone.length < 10) {
+          const apiPhone = data.phoneNumber?.startsWith("+91")
             ? data.phoneNumber
-            : `+91${data.phoneNumber || ""}`
-        );
+            : `+91${data.phoneNumber || ""}`;
+          console.log("[profileEdit] phone from API:", apiPhone);
+          setPhoneNumber(apiPhone);
+        }
         setAddress(data.address);
         setQuery(data.address || "");
         setGender(data.gender);
@@ -204,6 +213,8 @@ export default function ProfileEditScreen({ navigation }: Props) {
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
+        nestedScrollEnabled={true}
+        keyboardShouldPersistTaps="handled"
       >
         <Text style={styles.title}>Profile</Text>
 
@@ -380,6 +391,8 @@ export default function ProfileEditScreen({ navigation }: Props) {
               style={styles.dropdown}
               textStyle={styles.dropdownText}
               dropDownContainerStyle={styles.dropDownContainer}
+              listMode="SCROLLVIEW"
+              scrollViewProps={{ nestedScrollEnabled: true }}
             />
           </View>
 
@@ -396,7 +409,15 @@ export default function ProfileEditScreen({ navigation }: Props) {
               placeholder="Select Age"
               style={styles.dropdown}
               textStyle={styles.dropdownText}
-              dropDownContainerStyle={styles.dropDownContainer}
+              dropDownContainerStyle={[
+                styles.dropDownContainer,
+                { maxHeight: 420 },
+              ]}
+              listMode="MODAL"
+              modalProps={{ animationType: "slide" }}
+              modalTitle="Select Age"
+              modalContentContainerStyle={{ margin: 12 }}
+              flatListProps={{ initialNumToRender: 20 }}
             />
           </View>
         </View>

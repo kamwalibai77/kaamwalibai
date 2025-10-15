@@ -51,11 +51,14 @@ export default function AppNavigator() {
       try {
         const storedRole = await AsyncStorage.getItem("userRole"); // e.g. "user" or "serviceProvider"
         // Normalize common variants so the navigator and UI use the same canonical value
-        let normalized: string | null = storedRole;
+        let normalized: string | null = null;
         if (storedRole) {
           const compact = storedRole.replace(/[^a-zA-Z]/g, "").toLowerCase();
-          if (compact === "ServiceProvider") {
-            normalized = "ServiceProvider"; // canonical form used across the app
+          // if storedRole matches service provider in any casing/format, normalize to 'serviceProvider'
+          if (compact === "serviceprovider") {
+            normalized = "serviceProvider"; // canonical form used across the app
+          } else {
+            normalized = storedRole;
           }
         }
         setRole(normalized);
@@ -95,7 +98,7 @@ export default function AppNavigator() {
         />
         <Stack.Screen name="ChatBox" component={ChatBoxScreen} />
         {/* 👇 Only Service Providers can access MyServices */}
-        {role === "serviceProvider" && (
+        {(role || "").toLowerCase() === "serviceprovider" && (
           <Stack.Screen name="MyServices" component={MyServicesScreen} />
         )}
       </Stack.Navigator>

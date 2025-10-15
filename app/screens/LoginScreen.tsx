@@ -75,6 +75,16 @@ export default function LoginScreen({ navigation }: Props) {
         setSnackbarMsg(
           `OTP sent to +${COUNTRY_CODE}${phone} - OTP is ${json.otp}`
         );
+        // persist phone locally so EditProfile can read it after redirect
+        try {
+          await AsyncStorage.setItem("phoneNumber", `+${COUNTRY_CODE}${phone}`);
+          console.log(
+            "[login] saved phoneNumber to AsyncStorage:",
+            `+${COUNTRY_CODE}${phone}`
+          );
+        } catch (e) {
+          console.warn("Failed to save phone to AsyncStorage", e);
+        }
       } else {
         setSnackbarMsg(json?.error || "Failed to send OTP");
       }
@@ -106,6 +116,20 @@ export default function LoginScreen({ navigation }: Props) {
           await AsyncStorage.setItem("token", json.token);
           if (json.user?.id)
             await AsyncStorage.setItem("userId", String(json.user.id));
+
+          // persist phone locally as well
+          try {
+            await AsyncStorage.setItem(
+              "phoneNumber",
+              `+${COUNTRY_CODE}${phone}`
+            );
+            console.log(
+              "[login] saved phoneNumber to AsyncStorage on verify:",
+              `+${COUNTRY_CODE}${phone}`
+            );
+          } catch (e) {
+            console.warn("Failed to save phone to AsyncStorage", e);
+          }
 
           const serverRole = json.user?.role?.toLowerCase();
           if (serverRole) {

@@ -76,21 +76,28 @@ export const sendOtp = async (req, res) => {
     let providerResponse = null;
     try {
       // Allow explicit 'twilio' provider or automatic use when TWILIO_AUTH_TOKEN is set
-      const twilioToken = process.env.TWILIO_AUTH_TOKEN || process.env.TWILIO_SECRET;
+      const twilioToken =
+        process.env.TWILIO_AUTH_TOKEN || process.env.TWILIO_SECRET;
       const twilioSid = process.env.TWILIO_ACCOUNT_SID;
       const twilioFrom = process.env.TWILIO_FROM;
 
       if (provider === "twilio" || (twilioToken && twilioSid && twilioFrom)) {
         if (!twilioSid || !twilioToken || !twilioFrom) {
-          console.warn("[otp] Twilio configured but missing TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, or TWILIO_FROM");
+          console.warn(
+            "[otp] Twilio configured but missing TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, or TWILIO_FROM"
+          );
         } else {
-          const toNumber = phoneDigits.startsWith("+") ? phoneDigits : `+${phoneDigits}`;
+          const toNumber = phoneDigits.startsWith("+")
+            ? phoneDigits
+            : `+${phoneDigits}`;
           const url = `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`;
           const params = new URLSearchParams();
           params.append("To", toNumber);
           params.append("From", twilioFrom);
           params.append("Body", `Your OTP is ${otp}`);
-          const auth = Buffer.from(`${twilioSid}:${twilioToken}`).toString("base64");
+          const auth = Buffer.from(`${twilioSid}:${twilioToken}`).toString(
+            "base64"
+          );
           const r = await fetch(url, {
             method: "POST",
             headers: {
@@ -147,7 +154,8 @@ export const sendOtp = async (req, res) => {
       cooldownSecs,
       otp,
     };
-    if (process.env.DEBUG_OTP === "true") responsePayload.providerResponse = providerResponse;
+    if (process.env.DEBUG_OTP === "true")
+      responsePayload.providerResponse = providerResponse;
     return res.json(responsePayload);
   } catch (err) {
     console.error("sendOtp error:", err);

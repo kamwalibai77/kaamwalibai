@@ -210,7 +210,8 @@ router.get("/me", authMiddleware, async (req, res) => {
 router.post("/consume", authMiddleware, async (req, res) => {
   try {
     const { provider_id: providerId, action } = req.body || {};
-    if (!providerId) return res.status(400).json({ error: "provider_id is required" });
+    if (!providerId)
+      return res.status(400).json({ error: "provider_id is required" });
     const userId = String(req.user.id);
 
     const Subscription = db.Subscription;
@@ -227,7 +228,10 @@ router.post("/consume", authMiddleware, async (req, res) => {
     }
 
     // If numberOfContacts is null -> unlimited
-    if (sub.numberOfContacts === null || typeof sub.numberOfContacts === "undefined") {
+    if (
+      sub.numberOfContacts === null ||
+      typeof sub.numberOfContacts === "undefined"
+    ) {
       // Log contact but do not decrement
       if (ContactLog) {
         try {
@@ -263,7 +267,8 @@ router.post("/consume", authMiddleware, async (req, res) => {
         throw new Error("limit_exceeded");
       }
 
-      const updated = Array.isArray(affectedRows) && affectedRows[0] ? affectedRows[0] : null;
+      const updated =
+        Array.isArray(affectedRows) && affectedRows[0] ? affectedRows[0] : null;
       if (updated) remaining = updated.numberOfContacts;
 
       // record contact log if model exists
@@ -287,7 +292,9 @@ router.post("/consume", authMiddleware, async (req, res) => {
     return res.json({ remaining, subscription: sub });
   } catch (err) {
     if (err && err.message === "limit_exceeded") {
-      return res.status(403).json({ error: "Subscription contact limit reached" });
+      return res
+        .status(403)
+        .json({ error: "Subscription contact limit reached" });
     }
     console.error("/consume error:", err && err.stack ? err.stack : err);
     return res.status(500).json({ error: "Failed to consume contact" });
