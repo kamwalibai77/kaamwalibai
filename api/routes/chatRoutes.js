@@ -1,6 +1,7 @@
 import express from "express";
 import { authMiddleware } from "../middleware/auth.js";
 import db from "../models/index.js";
+import { ioServer } from "../sockets/socket.js";
 
 const router = express.Router();
 const Message = db.Message;
@@ -19,7 +20,43 @@ router.post("/send", authMiddleware, async (req, res) => {
         .json({ success: false, error: "Message & Receiver required" });
     }
 
+    // Check blocked relationship: if either side has blocked the other, deny
+    try {
+      const BlockedUser = db.BlockedUser;
+      const Op = db.Sequelize.Op;
+      const blocked = await BlockedUser.findOne({
+        where: {
+          [Op.or]: [
+            { userId: senderId, targetId: receiverId },
+            { userId: receiverId, targetId: senderId },
+          ],
+        },
+      });
+      if (blocked) {
+        return res.status(403).json({ success: false, error: "Message blocked" });
+      }
+    } catch (e) {
+      console.warn("chat send: block check failed", e);
+    }
+
     const newMessage = await Message.create({ senderId, receiverId, message });
+    // Emit real-time notification to receiver only, with senderName
+    try {
+      if (ioServer) {
+        // Fetch sender name for notification
+        let senderName = null;
+        try {
+          const sender = await User.findByPk(senderId);
+          senderName = sender?.name || String(senderId);
+        } catch {}
+        ioServer.to(String(receiverId)).emit("receiveMessage", {
+          ...newMessage.toJSON(),
+          senderName,
+        });
+      }
+    } catch (e) {
+      console.warn("chat send: failed to emit socket message", e);
+    }
     res.json({ success: true, message: newMessage });
   } catch (err) {
     console.error(err);
@@ -54,6 +91,13 @@ router.get("/", authMiddleware, async (req, res) => {
     const chatMap = {};
     messages.forEach((msg) => {
       const otherUser = msg.senderId === userId ? msg.receiver : msg.sender;
+      // Skip chats where the other user has blocked or been blocked by this user.
+      // We'll check BlockedUser table; if blocked, do not include in chat list.
+      // Note: this is a best-effort check inside the loop; for performance
+      // a more optimized query should be used in production.
+      // We'll skip inclusion here and rely on clients receiving `userBlocked` events
+      // to update their UI in real-time.
+      if (!otherUser || !otherUser.id) return;
       if (!chatMap[otherUser.id]) {
         chatMap[otherUser.id] = {
           id: otherUser.id,

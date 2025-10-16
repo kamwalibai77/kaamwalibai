@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import express from "express";
 import db from "../models/index.js";
+import { ioServer } from "../sockets/socket.js";
 
 const Subscription = db.Subscription;
 const User = db.User;
@@ -134,6 +135,24 @@ router.post(
             user.isSubscribed = true;
             await user.save({ fields: ["isSubscribed"] });
             console.log("[webhook] marked user as subscribed", { userId: uid });
+            // Emit a socket notification to the user so their client can show a badge
+            try {
+              if (ioServer) {
+                // Fetch user name for notification
+                let userName = null;
+                try {
+                  userName = user?.name || String(uid);
+                } catch {}
+                ioServer.to(String(uid)).emit("subscriptionPurchased", {
+                  userId: String(uid),
+                  userName,
+                  message: `Hi ${userName || ''}, your subscription is now active!`,
+                  planId: String(planId),
+                });
+              }
+            } catch (e) {
+              console.warn("[webhook] failed to emit subscriptionPurchased", e);
+            }
           } else {
             console.warn("[webhook] user not found for subscription webhook", {
               userId: uid,

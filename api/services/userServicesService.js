@@ -8,12 +8,29 @@ export const create = async (data) => {
   return await db.sequelize.transaction(async (t) => {
     const { serviceTypeIds = [], ...userServiceData } = data;
 
+    // allow availabilitySlots to be stored in JSON column
     const userService = await UserServices.create(userServiceData, {
       transaction: t,
     });
 
     if (serviceTypeIds.length > 0) {
       await userService.setServiceTypes(serviceTypeIds, { transaction: t });
+    }
+
+    // If availabilitySlots provided, persist via AvailabilityTime table
+    if (userServiceData.availabilitySlots && userServiceData.providerId) {
+      // normalize slots: expect array of slot keys like ['morning','evening']
+      const slots = (userServiceData.availabilitySlots || []).map((s) => ({
+        providerId: userServiceData.providerId,
+        dayOfWeek: "any",
+        startTime: "00:00:00",
+        endTime: "23:59:59",
+        slotKey: s,
+      }));
+      const AvailabilityTime = db.AvailabilityTime;
+      // delete previous availability for provider and insert new
+      await AvailabilityTime.destroy({ where: { providerId: userServiceData.providerId }, transaction: t });
+      if (slots.length) await AvailabilityTime.bulkCreate(slots, { transaction: t });
     }
 
     return userService;
@@ -29,6 +46,7 @@ export const getAll = async ({
   lat,
   lng,
   radius,
+  gender,
   serviceTypeIds,
 }) => {
   const offset = (page - 1) * limit;
@@ -92,9 +110,18 @@ export const getAll = async ({
     }
   }
 
-  const providerWhere = providerConditions.length
+  let providerWhere = providerConditions.length
     ? { [Op.and]: providerConditions }
     : undefined;
+
+  // apply gender filter to provider if passed
+  if (gender) {
+    if (providerWhere) {
+      providerWhere.gender = gender;
+    } else {
+      providerWhere = { gender };
+    }
+  }
 
   // If serviceTypeIds provided, filter services that are associated with any of the given ids
   const serviceTypeFilter = serviceTypeIds
@@ -178,6 +205,20 @@ export const update = async (id, data) => {
     if (!userService) return null;
     await userService.update(userServiceData, { transaction: t });
     await userService.setServiceTypes(serviceTypeIds, { transaction: t });
+
+    // handle availabilitySlots similar to create
+    if (userServiceData.availabilitySlots && userServiceData.providerId) {
+      const slots = (userServiceData.availabilitySlots || []).map((s) => ({
+        providerId: userServiceData.providerId,
+        dayOfWeek: "any",
+        startTime: "00:00:00",
+        endTime: "23:59:59",
+        slotKey: s,
+      }));
+      const AvailabilityTime = db.AvailabilityTime;
+      await AvailabilityTime.destroy({ where: { providerId: userServiceData.providerId }, transaction: t });
+      if (slots.length) await AvailabilityTime.bulkCreate(slots, { transaction: t });
+    }
     return userService;
   });
 };

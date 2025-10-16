@@ -5,6 +5,7 @@ export default (sequelize, DataTypes) => {
     rateType: DataTypes.ENUM("hourly", "daily", "weekly", "monthly"), // ✅ role column
     currency: { type: DataTypes.STRING, defaultValue: "INR" },
     contactNumber: { type: DataTypes.STRING },
+    availabilitySlots: { type: DataTypes.JSON, allowNull: true },
   });
 
   UserService.associate = (models) => {

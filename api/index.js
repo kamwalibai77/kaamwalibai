@@ -18,6 +18,8 @@ import serviceTypeRoutes from "./routes/serviceTypeRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import userServicesRoutes from "./routes/userServicesRoutes.js";
 import webhookRoutes from "./routes/webhook.js";
+import ratingRoutes from "./routes/ratingRoutes.js";
+import debugRoutes from "./routes/debugRoutes.js";
 
 dotenv.config();
 
@@ -39,6 +41,11 @@ app.use("/api/service-types", serviceTypeRoutes);
 app.use("/api/service-provider", userServicesRoutes);
 app.use("/api/service-provider/availability", availabilityRoutes);
 app.use("/api/payments", paymentsRoutes);
+app.use("/api/rating", ratingRoutes);
+// Dev-only debug routes
+if (process.env.NODE_ENV !== "production") {
+  app.use("/api/_debug", debugRoutes);
+}
 app.use("/api/faqs", faqRoutes);
 app.use("/api/plans", plansRoutes);
 
