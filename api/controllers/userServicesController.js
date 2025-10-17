@@ -17,7 +17,10 @@ export const getAll = async (req, res) => {
     // Frontend may send `search` param; service layer expects `searchText`.
     if (params.search && !params.searchText) params.searchText = params.search;
 
-    const serviceTypes = await services.getAll(params);
+    // Pass the requesting user's id (if authenticated) so the service layer
+    // can optionally exclude posts owned by the requester.
+    const requesterId = req.user?.id;
+    const serviceTypes = await services.getAll(params, requesterId);
     res.json(serviceTypes);
   } catch (err) {
     res.status(500).json({ error: err.message });

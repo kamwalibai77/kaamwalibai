@@ -48,7 +48,7 @@ export const getAll = async ({
   radius,
   gender,
   serviceTypeIds,
-}) => {
+}, requesterId) => {
   const offset = (page - 1) * limit;
 
   let where = {};
@@ -157,9 +157,14 @@ export const getAll = async ({
   };
 
   const { rows, count } = await UserServices.findAndCountAll(findOpts);
+  // If requesterId is provided, filter out services owned by the requester
+  let filteredRows = rows;
+  if (requesterId) {
+    filteredRows = rows.filter((r) => String(r.providerId) !== String(requesterId));
+  }
 
   return {
-    data: rows,
+    data: filteredRows,
     pagination: {
       total: count,
       page,

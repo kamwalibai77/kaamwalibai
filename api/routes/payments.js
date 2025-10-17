@@ -214,6 +214,19 @@ router.post("/consume", authMiddleware, async (req, res) => {
       return res.status(400).json({ error: "provider_id is required" });
     const userId = String(req.user.id);
 
+    // If the user is trying to consume a contact on their own post, skip consumption.
+    // This prevents providers from consuming their own subscription contacts.
+    try {
+      const ProviderUser = await db.User.findByPk(String(providerId));
+      // providerId may be userService id or provider user id; if providerId equals current user id
+      // treat as owner. If ProviderUser exists and its id equals userId, skip consumption.
+      if (ProviderUser && String(ProviderUser.id) === String(userId)) {
+        return res.json({ remaining: null, message: "Own post - no subscription consumed" });
+      }
+    } catch (e) {
+      // ignore lookup errors and continue with normal consumption logic
+    }
+
     const Subscription = db.Subscription;
     const ContactLog = db.ContactLog;
 

@@ -201,30 +201,100 @@ export const verifyOtp = async (req, res) => {
       // consume OTP and login
       await record.update({ used: true });
       const token = jwt.sign(
-        { id: user.id },
+        { id: user.id, name: user.name, phoneNumber: user.phoneNumber, role: user.role },
         process.env.JWT_SECRET || "secret",
         { expiresIn: "30d" }
       );
       return res.json({ ok: true, token, user, isNewUser: false });
     }
 
-    // create user with provided role
-    user = await User.create({
-      name: `User_${Date.now()}`,
-      phoneNumber: String(phone),
-      password: "",
-    });
-
+    // New phone: consume OTP and issue a temporary token containing phone only.
     await record.update({ used: true });
-    const token = jwt.sign(
-      { id: user.id },
+    const tempToken = jwt.sign(
+      { phone: String(phone), isNewUser: true },
       process.env.JWT_SECRET || "secret",
-      { expiresIn: "30d" }
+      { expiresIn: "30m" }
     );
-    return res.json({ ok: true, token, user, isNewUser: true });
+    // Return token but do NOT create a permanent user yet. Client should redirect to profile edit
+    // and call /auth/complete-signup to create the user.
+    return res.json({ ok: true, token: tempToken, user: null, isNewUser: true });
   } catch (err) {
     console.error("verifyOtp error:", err && err.stack ? err.stack : err);
     return res.status(500).json({ error: "Failed to verify OTP" });
+  }
+};
+
+export const completeSignup = async (req, res) => {
+  try {
+    // Expect Authorization: Bearer <tempToken>
+    const auth = req.headers.authorization;
+    if (!auth || !auth.startsWith("Bearer "))
+      return res.status(401).json({ error: "Missing token" });
+    const token = auth.split(" ")[1];
+    let payload;
+    try {
+      payload = jwt.verify(token, process.env.JWT_SECRET || "secret");
+    } catch (e) {
+      return res.status(401).json({ error: "Invalid or expired token" });
+    }
+
+    if (!payload || !payload.phone || !payload.isNewUser)
+      return res.status(400).json({ error: "Invalid signup token" });
+
+    // Normalize role helper
+    const normalizeRole = (r) => {
+      if (!r) return null;
+      const v = String(r).toLowerCase();
+      if (v === "serviceprovider" || v === "service_provider" || v === "provider") return "ServiceProvider";
+      if (v === "admin" || v === "superadmin") return "superadmin";
+      return "user";
+    };
+
+    // If multipart/form-data, fields are in req.body and file in req.file
+    const { name, role, address, gender, age, latitude, longitude } = req.body;
+
+    const roleToSave = normalizeRole(role);
+    if (!roleToSave) {
+      return res.status(400).json({ error: "Role is required" });
+    }
+
+    // Create the user record
+    const newUser = await User.create({
+      name: name || `User_${Date.now()}`,
+      phoneNumber: String(payload.phone),
+      password: "",
+      role: roleToSave,
+      address: address || null,
+      gender: gender || null,
+      age: age ? Number(age) : null,
+      latitude: latitude ? Number(latitude) : null,
+      longitude: longitude ? Number(longitude) : null,
+    });
+
+    // If a profile photo was uploaded, and middleware saved req.file.path, handle cloudinary upload here
+    if (req.file && req.file.path) {
+      try {
+        const uploadRes = await import("../config/cloudinary.js");
+        const cloud = uploadRes.default || uploadRes;
+        const upl = await cloud.uploader.upload(req.file.path, { folder: "maid-service" });
+        newUser.profilePhoto = upl.secure_url;
+        await newUser.save();
+      } catch (e) {
+        console.warn("Failed to upload profile photo during signup:", e);
+      }
+    }
+
+    // Issue permanent JWT
+    const authToken = jwt.sign(
+      { id: newUser.id, name: newUser.name, phoneNumber: newUser.phoneNumber, role: newUser.role },
+      process.env.JWT_SECRET || "secret",
+      { expiresIn: "30d" }
+    );
+
+    return res.json({ ok: true, token: authToken, user: newUser });
+  } catch (err) {
+    console.error("completeSignup error:", err && err.stack ? err.stack : err);
+    return res.status(500).json({ error: "Failed to complete signup" });
   }
 };
 

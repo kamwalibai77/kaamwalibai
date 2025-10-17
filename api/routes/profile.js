@@ -32,6 +32,16 @@ router.put(
         role,
       } = req.body;
 
+      // Enforce role immutability server-side: if the user already has a role,
+      // do not allow it to be changed via this endpoint. Only allow setting
+      // role when the existing role is empty/null.
+      const existingUser = await User.findByPk(userId);
+      let roleToSave = role;
+      if (existingUser && existingUser.role) {
+        // ignore role from request to prevent elevation or changes
+        roleToSave = existingUser.role;
+      }
+
       // save local path for cleanup
       localFilePath = req.file?.path;
 
@@ -46,7 +56,7 @@ router.put(
 
       // Save user to DB
       const [rowsUpdated, [updatedUser]] = await User.update(
-        { name, phoneNumber, address, gender, age, latitude, longitude, role },
+        { name, phoneNumber, address, gender, age, latitude, longitude, role: roleToSave },
         {
           where: { id: userId },
           returning: true,
