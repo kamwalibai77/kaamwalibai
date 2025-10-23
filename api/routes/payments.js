@@ -221,7 +221,10 @@ router.post("/consume", authMiddleware, async (req, res) => {
       // providerId may be userService id or provider user id; if providerId equals current user id
       // treat as owner. If ProviderUser exists and its id equals userId, skip consumption.
       if (ProviderUser && String(ProviderUser.id) === String(userId)) {
-        return res.json({ remaining: null, message: "Own post - no subscription consumed" });
+        return res.json({
+          remaining: null,
+          message: "Own post - no subscription consumed",
+        });
       }
     } catch (e) {
       // ignore lookup errors and continue with normal consumption logic

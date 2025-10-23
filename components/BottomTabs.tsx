@@ -1,17 +1,20 @@
 // app/components/BottomTabs.tsx
-import React, { useEffect, useState } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import {
+  FontAwesome5,
   Ionicons,
   MaterialCommunityIcons,
-  FontAwesome5,
 } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
+  NavigationProp,
   useNavigation,
   useRoute,
-  NavigationProp,
 } from "@react-navigation/native";
+import axios from "axios";
+import React, { useEffect, useState } from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import io from "socket.io-client";
+import { SOCKET_URL } from "../app/utills/config";
 
 export default function BottomTabs() {
   const navigation =
@@ -25,6 +28,8 @@ export default function BottomTabs() {
 
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+  const socketRef = React.useRef<any>(null);
 
   useEffect(() => {
     const fetchRole = async () => {
@@ -38,6 +43,59 @@ export default function BottomTabs() {
       }
     };
     fetchRole();
+  }, []);
+
+  // fetch unread counts for chat and listen to socket events to update badge
+  useEffect(() => {
+    let mounted = true;
+    const init = async () => {
+      try {
+        const token = await AsyncStorage.getItem("token");
+        if (!token) return;
+        // fetch chat list which includes unreadCount per chat
+        const res = await axios.get(`${SOCKET_URL}/api/chat`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.data && res.data.chats) {
+          const total = res.data.chats.reduce(
+            (acc: number, c: any) => acc + (c.unreadCount || 0),
+            0
+          );
+          if (mounted) setUnreadCount(total);
+        }
+
+        // connect socket and listen for receiveMessage to increment unread
+        const storedId = await AsyncStorage.getItem("userId");
+        if (!storedId) return;
+        const socket = io(SOCKET_URL, { transports: ["websocket"] });
+        socketRef.current = socket;
+        socket.on("connect", () => socket.emit("register", storedId));
+        socket.on("receiveMessage", (msg: any) => {
+          // If message is to current user, increment badge
+          const myId = storedId;
+          if (String(msg.receiverId) === String(myId)) {
+            setUnreadCount((prev) => prev + 1);
+          }
+        });
+        socket.on("messageBlocked", () => {
+          // no change
+        });
+        socket.on("subscriptionPurchased", (data: any) => {
+          // optionally show a transient badge for subscription
+          // we'll increment unreadCount to show notification presence
+          setUnreadCount((prev) => prev + 1);
+        });
+      } catch (e) {
+        console.warn("BottomTabs init error", e);
+      }
+    };
+    init();
+    return () => {
+      mounted = false;
+      try {
+        socketRef.current?.disconnect();
+      } catch {}
+    };
   }, []);
 
   if (loading) return null;
@@ -71,21 +129,31 @@ export default function BottomTabs() {
       {/* Chat */}
       <TouchableOpacity
         style={styles.tabItem}
-        onPress={() => navigation.navigate("Chat")}
+        onPress={() => {
+          setUnreadCount(0);
+          navigation.navigate("Chat");
+        }}
       >
         <MaterialCommunityIcons
           name="chat-processing-outline"
           size={28}
           color={pathname === "Chat" ? activeColor : inactiveColor}
         />
-        <Text
-          style={[
-            styles.tabText,
-            { color: pathname === "Chat" ? activeColor : inactiveColor },
-          ]}
-        >
-          Chat
-        </Text>
+        <View style={{ position: "relative", alignItems: "center" }}>
+          <Text
+            style={[
+              styles.tabText,
+              { color: pathname === "Chat" ? activeColor : inactiveColor },
+            ]}
+          >
+            Chat
+          </Text>
+          {unreadCount > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{unreadCount}</Text>
+            </View>
+          )}
+        </View>
       </TouchableOpacity>
 
       {/* Subscriptions */}
@@ -173,4 +241,16 @@ const styles = StyleSheet.create({
   },
   tabItem: { alignItems: "center" },
   tabText: { fontSize: 12, color: "#64748b", marginTop: 3, fontWeight: "700" },
+  badge: {
+    position: "absolute",
+    right: -10,
+    top: -6,
+    backgroundColor: "#ef4444",
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  badgeText: { color: "#fff", fontSize: 11, fontWeight: "700" },
 });

@@ -146,7 +146,9 @@ router.post(
                 ioServer.to(String(uid)).emit("subscriptionPurchased", {
                   userId: String(uid),
                   userName,
-                  message: `Hi ${userName || ''}, your subscription is now active!`,
+                  message: `Hi ${
+                    userName || ""
+                  }, your subscription is now active!`,
                   planId: String(planId),
                 });
               }

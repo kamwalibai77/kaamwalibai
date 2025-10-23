@@ -9,6 +9,7 @@ const getAllServices = async ({
   lng, // optional user longitude
   radius, // optional radius in km
   serviceTypeIds, // optional comma-separated ids or array
+  gender,
 }: {
   page?: number;
   limit?: number;
@@ -18,8 +19,10 @@ const getAllServices = async ({
   lng?: number | string;
   radius?: number | string;
   serviceTypeIds?: string | number[];
+  gender?: string;
 }) => {
   const params: any = { page, limit, search, area };
+  if (gender !== undefined && gender !== null) params.gender = gender;
   if (lat !== undefined) params.lat = lat;
   if (lng !== undefined) params.lng = lng;
   if (radius !== undefined) params.radius = radius;

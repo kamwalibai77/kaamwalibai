@@ -51,13 +51,20 @@ export function initSocket(server) {
           });
 
           if (blocked) {
-            console.log("⛔ Message blocked due to BlockedUser record between", senderId, receiverId);
+            console.log(
+              "⛔ Message blocked due to BlockedUser record between",
+              senderId,
+              receiverId
+            );
             // Notify sender that their message was blocked and include the original data
             io.to(sid).emit("messageBlocked", { reason: "User blocked", data });
             return;
           }
         } catch (e) {
-          console.error("Error checking blocked users:", e && e.stack ? e.stack : e);
+          console.error(
+            "Error checking blocked users:",
+            e && e.stack ? e.stack : e
+          );
           // proceed with sending if DB check fails (fail-open)
         }
 

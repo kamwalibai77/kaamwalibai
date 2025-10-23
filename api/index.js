@@ -9,17 +9,17 @@ import { initSocket } from "./sockets/socket.js";
 import authRoutes from "./routes/authRoutes.js";
 import availabilityRoutes from "./routes/availabilityTimeRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
+import debugRoutes from "./routes/debugRoutes.js";
 import faqRoutes from "./routes/faqRoutes.js";
 import otpRoutes from "./routes/otpRoutes.js";
 import paymentsRoutes from "./routes/payments.js";
 import plansRoutes from "./routes/plans.js";
 import profileRoutes from "./routes/profile.js";
+import ratingRoutes from "./routes/ratingRoutes.js";
 import serviceTypeRoutes from "./routes/serviceTypeRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import userServicesRoutes from "./routes/userServicesRoutes.js";
 import webhookRoutes from "./routes/webhook.js";
-import ratingRoutes from "./routes/ratingRoutes.js";
-import debugRoutes from "./routes/debugRoutes.js";
 
 dotenv.config();
 

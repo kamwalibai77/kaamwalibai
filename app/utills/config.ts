@@ -39,9 +39,9 @@ if (inferred) {
   HOST = inferred;
 } else if (Platform.OS === "android") {
   // Default emulator loopback for Android emulator
-  HOST = "192.168.1.5";
+  HOST = "192.168.1.12";
 } else {
-  HOST = "192.168.1.5";
+  HOST = "192.168.1.12";
 }
 
 export const API_BASE_URL =

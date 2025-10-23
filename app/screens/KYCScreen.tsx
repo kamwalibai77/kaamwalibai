@@ -1,12 +1,15 @@
-import React, { useState } from "react";
+import * as ImagePicker from "expo-image-picker";
+import { useState } from "react";
 import {
-  View,
-  TextInput,
-  Text,
   Alert,
-  StyleSheet,
+  Image,
   ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
   TouchableOpacity,
+  View,
 } from "react-native";
 import api from "../services/api";
 
@@ -16,6 +19,9 @@ export default function KYCVerification() {
   const [aadhaarStatus, setAadhaarStatus] = useState("");
   const [pan, setPan] = useState("");
   const [kycStatus, setKycStatus] = useState("");
+  const [kycFront, setKycFront] = useState<any>(null);
+  const [kycBack, setKycBack] = useState<any>(null);
+  const [consent, setConsent] = useState(false);
 
   // Aadhaar Verification
   const handleVerifyAadhaar = async () => {
@@ -52,13 +58,53 @@ export default function KYCVerification() {
       return;
     }
 
+    if (!consent) {
+      Alert.alert("Consent required", "Please provide consent to submit KYC");
+      return;
+    }
+
     try {
-      const res = await api.post("/profile/submit-kyc", { aadhaar, pan });
-      setKycStatus(res.data.status);
+      const form = new FormData();
+      form.append("aadhaarNumber", aadhaar);
+      form.append("panCardNumber", pan);
+      form.append(
+        "consentText",
+        "I consent to submit my Aadhaar for verification"
+      );
+
+      // Helper to append blob from local uri
+      const appendFile = async (fieldName: string, fileUri: string | null) => {
+        if (!fileUri) return;
+        const res = await fetch(fileUri);
+        const blob = await res.blob();
+        // @ts-ignore
+        form.append(fieldName, blob, `${fieldName}.jpg`);
+      };
+
+      await appendFile("kycFront", kycFront?.uri || kycFront);
+      await appendFile("kycBack", kycBack?.uri || kycBack);
+
+      // Use axios instance which attaches token via interceptor
+      const res = await api.post("/profile/submit-kyc", form);
+      const data = res.data;
+      setKycStatus(data.status || data.user?.kycStatus);
       Alert.alert("KYC Submitted", "Your KYC has been submitted successfully!");
     } catch (error) {
       console.log(error);
       Alert.alert("Error", "Failed to submit KYC");
+    }
+  };
+
+  const pickImage = async (setter: any) => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      // expo-image-picker returns assets array with uri
+      const uri = (result as any).assets?.[0]?.uri || (result as any).uri;
+      if (uri) setter({ uri });
     }
   };
 
@@ -100,6 +146,46 @@ export default function KYCVerification() {
         value={pan}
         onChangeText={setPan}
       />
+
+      {/* KYC Images */}
+      <Text style={styles.label}>Aadhaar Front (Photo)</Text>
+      <TouchableOpacity onPress={() => pickImage(setKycFront)}>
+        {kycFront ? (
+          <Image
+            source={{ uri: kycFront.uri || kycFront }}
+            style={styles.preview}
+          />
+        ) : (
+          <View style={styles.placeholderBox}>
+            <Text style={{ color: "#94a3b8" }}>Pick front image</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+
+      <Text style={styles.label}>Aadhaar Back (Photo)</Text>
+      <TouchableOpacity onPress={() => pickImage(setKycBack)}>
+        {kycBack ? (
+          <Image
+            source={{ uri: kycBack.uri || kycBack }}
+            style={styles.preview}
+          />
+        ) : (
+          <View style={styles.placeholderBox}>
+            <Text style={{ color: "#94a3b8" }}>Pick back image</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+
+      {/* Consent */}
+      <View
+        style={{ flexDirection: "row", alignItems: "center", marginTop: 12 }}
+      >
+        <Switch value={consent} onValueChange={setConsent} />
+        <Text style={{ marginLeft: 8, flex: 1 }}>
+          I confirm the Aadhaar images are mine and I consent to storing them
+          for verification purposes.
+        </Text>
+      </View>
 
       <TouchableOpacity style={styles.buttonSuccess} onPress={handleSubmitKYC}>
         <Text style={styles.buttonText}>Submit KYC</Text>
@@ -181,5 +267,23 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: "#1e293b",
     marginBottom: 4,
+  },
+  preview: {
+    width: "100%",
+    height: 180,
+    borderRadius: 10,
+    marginBottom: 12,
+    backgroundColor: "#eef2ff",
+  },
+  placeholderBox: {
+    width: "100%",
+    height: 140,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 12,
+    backgroundColor: "#fafafa",
   },
 });

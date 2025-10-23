@@ -29,8 +29,12 @@ export const create = async (data) => {
       }));
       const AvailabilityTime = db.AvailabilityTime;
       // delete previous availability for provider and insert new
-      await AvailabilityTime.destroy({ where: { providerId: userServiceData.providerId }, transaction: t });
-      if (slots.length) await AvailabilityTime.bulkCreate(slots, { transaction: t });
+      await AvailabilityTime.destroy({
+        where: { providerId: userServiceData.providerId },
+        transaction: t,
+      });
+      if (slots.length)
+        await AvailabilityTime.bulkCreate(slots, { transaction: t });
     }
 
     return userService;
@@ -38,17 +42,20 @@ export const create = async (data) => {
 };
 
 // Get all UserServices with pagination + search + include service types
-export const getAll = async ({
-  page = 1,
-  limit = 10,
-  searchText = "",
-  area = "",
-  lat,
-  lng,
-  radius,
-  gender,
-  serviceTypeIds,
-}, requesterId) => {
+export const getAll = async (
+  {
+    page = 1,
+    limit = 10,
+    searchText = "",
+    area = "",
+    lat,
+    lng,
+    radius,
+    gender,
+    serviceTypeIds,
+  },
+  requesterId
+) => {
   const offset = (page - 1) * limit;
 
   let where = {};
@@ -160,7 +167,9 @@ export const getAll = async ({
   // If requesterId is provided, filter out services owned by the requester
   let filteredRows = rows;
   if (requesterId) {
-    filteredRows = rows.filter((r) => String(r.providerId) !== String(requesterId));
+    filteredRows = rows.filter(
+      (r) => String(r.providerId) !== String(requesterId)
+    );
   }
 
   return {
@@ -221,8 +230,12 @@ export const update = async (id, data) => {
         slotKey: s,
       }));
       const AvailabilityTime = db.AvailabilityTime;
-      await AvailabilityTime.destroy({ where: { providerId: userServiceData.providerId }, transaction: t });
-      if (slots.length) await AvailabilityTime.bulkCreate(slots, { transaction: t });
+      await AvailabilityTime.destroy({
+        where: { providerId: userServiceData.providerId },
+        transaction: t,
+      });
+      if (slots.length)
+        await AvailabilityTime.bulkCreate(slots, { transaction: t });
     }
     return userService;
   });

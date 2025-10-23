@@ -48,6 +48,32 @@ export default (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true,
     },
+    // KYC fields
+    kycStatus: {
+      type: DataTypes.ENUM("none", "pending", "verified", "rejected"),
+      allowNull: false,
+      defaultValue: "none",
+    },
+    kycFrontUrl: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    kycBackUrl: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    kycConsent: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    kycSubmittedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    kycVerifiedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
     isSubscribed: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,

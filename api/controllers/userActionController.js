@@ -12,15 +12,24 @@ export const blockUser = async (req, res) => {
     const { targetId } = req.body || {};
     const targetIdNum = targetId ? parseInt(String(targetId), 10) : null;
     if (!userId || !targetIdNum) {
-      console.warn("blockUser: missing fields", { userId: req.user, body: req.body });
-      return res.status(400).json({ error: "Missing fields: userId or targetId" });
+      console.warn("blockUser: missing fields", {
+        userId: req.user,
+        body: req.body,
+      });
+      return res
+        .status(400)
+        .json({ error: "Missing fields: userId or targetId" });
     }
     const record = await BlockedUser.create({ userId, targetId: targetIdNum });
     // notify both users via websocket so clients can update chat list
     try {
       if (ioServer) {
-        ioServer.to(String(userId)).emit("userBlocked", { userId, targetId: targetIdNum });
-        ioServer.to(String(targetIdNum)).emit("userBlocked", { userId, targetId: targetIdNum });
+        ioServer
+          .to(String(userId))
+          .emit("userBlocked", { userId, targetId: targetIdNum });
+        ioServer
+          .to(String(targetIdNum))
+          .emit("userBlocked", { userId, targetId: targetIdNum });
       }
     } catch (e) {
       console.warn("Failed to emit userBlocked event", e);
@@ -40,7 +49,9 @@ export const blockUser = async (req, res) => {
     } catch (e) {
       console.warn("Failed to delete messages on block", e);
     }
-  return res.status(200).json({ success: true, record, message: "User blocked" });
+    return res
+      .status(200)
+      .json({ success: true, record, message: "User blocked" });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: err.message });
@@ -53,14 +64,27 @@ export const reportUser = async (req, res) => {
     const { targetId, reason } = req.body || {};
     const targetIdNum = targetId ? parseInt(String(targetId), 10) : null;
     if (!userId || !targetIdNum) {
-      console.warn("reportUser: missing fields", { userId: req.user, body: req.body });
-      return res.status(400).json({ error: "Missing fields: userId or targetId" });
+      console.warn("reportUser: missing fields", {
+        userId: req.user,
+        body: req.body,
+      });
+      return res
+        .status(400)
+        .json({ error: "Missing fields: userId or targetId" });
     }
-    const record = await Report.create({ reporterId: userId, targetId: targetIdNum, reason });
+    const record = await Report.create({
+      reporterId: userId,
+      targetId: targetIdNum,
+      reason,
+    });
     try {
       if (ioServer) {
-        ioServer.to(String(userId)).emit("userReported", { reporterId: userId, targetId: targetIdNum });
-        ioServer.to(String(targetIdNum)).emit("userReported", { reporterId: userId, targetId: targetIdNum });
+        ioServer
+          .to(String(userId))
+          .emit("userReported", { reporterId: userId, targetId: targetIdNum });
+        ioServer
+          .to(String(targetIdNum))
+          .emit("userReported", { reporterId: userId, targetId: targetIdNum });
       }
     } catch (e) {
       console.warn("Failed to emit userReported event", e);
@@ -76,11 +100,18 @@ export const reportUser = async (req, res) => {
           ],
         },
       });
-      console.log("Deleted messages between (report)", userId, "and", targetIdNum);
+      console.log(
+        "Deleted messages between (report)",
+        userId,
+        "and",
+        targetIdNum
+      );
     } catch (e) {
       console.warn("Failed to delete messages on report", e);
     }
-  return res.status(200).json({ success: true, record, message: "User reported" });
+    return res
+      .status(200)
+      .json({ success: true, record, message: "User reported" });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: err.message });

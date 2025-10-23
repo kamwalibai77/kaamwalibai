@@ -33,7 +33,12 @@ export type RootStackParamList = {
   ChatBox: { userId: string; name: string; profilePhoto?: string }; // ✅ Added profilePhoto
   Aboutus: undefined; // ✅ Added About Us
   PrivacyPolicy: undefined; // ✅ Added Privacy Policy
-  ReveiwForm: undefined; // ✅ Added Privacy Policy
+  ReveiwForm: {
+    providerId?: number | string | null;
+    providerName?: string;
+    providerPhoto?: string;
+    isAppReview?: boolean;
+  };
   FAQ: undefined;
 };
 

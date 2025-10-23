@@ -23,7 +23,7 @@ import api from "../services/api";
 
 type Props = NativeStackScreenProps<RootStackParamList, "EditProfile">;
 
-export default function ProfileEditScreen({ navigation }: Props) {
+export default function ProfileEditScreen({ navigation, route }: Props) {
   const [id, setId] = useState("");
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
@@ -31,6 +31,7 @@ export default function ProfileEditScreen({ navigation }: Props) {
   const [address, setAddress] = useState("");
   const [profilePhoto, setProfilePhoto] = useState("");
   const [loading, setLoading] = useState(true);
+  const needsRole = (route?.params as any)?.needsRole === true;
 
   // Dropdown states
   const [genderOpen, setGenderOpen] = useState(false);
@@ -109,6 +110,12 @@ export default function ProfileEditScreen({ navigation }: Props) {
       alert("Phone number must be 10 digits after +91");
       return;
     }
+    // If user was routed here to choose a role, require role selection
+    const needsRole = (route?.params as any)?.needsRole === true;
+    if (needsRole && !role) {
+      Alert.alert("Select role", "Please select a role to continue.");
+      return;
+    }
     try {
       setLoading(true);
       const formData = new FormData();
@@ -121,25 +128,76 @@ export default function ProfileEditScreen({ navigation }: Props) {
       formData.append("gender", gender || "");
       formData.append("age", age?.toString() || "");
 
-      // ✅ Upload only if user picked a new image
-      if (
-        profilePhoto &&
-        (profilePhoto.startsWith("file://") ||
-          profilePhoto.startsWith("content://"))
-      ) {
-        const file: any = {
-          uri: profilePhoto,
-          name: "profile.jpg",
-          type: "image/jpeg",
-        };
-        formData.append("profilePhoto", file as any);
+      // ✅ Upload only if user picked a new local image (not a remote URL)
+      if (profilePhoto && !profilePhoto.startsWith("http")) {
+        try {
+          // Convert local URI to blob — more reliable on Android (content://)
+          const fetched = await fetch(profilePhoto);
+          const blob = await fetched.blob();
+          // In React Native, append(blob, name) works for multipart
+          formData.append("profilePhoto", blob as any, "profile.jpg");
+        } catch (err) {
+          console.warn(
+            "Failed to attach profile photo blob, falling back to uri append:",
+            err
+          );
+          // Fallback to uri-style append which may work on some platforms
+          const file: any = {
+            uri: profilePhoto,
+            name: "profile.jpg",
+            type: "image/jpeg",
+          };
+          formData.append("profilePhoto", file as any);
+        }
       }
 
-      await api.put("/profile/update", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      // If no existing userId, this is the "complete signup" flow for new users.
+      const userId = await AsyncStorage.getItem("userId");
+      if (!userId) {
+        // Use the temporary token issued by verify-otp to authenticate this request
+        const tempToken = await AsyncStorage.getItem("token");
+        if (!tempToken) {
+          Alert.alert(
+            "Error",
+            "Missing signup token. Please verify OTP again."
+          );
+          setLoading(false);
+          return;
+        }
+
+        const resp = await api.post("/auth/complete-signup", formData, {
+          headers: {
+            Authorization: `Bearer ${tempToken}`,
+          },
+        });
+
+        const data = resp.data;
+        if (!data || !data.ok) {
+          console.error("complete-signup failed:", data);
+          Alert.alert("Error", data?.error || "Signup failed");
+          setLoading(false);
+          return;
+        }
+
+        // Persist returned permanent token and userId
+        if (data.token) await AsyncStorage.setItem("token", data.token);
+        if (data.user?.id)
+          await AsyncStorage.setItem("userId", String(data.user.id));
+        if (data.user?.role)
+          await AsyncStorage.setItem(
+            "userRole",
+            data.user.role?.toLowerCase().includes("provider")
+              ? "ServiceProvider"
+              : "user"
+          );
+
+        Alert.alert("Success", "Signup completed and profile saved!");
+        navigation.navigate("Profile");
+        return;
+      }
+
+      // Existing user — regular profile update
+      await api.put("/profile/update", formData);
 
       // Persist the role locally once the profile is saved — make it immutable in the UI
       if (role) {
@@ -154,8 +212,8 @@ export default function ProfileEditScreen({ navigation }: Props) {
       Alert.alert("Success", "Profile updated successfully!");
       navigation.navigate("Profile");
     } catch (e) {
-      console.error("Profile update failed:", e);
-      Alert.alert("Error", "Failed to update profile.");
+      console.error("Profile update/complete-signup failed:", e);
+      Alert.alert("Error", "Failed to save profile.");
     } finally {
       setLoading(false);
     }
@@ -329,46 +387,60 @@ export default function ProfileEditScreen({ navigation }: Props) {
           />
 
           <Text style={styles.label}>Role</Text>
-          {/* If role is missing or we're explicitly required to choose a role, show a selector. */}
-          {!role ||
-          (navigation as any)
-            ?.getState()
-            ?.routes?.some((r: any) => r.params?.needsRole) ? (
-            <View style={{ flexDirection: "row", marginBottom: 18 }}>
-              <TouchableOpacity
-                style={[styles.roleBtn, role === "user" && styles.roleActive]}
-                onPress={() => setRole("user")}
-              >
-                <Text
-                  style={
-                    role === "user" ? styles.roleTextActive : styles.roleText
-                  }
+          {/* // If route asks for role and this is a NEW user (no id yet), show a selector.
+                  // Previously this depended on `!role` which could accidentally hide the selector. */}
+          {needsRole && !id ? (
+            <View style={{ marginTop: 8 }}>
+              <Text style={{ marginBottom: 8, color: "#374151" }}>
+                Select your role
+              </Text>
+              <View style={{ flexDirection: "row" }}>
+                <TouchableOpacity
+                  style={[
+                    styles.roleBtn,
+                    { marginRight: 8 },
+                    role === "user" && styles.roleActive,
+                  ]}
+                  onPress={() => setRole("user")}
                 >
-                  User
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.roleBtn,
-                  role === "ServiceProvider" && styles.roleActive,
-                ]}
-                onPress={() => setRole("ServiceProvider")}
-              >
-                <Text
-                  style={
-                    role === "ServiceProvider"
-                      ? styles.roleTextActive
-                      : styles.roleText
-                  }
+                  <Text
+                    style={
+                      role === "user" ? styles.roleTextActive : styles.roleText
+                    }
+                  >
+                    User
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.roleBtn,
+                    role === "serviceProvider" && styles.roleActive,
+                  ]}
+                  onPress={() => setRole("serviceProvider")}
                 >
-                  Service Provider
-                </Text>
-              </TouchableOpacity>
+                  <Text
+                    style={
+                      role === "serviceProvider"
+                        ? styles.roleTextActive
+                        : styles.roleText
+                    }
+                  >
+                    Service Provider
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           ) : (
+            // Role should be non-editable once set (existing users). Show a friendly label.
             <TextInput
               placeholder="Role"
-              value={role}
+              value={
+                role
+                  ? role.toLowerCase().includes("provider")
+                    ? "Service Provider"
+                    : "User"
+                  : ""
+              }
               editable={false}
               style={[styles.input, { backgroundColor: "#f8fafc" }]}
             />

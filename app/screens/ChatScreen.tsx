@@ -1,8 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import axios from "axios";
-import React, { useEffect, useState, useRef } from "react";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../navigation/AppNavigator";
+import axios from "axios";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -13,10 +12,10 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons"; // ✅ back button
 import io from "socket.io-client";
-import { SOCKET_URL } from "../utills/config";
 import BottomTab from "../../components/BottomTabs";
+import { RootStackParamList } from "../navigation/AppNavigator";
+import { SOCKET_URL } from "../utills/config";
 
 interface Chat {
   id: string;
@@ -96,6 +95,27 @@ export default function ChatScreen({ navigation }: Props) {
       });
     });
 
+    // If a user is blocked/reported, remove them from chat list
+    socket.on("userBlocked", (data: any) => {
+      console.log("socket userBlocked", data);
+      const otherId = String(
+        data.targetId === Number(myId) ? data.userId : data.targetId
+      );
+      setChatList((prev) =>
+        prev.filter((c) => String(c.id) !== String(otherId))
+      );
+    });
+
+    socket.on("userReported", (data: any) => {
+      console.log("socket userReported", data);
+      const otherId = String(
+        data.targetId === Number(myId) ? data.reporterId : data.targetId
+      );
+      setChatList((prev) =>
+        prev.filter((c) => String(c.id) !== String(otherId))
+      );
+    });
+
     return () => {
       try {
         socket.disconnect();
@@ -137,6 +157,10 @@ export default function ChatScreen({ navigation }: Props) {
 
   useEffect(() => {
     if (token) fetchChats();
+    const unsub = navigation.addListener("focus", () => {
+      if (token) fetchChats();
+    });
+    return () => unsub();
   }, [token]);
 
   const renderChatItem = ({ item }: { item: Chat }) => (

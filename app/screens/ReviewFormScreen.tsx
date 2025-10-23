@@ -1,6 +1,9 @@
-import React, { useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useState } from "react";
 import {
   Alert,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -9,25 +12,94 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
 import BottomTab from "../../components/BottomTabs";
+import api from "../services/api";
 
-export default function ReviewFormScreen({ navigation }: any) {
+export default function ReviewFormScreen({ navigation, route }: any) {
+  const providerId = route?.params?.providerId;
+  const providerName = route?.params?.providerName;
+  const isAppReview = route?.params?.isAppReview;
+  const providerPhoto = route?.params?.providerPhoto;
   const [name, setName] = useState("");
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = () => {
-    if (!name.trim() || !comment.trim() || rating === 0) {
-      Alert.alert("Error", "Please fill all fields and select a rating.");
+  const handleSubmit = async () => {
+    if (rating === 0) {
+      Alert.alert("Error", "Please select a rating.");
       return;
     }
 
-    console.log("Review submitted:", { name, rating, comment });
-    Alert.alert("Success", "Your review has been submitted!");
-    setName("");
-    setRating(0);
-    setComment("");
+    // Resolve provider id from route params or fallback storage
+    let resolvedProviderId: any = providerId;
+    if (!resolvedProviderId) {
+      resolvedProviderId =
+        route?.params?.providerId ||
+        route?.params?.userId ||
+        route?.params?.ratedId ||
+        route?.params?.rated_id;
+    }
+    if (!resolvedProviderId) {
+      const stored = await AsyncStorage.getItem("selectedProviderId");
+      if (stored) resolvedProviderId = parseInt(stored, 10);
+    }
+    // If this is an application-level review, we don't need a provider id.
+    if (!resolvedProviderId && !isAppReview) {
+      Alert.alert("Error", "No provider selected to rate.");
+      console.warn(
+        "ReviewForm: missing providerId — route.params:",
+        route?.params
+      );
+      return;
+    }
+
+    const token = await AsyncStorage.getItem("token");
+    if (!token) {
+      Alert.alert(
+        "Authentication required",
+        "Please login to submit a rating.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Login", onPress: () => navigation.navigate("Login") },
+        ]
+      );
+      return;
+    }
+
+    const parsedProviderId = resolvedProviderId
+      ? parseInt(String(resolvedProviderId), 10)
+      : null;
+
+    const payload: any = {
+      score: rating,
+      comment,
+      // For app reviews, send a special ratedId of 0 and flag isAppReview
+      ratedId: isAppReview ? 0 : parsedProviderId,
+      rated_id: isAppReview ? 0 : parsedProviderId,
+      providerId: isAppReview ? null : parsedProviderId,
+      provider_id: isAppReview ? null : parsedProviderId,
+      isAppReview: !!isAppReview,
+    };
+
+    try {
+      console.debug("Submitting rating payload:", payload);
+      setSubmitting(true);
+      const res = await api.post("/rating/rate", payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      Alert.alert("Success", "Your review has been submitted!");
+      setName("");
+      setRating(0);
+      setComment("");
+      navigation.goBack();
+    } catch (err: any) {
+      console.error("Error submitting rating", err?.response || err);
+      const message = err?.response?.data?.error || "Unable to submit review";
+      Alert.alert("Error", message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -40,13 +112,16 @@ export default function ReviewFormScreen({ navigation }: any) {
         >
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <Ionicons
-          name="star-outline"
-          size={26}
-          color="#fff"
-          style={{ marginLeft: 8 }}
+        <Image
+          source={{
+            uri:
+              providerPhoto || "https://randomuser.me/api/portraits/lego/1.jpg",
+          }}
+          style={styles.headerAvatar}
         />
-        <Text style={styles.headerText}>Submit a Review</Text>
+        <Text style={[styles.headerText, { marginLeft: 8 }]}>
+          Review {providerName ? providerName : "Provider"}
+        </Text>
       </View>
 
       {/* 🧾 Content */}
@@ -85,8 +160,14 @@ export default function ReviewFormScreen({ navigation }: any) {
           multiline
         />
 
-        <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-          <Text style={styles.buttonText}>Submit Review</Text>
+        <TouchableOpacity
+          style={[styles.button, submitting && { opacity: 0.7 }]}
+          onPress={handleSubmit}
+          disabled={submitting}
+        >
+          <Text style={styles.buttonText}>
+            {submitting ? "Submitting..." : "Submit Review"}
+          </Text>
         </TouchableOpacity>
       </ScrollView>
 
@@ -115,6 +196,12 @@ const styles = StyleSheet.create({
   },
   backButton: {
     marginRight: 10,
+  },
+  headerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginLeft: 8,
   },
   headerText: {
     color: "white",

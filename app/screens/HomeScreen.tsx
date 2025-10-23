@@ -18,10 +18,12 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context"; // ✅ SafeArea
+import io from "socket.io-client";
 import api from "../services/api";
 import providersApi from "../services/serviceProviders";
 import serviceTypesApi from "../services/serviceTypes";
 import userApi from "../services/user";
+import { SOCKET_URL } from "../utills/config";
 const PlaceholderImg = require("../../assets/images/default.png");
 
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -48,8 +50,15 @@ export default function HomeScreen({ navigation }: Props) {
   const [selectedServiceTypeIds, setSelectedServiceTypeIds] = useState<
     number[]
   >([]);
+  const [selectedGenderFilter, setSelectedGenderFilter] = useState<
+    "all" | "male" | "female"
+  >("all");
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<any>(null);
+  const [providerAvgRating, setProviderAvgRating] = useState<number | null>(
+    null
+  );
+  const [ratingLoading, setRatingLoading] = useState(false);
   const [contactLoading, setContactLoading] = useState(false);
   const [consumedProviderIds, setConsumedProviderIds] = useState<any[]>([]);
   const [isSubscribed, setIsSubscribed] = useState(false);
@@ -61,6 +70,10 @@ export default function HomeScreen({ navigation }: Props) {
   const [subscriptionRemaining, setSubscriptionRemaining] = useState<
     number | null
   >(null);
+
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notifModalVisible, setNotifModalVisible] = useState(false);
+  const socketRef = React.useRef<any>(null);
 
   const [locationQuery, setLocationQuery] = useState("");
   const [suggestions, setSuggestions] = useState<any[]>([]);
@@ -116,6 +129,8 @@ export default function HomeScreen({ navigation }: Props) {
         lng: explicitLng ?? userLng ?? undefined,
         radius: explicitRadius,
         serviceTypeIds: selectedServiceTypeIds,
+        gender:
+          selectedGenderFilter === "all" ? undefined : selectedGenderFilter,
       });
 
       const data = response.data;
@@ -133,10 +148,11 @@ export default function HomeScreen({ navigation }: Props) {
   };
 
   // If subscriptionLimit is set, show only that many providers
-  const displayedProviders =
-    subscriptionLimit !== null
-      ? providers.slice(0, subscriptionLimit)
-      : providers;
+  // Listing should always show providers returned from API; subscription limits
+  // only control contact actions (view/call/message). Previously we sliced
+  // the providers array when subscriptionLimit was 0 which produced an
+  // empty list even though the API returned results.
+  const displayedProviders = providers;
 
   useEffect(() => {
     const init = async () => {
@@ -238,6 +254,60 @@ export default function HomeScreen({ navigation }: Props) {
     initializedRef.current = true;
   }, []);
 
+  // Socket listeners for notification events
+  useEffect(() => {
+    (async () => {
+      const storedId = await AsyncStorage.getItem("userId");
+      if (!storedId) return;
+      const socket = io(SOCKET_URL, { transports: ["websocket"] });
+      socketRef.current = socket;
+      socket.on("connect", () => socket.emit("register", storedId));
+
+      socket.on("receiveMessage", (msg: any) => {
+        // Only show notification if the message is for this user
+        AsyncStorage.getItem("userId").then((myId) => {
+          if (String(msg.receiverId) === String(myId)) {
+            setNotifications((prev) => [
+              {
+                id: `msg-${msg.id}`,
+                type: "message",
+                title: `New message from ${msg.senderName || msg.senderId}`,
+                body: msg.message,
+                createdAt: new Date().toISOString(),
+              },
+              ...prev,
+            ]);
+          }
+        });
+      });
+
+      socket.on("subscriptionPurchased", (data: any) => {
+        // Only show notification if the event is for this user
+        AsyncStorage.getItem("userId").then((myId) => {
+          if (String(data.userId) === String(myId)) {
+            setNotifications((prev) => [
+              {
+                id: `sub-${Date.now()}`,
+                type: "subscription",
+                title: "Subscription purchased",
+                body: data?.message || "Your subscription was activated",
+                createdAt: new Date().toISOString(),
+              },
+              ...prev,
+            ]);
+          }
+        });
+      });
+
+      return () => {
+        try {
+          socket.disconnect();
+        } catch (e) {}
+        socketRef.current = null;
+      };
+    })();
+  }, []);
+
   useEffect(() => {
     if (!initializedRef.current) return;
     const timeout = setTimeout(() => {
@@ -245,6 +315,12 @@ export default function HomeScreen({ navigation }: Props) {
     }, 400);
     return () => clearTimeout(timeout);
   }, [searchQuery, selectedArea, userLat, userLng]);
+
+  // Re-fetch when gender filter changes
+  useEffect(() => {
+    if (!initializedRef.current) return;
+    fetchProviders(true);
+  }, [selectedGenderFilter]);
 
   // Re-fetch when selected service types change
   useEffect(() => {
@@ -336,6 +412,27 @@ export default function HomeScreen({ navigation }: Props) {
     }
   };
 
+  // When modal opens fetch average rating for the provider (if available)
+  useEffect(() => {
+    const fetchAvg = async () => {
+      if (!modalVisible || !selectedProvider) return;
+      const pid = selectedProvider?.provider?.id ?? selectedProvider?.id;
+      if (!pid) return;
+      try {
+        setRatingLoading(true);
+        const res = await api.get(`/rating/avg/${pid}`);
+        const avg = res?.data?.avg ?? null;
+        setProviderAvgRating(typeof avg === "number" ? avg : Number(avg) || 0);
+      } catch (err) {
+        console.warn("Failed to fetch avg rating", err);
+        setProviderAvgRating(null);
+      } finally {
+        setRatingLoading(false);
+      }
+    };
+    fetchAvg();
+  }, [modalVisible, selectedProvider]);
+
   const handleSubscribe = async () => {
     try {
       const res = await userApi.subscribe();
@@ -422,10 +519,60 @@ export default function HomeScreen({ navigation }: Props) {
         {/* HEADER */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>कामवाली बाई</Text>
-          <TouchableOpacity onPress={handleLogout}>
-            <Ionicons name="log-out-outline" size={28} color="#6366f1" />
+          <TouchableOpacity
+            style={{ marginLeft: "auto", paddingHorizontal: 12 }}
+            onPress={() => setNotifModalVisible(true)}
+          >
+            <View>
+              <Ionicons
+                name="notifications-outline"
+                size={26}
+                color="#6a1010"
+              />
+              {notifications.length > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{notifications.length}</Text>
+                </View>
+              )}
+            </View>
           </TouchableOpacity>
         </View>
+
+        {/* Notifications Modal */}
+        <Modal visible={notifModalVisible} transparent animationType="slide">
+          <View style={styles.notifOverlay}>
+            <View style={styles.notifBox}>
+              <Text
+                style={{ fontWeight: "700", fontSize: 16, marginBottom: 8 }}
+              >
+                Notifications
+              </Text>
+              <FlatList
+                data={notifications}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => (
+                  <View style={styles.notifItem}>
+                    <Text style={{ fontWeight: "600" }}>{item.title}</Text>
+                    <Text style={{ color: "#555" }}>{item.body}</Text>
+                  </View>
+                )}
+                ListEmptyComponent={() => (
+                  <View style={{ padding: 12 }}>
+                    <Text>No notifications</Text>
+                  </View>
+                )}
+              />
+              <TouchableOpacity
+                onPress={() => setNotifModalVisible(false)}
+                style={{ marginTop: 12 }}
+              >
+                <Text style={{ color: "#2563eb", fontWeight: "700" }}>
+                  Close
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
 
         {/* Location Search Filter */}
         <View style={styles.searchContainer}>
@@ -586,6 +733,40 @@ export default function HomeScreen({ navigation }: Props) {
                 }}
               />
               <Text style={styles.sectionTitle}>Nearby Providers</Text>
+              <View style={{ position: "absolute", right: 12, top: 4 }}>
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <TouchableOpacity
+                    onPress={() => setSelectedGenderFilter("all")}
+                    style={[
+                      styles.genderFilterBtn,
+                      selectedGenderFilter === "all" &&
+                        styles.genderFilterActive,
+                    ]}
+                  >
+                    <Text style={styles.genderFilterText}>All</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => setSelectedGenderFilter("male")}
+                    style={[
+                      styles.genderFilterBtn,
+                      selectedGenderFilter === "male" &&
+                        styles.genderFilterActive,
+                    ]}
+                  >
+                    <Text style={styles.genderFilterText}>Male</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => setSelectedGenderFilter("female")}
+                    style={[
+                      styles.genderFilterBtn,
+                      selectedGenderFilter === "female" &&
+                        styles.genderFilterActive,
+                    ]}
+                  >
+                    <Text style={styles.genderFilterText}>Female</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
             </>
           )}
           ListFooterComponent={
@@ -656,6 +837,84 @@ export default function HomeScreen({ navigation }: Props) {
                     .map((st: any) => st.name)
                     .join(", ")}
                 </Text>
+
+                {/* Provider gender and availability + rating */}
+                <View style={{ alignSelf: "stretch", marginBottom: 12 }}>
+                  <Text style={{ color: "#374151", fontWeight: "600" }}>
+                    {selectedProvider.provider.gender
+                      ? `Gender: ${selectedProvider.provider.gender}`
+                      : ""}
+                  </Text>
+
+                  {/* availabilitySlots array if present on service */}
+                  {selectedProvider.availabilitySlots && (
+                    <Text style={{ color: "#6b7280", marginTop: 6 }}>
+                      Available:{" "}
+                      {String(selectedProvider.availabilitySlots).replace(
+                        /,/g,
+                        ", "
+                      )}
+                    </Text>
+                  )}
+
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      marginTop: 8,
+                    }}
+                  >
+                    <Text style={{ fontWeight: "700", marginRight: 8 }}>
+                      Rating:
+                    </Text>
+                    {ratingLoading ? (
+                      <ActivityIndicator size="small" color="#f59e0b" />
+                    ) : (
+                      <Text style={{ color: "#b45309", fontWeight: "700" }}>
+                        {providerAvgRating !== null
+                          ? providerAvgRating.toFixed(1)
+                          : "—"}
+                      </Text>
+                    )}
+                    <TouchableOpacity
+                      style={{
+                        marginLeft: 12,
+                        paddingVertical: 6,
+                        paddingHorizontal: 10,
+                        backgroundColor: "#efefef",
+                        borderRadius: 8,
+                      }}
+                      onPress={async () => {
+                        setModalVisible(false);
+                        const pid =
+                          selectedProvider?.provider?.id ??
+                          selectedProvider?.id;
+                        try {
+                          if (pid)
+                            await AsyncStorage.setItem(
+                              "selectedProviderId",
+                              String(pid)
+                            );
+                        } catch (e) {
+                          console.warn(
+                            "Failed to persist selectedProviderId",
+                            e
+                          );
+                        }
+                        navigation.navigate("ReveiwForm", {
+                          providerId: pid,
+                          providerName: selectedProvider?.provider?.name,
+                          providerPhoto:
+                            selectedProvider?.provider?.profilePhoto,
+                        });
+                      }}
+                    >
+                      <Text style={{ fontWeight: "700", color: "#065f46" }}>
+                        Rate
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
 
                 <View style={styles.providerModalActions}>
                   <TouchableOpacity
@@ -817,6 +1076,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
   },
 
+  badge: {
+    position: "absolute",
+    right: -6,
+    top: -6,
+    backgroundColor: "#ef4444",
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  badgeText: { color: "#fff", fontSize: 11, fontWeight: "700" },
+  notifOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  notifBox: {
+    width: "85%",
+    maxHeight: "70%",
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 12,
+  },
+  notifItem: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+    paddingVertical: 10,
+  },
+
   clearButton: {
     backgroundColor: "transparent",
     paddingHorizontal: 8,
@@ -956,4 +1246,13 @@ const styles = StyleSheet.create({
   suggestionItem: { padding: 10, borderBottomWidth: 1, borderColor: "#e5e7eb" },
   suggestionText: { fontSize: 14, fontWeight: "600" },
   suggestionSubText: { fontSize: 12, color: "gray" },
+  genderFilterBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginLeft: 6,
+    borderRadius: 8,
+    backgroundColor: "#f1f5f9",
+  },
+  genderFilterActive: { backgroundColor: "#c7d2fe" },
+  genderFilterText: { fontSize: 12, color: "#0f172a", fontWeight: "600" },
 });

@@ -1,19 +1,19 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useState } from "react";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../navigation/AppNavigator";
+import { useState } from "react";
 import {
   Alert,
   Modal,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import BottomTab from "../../components/BottomTabs";
+import { RootStackParamList } from "../navigation/AppNavigator";
 import api from "../services/api";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Settings">;
@@ -71,7 +71,13 @@ export default function SettingsScreen({ navigation }: Props) {
         {/* ⭐ Reviews & Ratings */}
         <TouchableOpacity
           style={styles.option}
-          onPress={() => navigation.navigate("ReveiwForm")}
+          // Open Review form for application-level feedback
+          onPress={() =>
+            navigation.navigate("ReveiwForm", {
+              isAppReview: true,
+              providerName: "Application",
+            })
+          }
         >
           <Ionicons name="star" size={22} color="#333" />
           <Text style={styles.optionText}>Reviews & Ratings</Text>

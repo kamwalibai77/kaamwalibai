@@ -1,22 +1,22 @@
 // app/screens/AddServiceScreen.tsx
-import React, { useState, useEffect } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import React, { useEffect, useState } from "react";
 import {
-  View,
+  ActivityIndicator,
+  Alert,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  Keyboard,
-  Alert,
-  ActivityIndicator,
+  View,
 } from "react-native";
 import DropDownPicker from "react-native-dropdown-picker";
-import serviceTypesApi from "../services/serviceTypes";
 import serviceprovidersApi from "../services/serviceProviders";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import serviceTypesApi from "../services/serviceTypes";
 
 const RATE_OPTIONS = [
   { label: "Per Hour", value: "hourly" },
@@ -49,6 +49,16 @@ export default function AddServiceScreen({
   const [selectedRate, setSelectedRate] = useState<string | null>(null);
   const [cost, setCost] = useState("");
   const [contactNumber, setContactNumber] = useState("");
+  const [availabilityOpen, setAvailabilityOpen] = useState(false);
+  const [availabilityItems] = useState([
+    { label: "Morning (6am-10am)", value: "morning" },
+    { label: "Afternoon (12pm-4pm)", value: "afternoon" },
+    { label: "Evening (5pm-9pm)", value: "evening" },
+    { label: "Night (9pm-12am)", value: "night" },
+  ]);
+  const [selectedAvailability, setSelectedAvailability] = useState<string[]>(
+    []
+  );
 
   const [errCost, setErrCost] = useState<string | null>(null);
   const [errContact, setErrContact] = useState<string | null>(null);
@@ -136,6 +146,7 @@ export default function AddServiceScreen({
         amount: costVal,
         contactNumber: phoneOnly,
         currency: "INR",
+        availabilitySlots: selectedAvailability,
       };
 
       if (serviceData) {
@@ -244,6 +255,30 @@ export default function AddServiceScreen({
             maxLength={15}
           />
           {errContact && <Text style={styles.errText}>{errContact}</Text>}
+
+          <Text style={styles.sectionLabel}>Availability</Text>
+          <View
+            style={[
+              styles.dropdownWrapper,
+              { zIndex: availabilityOpen ? 6000 : 1000 },
+            ]}
+          >
+            <DropDownPicker
+              open={availabilityOpen}
+              setOpen={setAvailabilityOpen}
+              multiple={true}
+              min={0}
+              max={4}
+              value={selectedAvailability}
+              setValue={setSelectedAvailability}
+              items={availabilityItems}
+              listMode={Platform.OS === "web" ? "SCROLLVIEW" : "MODAL"}
+              placeholder="Select availability slots"
+              dropDownContainerStyle={styles.dropDownContainer}
+              style={styles.dropdown}
+              textStyle={styles.dropdownText}
+            />
+          </View>
         </View>
 
         <TouchableOpacity

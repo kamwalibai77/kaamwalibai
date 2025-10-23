@@ -33,7 +33,9 @@ router.post("/send", authMiddleware, async (req, res) => {
         },
       });
       if (blocked) {
-        return res.status(403).json({ success: false, error: "Message blocked" });
+        return res
+          .status(403)
+          .json({ success: false, error: "Message blocked" });
       }
     } catch (e) {
       console.warn("chat send: block check failed", e);

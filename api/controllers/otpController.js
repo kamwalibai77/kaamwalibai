@@ -201,7 +201,12 @@ export const verifyOtp = async (req, res) => {
       // consume OTP and login
       await record.update({ used: true });
       const token = jwt.sign(
-        { id: user.id, name: user.name, phoneNumber: user.phoneNumber, role: user.role },
+        {
+          id: user.id,
+          name: user.name,
+          phoneNumber: user.phoneNumber,
+          role: user.role,
+        },
         process.env.JWT_SECRET || "secret",
         { expiresIn: "30d" }
       );
@@ -217,7 +222,12 @@ export const verifyOtp = async (req, res) => {
     );
     // Return token but do NOT create a permanent user yet. Client should redirect to profile edit
     // and call /auth/complete-signup to create the user.
-    return res.json({ ok: true, token: tempToken, user: null, isNewUser: true });
+    return res.json({
+      ok: true,
+      token: tempToken,
+      user: null,
+      isNewUser: true,
+    });
   } catch (err) {
     console.error("verifyOtp error:", err && err.stack ? err.stack : err);
     return res.status(500).json({ error: "Failed to verify OTP" });
@@ -245,7 +255,12 @@ export const completeSignup = async (req, res) => {
     const normalizeRole = (r) => {
       if (!r) return null;
       const v = String(r).toLowerCase();
-      if (v === "serviceprovider" || v === "service_provider" || v === "provider") return "ServiceProvider";
+      if (
+        v === "serviceprovider" ||
+        v === "service_provider" ||
+        v === "provider"
+      )
+        return "ServiceProvider";
       if (v === "admin" || v === "superadmin") return "superadmin";
       return "user";
     };
@@ -276,7 +291,9 @@ export const completeSignup = async (req, res) => {
       try {
         const uploadRes = await import("../config/cloudinary.js");
         const cloud = uploadRes.default || uploadRes;
-        const upl = await cloud.uploader.upload(req.file.path, { folder: "maid-service" });
+        const upl = await cloud.uploader.upload(req.file.path, {
+          folder: "maid-service",
+        });
         newUser.profilePhoto = upl.secure_url;
         await newUser.save();
       } catch (e) {
@@ -286,7 +303,12 @@ export const completeSignup = async (req, res) => {
 
     // Issue permanent JWT
     const authToken = jwt.sign(
-      { id: newUser.id, name: newUser.name, phoneNumber: newUser.phoneNumber, role: newUser.role },
+      {
+        id: newUser.id,
+        name: newUser.name,
+        phoneNumber: newUser.phoneNumber,
+        role: newUser.role,
+      },
       process.env.JWT_SECRET || "secret",
       { expiresIn: "30d" }
     );

@@ -5,8 +5,16 @@ export async function up(queryInterface, Sequelize) {
     id: { type: Sequelize.INTEGER, autoIncrement: true, primaryKey: true },
     userId: { type: Sequelize.INTEGER, allowNull: false },
     targetId: { type: Sequelize.INTEGER, allowNull: false },
-    createdAt: { allowNull: false, type: Sequelize.DATE, defaultValue: Sequelize.literal("NOW()") },
-    updatedAt: { allowNull: false, type: Sequelize.DATE, defaultValue: Sequelize.literal("NOW()") },
+    createdAt: {
+      allowNull: false,
+      type: Sequelize.DATE,
+      defaultValue: Sequelize.literal("NOW()"),
+    },
+    updatedAt: {
+      allowNull: false,
+      type: Sequelize.DATE,
+      defaultValue: Sequelize.literal("NOW()"),
+    },
   });
 }
 

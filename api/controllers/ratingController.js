@@ -11,12 +11,15 @@ export const createRating = async (req, res) => {
     let { ratedId, score, comment } = req.body || {};
 
     // Fallbacks for common alternative keys
-    if (!ratedId) ratedId = req.body?.rated_id || req.body?.providerId || req.body?.provider_id;
+    if (!ratedId)
+      ratedId =
+        req.body?.rated_id || req.body?.providerId || req.body?.provider_id;
     if (typeof score === "undefined" || score === null)
       score = req.body?.rating || req.body?.score;
 
     // Basic auth guard
-    if (!raterId) return res.status(400).json({ error: "Missing raterId (auth)" });
+    if (!raterId)
+      return res.status(400).json({ error: "Missing raterId (auth)" });
 
     // Helpful debug log to inspect incoming payloads when clients report missing fields
     if (!ratedId) {
@@ -52,9 +55,14 @@ export const getAverage = async (req, res) => {
     const userId = req.params.id;
     const result = await db.Rating.findAll({
       where: { ratedId: userId },
-      attributes: [[db.Sequelize.fn("AVG", db.Sequelize.col("score")), "avgScore"]],
+      attributes: [
+        [db.Sequelize.fn("AVG", db.Sequelize.col("score")), "avgScore"],
+      ],
     });
-    const avg = result && result[0] && result[0].dataValues ? Number(result[0].dataValues.avgScore) || 0 : 0;
+    const avg =
+      result && result[0] && result[0].dataValues
+        ? Number(result[0].dataValues.avgScore) || 0
+        : 0;
     return res.json({ success: true, avg });
   } catch (err) {
     console.error(err);

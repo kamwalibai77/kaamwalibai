@@ -56,7 +56,16 @@ router.put(
 
       // Save user to DB
       const [rowsUpdated, [updatedUser]] = await User.update(
-        { name, phoneNumber, address, gender, age, latitude, longitude, role: roleToSave },
+        {
+          name,
+          phoneNumber,
+          address,
+          gender,
+          age,
+          latitude,
+          longitude,
+          role: roleToSave,
+        },
         {
           where: { id: userId },
           returning: true,
@@ -166,11 +175,72 @@ router.post("/verify-aadhaar", (req, res) => {
   res.json(result);
 });
 
-router.post("/submit-kyc", (req, res) => {
-  const { aadhaarNumber, panCardNumber } = req.body;
-  const result = dummyData[aadhaar] || { name: "", status: "Failure" };
-  res.json(result);
-});
+// Submit KYC with Aadhaar front/back images and consent
+router.post(
+  "/submit-kyc",
+  authMiddleware,
+  upload.fields([
+    { name: "kycFront", maxCount: 1 },
+    { name: "kycBack", maxCount: 1 },
+  ]),
+  async (req, res) => {
+    const userId = req.user.id;
+    const { aadhaarNumber, panCardNumber, consentText } = req.body;
+
+    // Basic validation
+    if (!aadhaarNumber || aadhaarNumber.length !== 12) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid Aadhaar" });
+    }
+
+    try {
+      const user = await User.findByPk(userId);
+      if (!user)
+        return res
+          .status(404)
+          .json({ success: false, message: "User not found" });
+
+      // Upload files to Cloudinary if present
+      let frontUrl = null;
+      let backUrl = null;
+
+      if (req.files && req.files.kycFront && req.files.kycFront[0]) {
+        const localPath = req.files.kycFront[0].path;
+        const uploadRes = await cloudinary.uploader.upload(localPath, {
+          folder: "maid-service/kyc",
+        });
+        frontUrl = uploadRes.secure_url;
+      }
+
+      if (req.files && req.files.kycBack && req.files.kycBack[0]) {
+        const localPath = req.files.kycBack[0].path;
+        const uploadRes = await cloudinary.uploader.upload(localPath, {
+          folder: "maid-service/kyc",
+        });
+        backUrl = uploadRes.secure_url;
+      }
+
+      // Update user kyc fields
+      user.aaadharNumber = aadhaarNumber;
+      user.panCardNumber = panCardNumber || user.panCardNumber;
+      user.kycFrontUrl = frontUrl || user.kycFrontUrl;
+      user.kycBackUrl = backUrl || user.kycBackUrl;
+      user.kycConsent = consentText || user.kycConsent;
+      user.kycStatus = "pending";
+      user.kycSubmittedAt = new Date();
+
+      await user.save();
+
+      // Emit socket notification could be added here
+
+      res.json({ success: true, status: user.kycStatus, user });
+    } catch (err) {
+      console.error("Submit KYC Error:", err);
+      res.status(500).json({ success: false, message: "Server error" });
+    }
+  }
+);
 
 //////////////////////////////////////
 // ✅ MapMyIndia Autosuggest API
