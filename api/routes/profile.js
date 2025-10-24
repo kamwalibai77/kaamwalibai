@@ -20,17 +20,26 @@ router.put(
     let localFilePath;
 
     try {
-      const userId = req.user.id;
-      const {
-        name,
-        phoneNumber,
-        address,
-        gender,
-        age,
-        latitude,
-        longitude,
-        role,
-      } = req.body;
+        const userId = req.user.id;
+        const {
+          name,
+          phoneNumber,
+          address,
+          gender,
+          age,
+          latitude,
+          longitude,
+          role,
+        } = req.body;
+
+        // Extra debug logs for profile update troubleshooting
+        // Logs: who is updating, submitted fields (non-sensitive), and uploaded file info.
+        console.log("[Profile Update] incoming:", {
+          userId,
+          body: { name, phoneNumber, address, gender, age, latitude, longitude, role },
+          file: req.file ? { originalname: req.file.originalname, mimetype: req.file.mimetype, size: req.file.size, path: req.file.path } : null,
+          timestamp: new Date().toISOString(),
+        });
 
       // Enforce role immutability server-side: if the user already has a role,
       // do not allow it to be changed via this endpoint. Only allow setting
@@ -41,6 +50,13 @@ router.put(
         // ignore role from request to prevent elevation or changes
         roleToSave = existingUser.role;
       }
+
+      // Log decision about role to save (helps debug immutability issues)
+      console.log("[Profile Update] role decision:", {
+        requestedRole: role,
+        existingRole: existingUser ? existingUser.role : null,
+        roleToSave,
+      });
 
       // save local path for cleanup
       localFilePath = req.file?.path;
