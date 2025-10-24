@@ -79,6 +79,15 @@ export default function ProfileScreen({ navigation }: Props) {
               }
               style={styles.profileImage}
             />
+            {/* Verified badge for service providers (small circular badge overlapping avatar) */}
+            {user.role === "ServiceProvider" &&
+              user.kycStatus === "verified" && (
+                <View style={styles.verifiedBadge}>
+                  <View style={styles.verifiedInner}>
+                    <Ionicons name="checkmark" size={14} color="#fff" />
+                  </View>
+                </View>
+              )}
             <Text style={styles.userName}>{user.name}</Text>
             <Text style={styles.userRole}>{user.role}</Text>
             <Text style={styles.userLocation}>
@@ -204,6 +213,26 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: "#6366f1",
     marginBottom: 12,
+  },
+  verifiedBadge: {
+    position: "absolute",
+    right: 6,
+    bottom: 6,
+    backgroundColor: "transparent",
+  },
+  verifiedInner: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#10b981",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#fff",
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
   },
   userName: { fontSize: 22, fontWeight: "700", color: "#111827" },
   userRole: { fontSize: 15, color: "#6366f1", marginBottom: 4 },
