@@ -1,5 +1,5 @@
-import jwt from "jsonwebtoken";
 import fs from "fs";
+import jwt from "jsonwebtoken";
 import db from "../models/index.js";
 
 const Otp = db.Otp;
@@ -269,6 +269,14 @@ export const completeSignup = async (req, res) => {
     // If multipart/form-data, fields are in req.body and file in req.file
     const { name, role, address, gender, age, latitude, longitude } = req.body;
 
+    // Debug: surface multer file info early so we can tell if the upload arrived
+    try {
+      console.log("[completeSignup] headers:", req.headers);
+      console.log("[completeSignup] req.file:", req.file);
+    } catch (e) {
+      console.warn("[completeSignup] failed to log request/req.file", e);
+    }
+
     // Role is optional for a minimal signup flow. If not provided, default to
     // a regular 'user'. This lets the mobile client create an account with
     // just a phone number and continue onboarding later.
@@ -300,11 +308,15 @@ export const completeSignup = async (req, res) => {
         if (gender && !newUser.gender) updates.gender = gender;
         if (age && !newUser.age) updates.age = Number(age);
         if (latitude && !newUser.latitude) updates.latitude = Number(latitude);
-        if (longitude && !newUser.longitude) updates.longitude = Number(longitude);
+        if (longitude && !newUser.longitude)
+          updates.longitude = Number(longitude);
         if (Object.keys(updates).length > 0) await newUser.update(updates);
       }
     } catch (createErr) {
-      console.error("completeSignup create user error:", createErr && createErr.stack ? createErr.stack : createErr);
+      console.error(
+        "completeSignup create user error:",
+        createErr && createErr.stack ? createErr.stack : createErr
+      );
       const details = (createErr && createErr.message) || String(createErr);
       return res.status(500).json({ error: "Failed to create user", details });
     }
@@ -319,7 +331,10 @@ export const completeSignup = async (req, res) => {
         if (upl && upl.secure_url) {
           newUser.profilePhoto = upl.secure_url;
           await newUser.save();
-          console.log("Signup profile photo uploaded to Cloudinary:", upl.secure_url);
+          console.log(
+            "Signup profile photo uploaded to Cloudinary:",
+            upl.secure_url
+          );
         } else {
           console.warn("Signup profile upload did not return secure_url", upl);
         }
@@ -330,7 +345,10 @@ export const completeSignup = async (req, res) => {
           console.warn("Failed to cleanup signup temp file:", cleanupErr);
         }
       } catch (e) {
-        console.warn("Failed to upload profile photo during signup:", e && e.message ? e.message : e);
+        console.warn(
+          "Failed to upload profile photo during signup:",
+          e && e.message ? e.message : e
+        );
       }
     }
 
@@ -398,7 +416,9 @@ export const completeSignupBase64 = async (req, res) => {
 
     // Defensive: if a user with this phone already exists, return that user
     // instead of attempting to create a duplicate (avoids unique constraint errors).
-    const existing = await User.findOne({ where: { phoneNumber: String(payload.phone) } });
+    const existing = await User.findOne({
+      where: { phoneNumber: String(payload.phone) },
+    });
     if (existing) {
       const authToken = jwt.sign(
         {
@@ -410,8 +430,16 @@ export const completeSignupBase64 = async (req, res) => {
         process.env.JWT_SECRET || "secret",
         { expiresIn: "30d" }
       );
-      console.warn("completeSignupBase64: user already exists for phone", payload.phone);
-      return res.json({ ok: true, token: authToken, user: existing, isNewUser: false });
+      console.warn(
+        "completeSignupBase64: user already exists for phone",
+        payload.phone
+      );
+      return res.json({
+        ok: true,
+        token: authToken,
+        user: existing,
+        isNewUser: false,
+      });
     }
 
     // Use findOrCreate to avoid duplicate records under race conditions.
@@ -435,19 +463,23 @@ export const completeSignupBase64 = async (req, res) => {
 
       // If user already existed, we may want to ensure some fields are up-to-date.
       if (!created) {
-  const updates = {};
+        const updates = {};
         if (name && !newUser.name) updates.name = name;
         if (address && !newUser.address) updates.address = address;
         if (gender && !newUser.gender) updates.gender = gender;
         if (age && !newUser.age) updates.age = Number(age);
         if (latitude && !newUser.latitude) updates.latitude = Number(latitude);
-        if (longitude && !newUser.longitude) updates.longitude = Number(longitude);
+        if (longitude && !newUser.longitude)
+          updates.longitude = Number(longitude);
         if (Object.keys(updates).length > 0) {
           await newUser.update(updates);
         }
       }
     } catch (createErr) {
-      console.error("completeSignupBase64 create user error:", createErr && createErr.stack ? createErr.stack : createErr);
+      console.error(
+        "completeSignupBase64 create user error:",
+        createErr && createErr.stack ? createErr.stack : createErr
+      );
       const details = (createErr && createErr.message) || String(createErr);
       return res.status(500).json({ error: "Failed to create user", details });
     }
@@ -456,8 +488,13 @@ export const completeSignupBase64 = async (req, res) => {
     if (dataUri && typeof dataUri === "string") {
       try {
         const { uploadFile } = await import("../config/cloudinary.js");
-        if (!process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
-          console.warn("Cloudinary not configured; skipping profile photo upload during signup");
+        if (
+          !process.env.CLOUDINARY_API_KEY ||
+          !process.env.CLOUDINARY_API_SECRET
+        ) {
+          console.warn(
+            "Cloudinary not configured; skipping profile photo upload during signup"
+          );
         } else {
           const upl = await uploadFile(dataUri, { folder: "maid-service" });
           if (upl && upl.secure_url) {
@@ -557,11 +594,15 @@ export const completeSignupSimple = async (req, res) => {
         if (gender && !newUser.gender) updates.gender = gender;
         if (age && !newUser.age) updates.age = Number(age);
         if (latitude && !newUser.latitude) updates.latitude = Number(latitude);
-        if (longitude && !newUser.longitude) updates.longitude = Number(longitude);
+        if (longitude && !newUser.longitude)
+          updates.longitude = Number(longitude);
         if (Object.keys(updates).length > 0) await newUser.update(updates);
       }
     } catch (createErr) {
-      console.error("completeSignupSimple create user error:", createErr && createErr.stack ? createErr.stack : createErr);
+      console.error(
+        "completeSignupSimple create user error:",
+        createErr && createErr.stack ? createErr.stack : createErr
+      );
       const details = (createErr && createErr.message) || String(createErr);
       return res.status(500).json({ error: "Failed to create user", details });
     }
