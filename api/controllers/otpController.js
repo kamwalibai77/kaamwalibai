@@ -273,40 +273,39 @@ export const completeSignup = async (req, res) => {
     // just a phone number and continue onboarding later.
     const roleToSave = normalizeRole(role) || "user";
 
-    // Create the user record
-    // If a user with this phone already exists (race/replay), return that user
-    const existing = await User.findOne({ where: { phoneNumber: String(payload.phone) } });
-    if (existing) {
-      const authToken = jwt.sign(
-        {
-          id: existing.id,
-          name: existing.name,
-          phoneNumber: existing.phoneNumber,
-          role: existing.role,
-        },
-        process.env.JWT_SECRET || "secret",
-        { expiresIn: "30d" }
-      );
-      console.warn("completeSignupBase64: user already exists for phone", payload.phone);
-      return res.json({ ok: true, token: authToken, user: existing, isNewUser: false });
-    }
-
+    // Create the user record (use findOrCreate to avoid race-created duplicates)
     let newUser;
     try {
-      newUser = await User.create({
-        name: name || `User_${Date.now()}`,
-        phoneNumber: String(payload.phone),
-        password: "",
-        role: roleToSave,
-        address: address || null,
-        gender: gender || null,
-        age: age ? Number(age) : null,
-        latitude: latitude ? Number(latitude) : null,
-        longitude: longitude ? Number(longitude) : null,
+      const [user, created] = await User.findOrCreate({
+        where: { phoneNumber: String(payload.phone) },
+        defaults: {
+          name: name || `User_${Date.now()}`,
+          phoneNumber: String(payload.phone),
+          password: "",
+          role: roleToSave,
+          address: address || null,
+          gender: gender || null,
+          age: age ? Number(age) : null,
+          latitude: latitude ? Number(latitude) : null,
+          longitude: longitude ? Number(longitude) : null,
+        },
       });
+      newUser = user;
+      if (!created) {
+        // update any empty fields with provided values
+        const updates = {};
+        if (name && !newUser.name) updates.name = name;
+        if (address && !newUser.address) updates.address = address;
+        if (gender && !newUser.gender) updates.gender = gender;
+        if (age && !newUser.age) updates.age = Number(age);
+        if (latitude && !newUser.latitude) updates.latitude = Number(latitude);
+        if (longitude && !newUser.longitude) updates.longitude = Number(longitude);
+        if (Object.keys(updates).length > 0) await newUser.update(updates);
+      }
     } catch (createErr) {
-      console.error("completeSignupBase64 create user error:", createErr && createErr.stack ? createErr.stack : createErr);
-      return res.status(500).json({ error: "Failed to create user", details: (createErr && createErr.message) || String(createErr) });
+      console.error("completeSignup create user error:", createErr && createErr.stack ? createErr.stack : createErr);
+      const details = (createErr && createErr.message) || String(createErr);
+      return res.status(500).json({ error: "Failed to create user", details });
     }
 
     // If a profile photo was uploaded, and middleware saved req.file.path, handle cloudinary upload here
@@ -386,17 +385,61 @@ export const completeSignupBase64 = async (req, res) => {
     } = req.body || {};
     const roleToSave = normalizeRole(role) || "user";
 
-    const newUser = await User.create({
-      name: name || `User_${Date.now()}`,
-      phoneNumber: String(payload.phone),
-      password: "",
-      role: roleToSave,
-      address: address || null,
-      gender: gender || null,
-      age: age ? Number(age) : null,
-      latitude: latitude ? Number(latitude) : null,
-      longitude: longitude ? Number(longitude) : null,
-    });
+    // Defensive: if a user with this phone already exists, return that user
+    // instead of attempting to create a duplicate (avoids unique constraint errors).
+    const existing = await User.findOne({ where: { phoneNumber: String(payload.phone) } });
+    if (existing) {
+      const authToken = jwt.sign(
+        {
+          id: existing.id,
+          name: existing.name,
+          phoneNumber: existing.phoneNumber,
+          role: existing.role,
+        },
+        process.env.JWT_SECRET || "secret",
+        { expiresIn: "30d" }
+      );
+      console.warn("completeSignupBase64: user already exists for phone", payload.phone);
+      return res.json({ ok: true, token: authToken, user: existing, isNewUser: false });
+    }
+
+    // Use findOrCreate to avoid duplicate records under race conditions.
+    let newUser;
+    try {
+      const [user, created] = await User.findOrCreate({
+        where: { phoneNumber: String(payload.phone) },
+        defaults: {
+          name: name || `User_${Date.now()}`,
+          phoneNumber: String(payload.phone),
+          password: "",
+          role: roleToSave,
+          address: address || null,
+          gender: gender || null,
+          age: age ? Number(age) : null,
+          latitude: latitude ? Number(latitude) : null,
+          longitude: longitude ? Number(longitude) : null,
+        },
+      });
+      newUser = user;
+
+      // If user already existed, we may want to ensure some fields are up-to-date.
+      if (!created) {
+  const updates = {};
+        if (name && !newUser.name) updates.name = name;
+        if (address && !newUser.address) updates.address = address;
+        if (gender && !newUser.gender) updates.gender = gender;
+        if (age && !newUser.age) updates.age = Number(age);
+        if (latitude && !newUser.latitude) updates.latitude = Number(latitude);
+        if (longitude && !newUser.longitude) updates.longitude = Number(longitude);
+        if (Object.keys(updates).length > 0) {
+          await newUser.update(updates);
+        }
+      }
+    } catch (createErr) {
+      console.error("completeSignupBase64 create user error:", createErr && createErr.stack ? createErr.stack : createErr);
+      const details = (createErr && createErr.message) || String(createErr);
+      return res.status(500).json({ error: "Failed to create user", details });
+    }
 
     const dataUri = profilePhotoBase64 || image;
     if (dataUri && typeof dataUri === "string") {
@@ -484,17 +527,39 @@ export const completeSignupSimple = async (req, res) => {
       req.body || {};
     const roleToSave = normalizeRole(role) || "user";
 
-    const newUser = await User.create({
-      name: name || `User_${Date.now()}`,
-      phoneNumber: String(payload.phone),
-      password: "",
-      role: roleToSave,
-      address: address || null,
-      gender: gender || null,
-      age: age ? Number(age) : null,
-      latitude: latitude ? Number(latitude) : null,
-      longitude: longitude ? Number(longitude) : null,
-    });
+    // Create or find existing user (idempotent)
+    let newUser;
+    try {
+      const [user, created] = await User.findOrCreate({
+        where: { phoneNumber: String(payload.phone) },
+        defaults: {
+          name: name || `User_${Date.now()}`,
+          phoneNumber: String(payload.phone),
+          password: "",
+          role: roleToSave,
+          address: address || null,
+          gender: gender || null,
+          age: age ? Number(age) : null,
+          latitude: latitude ? Number(latitude) : null,
+          longitude: longitude ? Number(longitude) : null,
+        },
+      });
+      newUser = user;
+      if (!created) {
+        const updates = {};
+        if (name && !newUser.name) updates.name = name;
+        if (address && !newUser.address) updates.address = address;
+        if (gender && !newUser.gender) updates.gender = gender;
+        if (age && !newUser.age) updates.age = Number(age);
+        if (latitude && !newUser.latitude) updates.latitude = Number(latitude);
+        if (longitude && !newUser.longitude) updates.longitude = Number(longitude);
+        if (Object.keys(updates).length > 0) await newUser.update(updates);
+      }
+    } catch (createErr) {
+      console.error("completeSignupSimple create user error:", createErr && createErr.stack ? createErr.stack : createErr);
+      const details = (createErr && createErr.message) || String(createErr);
+      return res.status(500).json({ error: "Failed to create user", details });
+    }
 
     const authToken = jwt.sign(
       {
