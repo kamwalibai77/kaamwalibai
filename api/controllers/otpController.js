@@ -320,6 +320,88 @@ export const completeSignup = async (req, res) => {
   }
 };
 
+// Variant that accepts a JSON body with a base64 data URI for profile photo
+export const completeSignupBase64 = async (req, res) => {
+  try {
+    const auth = req.headers.authorization;
+    if (!auth || !auth.startsWith("Bearer "))
+      return res.status(401).json({ error: "Missing token" });
+    const token = auth.split(" ")[1];
+    let payload;
+    try {
+      payload = jwt.verify(token, process.env.JWT_SECRET || "secret");
+    } catch (e) {
+      return res.status(401).json({ error: "Invalid or expired token" });
+    }
+
+    if (!payload || !payload.phone || !payload.isNewUser)
+      return res.status(400).json({ error: "Invalid signup token" });
+
+    const normalizeRole = (r) => {
+      if (!r) return null;
+      const v = String(r).toLowerCase();
+      if (
+        v === "serviceprovider" ||
+        v === "service_provider" ||
+        v === "provider"
+      )
+        return "ServiceProvider";
+      if (v === "admin" || v === "superadmin") return "superadmin";
+      return "user";
+    };
+
+    const { name, role, address, gender, age, latitude, longitude, profilePhotoBase64, image } = req.body || {};
+    const roleToSave = normalizeRole(role) || "user";
+
+    const newUser = await User.create({
+      name: name || `User_${Date.now()}`,
+      phoneNumber: String(payload.phone),
+      password: "",
+      role: roleToSave,
+      address: address || null,
+      gender: gender || null,
+      age: age ? Number(age) : null,
+      latitude: latitude ? Number(latitude) : null,
+      longitude: longitude ? Number(longitude) : null,
+    });
+
+    const dataUri = profilePhotoBase64 || image;
+    if (dataUri && typeof dataUri === "string") {
+      try {
+        const uploadRes = await import("../config/cloudinary.js");
+        const cloud = uploadRes.default || uploadRes;
+        if (!process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+          console.warn("Cloudinary not configured; skipping profile photo upload during signup");
+        } else {
+          const upl = await cloud.uploader.upload(dataUri, { folder: "maid-service" });
+          if (upl && upl.secure_url) {
+            newUser.profilePhoto = upl.secure_url;
+            await newUser.save();
+          }
+        }
+      } catch (e) {
+        console.warn("Failed to upload profile photo (base64) during signup:", e);
+      }
+    }
+
+    const authToken = jwt.sign(
+      {
+        id: newUser.id,
+        name: newUser.name,
+        phoneNumber: newUser.phoneNumber,
+        role: newUser.role,
+      },
+      process.env.JWT_SECRET || "secret",
+      { expiresIn: "30d" }
+    );
+
+    return res.json({ ok: true, token: authToken, user: newUser });
+  } catch (err) {
+    console.error("completeSignupBase64 error:", err && err.stack ? err.stack : err);
+    return res.status(500).json({ error: "Failed to complete signup" });
+  }
+};
+
 // JSON-only variant of completeSignup for clients that cannot send multipart
 // payloads reliably. Creates the user from the phone number present in the
 // temporary token. Does not attempt to process uploaded files.

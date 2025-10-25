@@ -4,6 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
+import * as FileSystem from "expo-file-system/legacy";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -20,6 +21,7 @@ import DropDownPicker from "react-native-dropdown-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { RootStackParamList } from "../navigation/AppNavigator";
 import api from "../services/api";
+import { API_BASE_URL } from "../utills/config";
 
 type Props = NativeStackScreenProps<RootStackParamList, "EditProfile">;
 
@@ -104,57 +106,46 @@ export default function ProfileEditScreen({ navigation, route }: Props) {
     if (item.lat) setLatitude(Number(item.lat));
     if (item.lng) setLongitude(Number(item.lng));
   };
-
   const handleSave = async () => {
     if (!/^\+91\d{10}$/.test(phoneNumber)) {
-      alert("Phone number must be 10 digits after +91");
+      Alert.alert("Invalid Number", "Phone number must be 10 digits after +91");
       return;
     }
-    // If user was routed here to choose a role, require role selection
+
     const needsRole = (route?.params as any)?.needsRole === true;
     if (needsRole && !role) {
       Alert.alert("Select role", "Please select a role to continue.");
       return;
     }
+
+    setLoading(true);
+
     try {
-      setLoading(true);
       const formData = new FormData();
       formData.append("name", name);
       formData.append("role", role);
       formData.append("phoneNumber", phoneNumber);
       formData.append("address", address);
-      if (latitude != null) formData.append("latitude", String(latitude));
-      if (longitude != null) formData.append("longitude", String(longitude));
+      if (latitude) formData.append("latitude", String(latitude));
+      if (longitude) formData.append("longitude", String(longitude));
       formData.append("gender", gender || "");
       formData.append("age", age?.toString() || "");
 
-      // ✅ Upload only if user picked a new local image (not a remote URL)
+      // ✅ Only attach new local image, not remote URL
       if (profilePhoto && !profilePhoto.startsWith("http")) {
-        try {
-          // Convert local URI to blob — more reliable on Android (content://)
-          const fetched = await fetch(profilePhoto);
-          const blob = await fetched.blob();
-          // In React Native, append(blob, name) works for multipart
-          formData.append("profilePhoto", blob as any, "profile.jpg");
-        } catch (err) {
-          console.warn(
-            "Failed to attach profile photo blob, falling back to uri append:",
-            err
-          );
-          // Fallback to uri-style append which may work on some platforms
-          const file: any = {
-            uri: profilePhoto,
-            name: "profile.jpg",
-            type: "image/jpeg",
-          };
-          formData.append("profilePhoto", file as any);
-        }
+        // keep the FormData path for environments that support multipart,
+        // but on Expo/React Native axios multipart is flaky. We'll prefer
+        // a fetch+FormData blob approach when sending from device.
+        const fetched = await fetch(profilePhoto);
+        const blob = await fetched.blob();
+        formData.append("profilePhoto", blob as any, "profile.jpg");
       }
 
-      // If no existing userId, this is the "complete signup" flow for new users.
+      let data: any = null;
       const userId = await AsyncStorage.getItem("userId");
+
+      // ✅ Case 1: Signup User completing profile
       if (!userId) {
-        // Use the temporary token issued by verify-otp to authenticate this request
         const tempToken = await AsyncStorage.getItem("token");
         if (!tempToken) {
           Alert.alert(
@@ -164,90 +155,232 @@ export default function ProfileEditScreen({ navigation, route }: Props) {
           setLoading(false);
           return;
         }
-
-        let data: any = null;
-        try {
-          // Try the multipart signup (with optional profilePhoto). This is the
-          // preferred route because it allows uploading a profile picture.
-          const resp = await api.post("/auth/complete-signup", formData, {
-            headers: {
-              Authorization: `Bearer ${tempToken}`,
-            },
-          });
-          data = resp.data;
-        } catch (multipartErr) {
-          console.warn("Multipart complete-signup failed, attempting JSON fallback:", multipartErr);
-
-          // Fallback: some RN environments have trouble sending multipart/form-data.
-          // Use the JSON-only endpoint we added on the server which creates the
-          // user from the temporary token and accepts role selection.
+        // Prefer a fetch-based multipart upload on device; if no local image
+        // is present send JSON via the simple endpoint.
+        const apiHost = API_BASE_URL.replace(/\/api\/?$/, "");
+        if (profilePhoto && !profilePhoto.startsWith("http")) {
           try {
-            const jsonBody: any = {
-              name,
-              role,
-              address,
-              gender,
-              age,
-              latitude,
-              longitude,
-            };
+            // Try fetch multipart
+            const resp = await fetch(profilePhoto);
+            const blob = await resp.blob();
+            const fd = new FormData();
+            fd.append("profilePhoto", blob as any, "profile.jpg");
+            fd.append("name", name);
+            fd.append("role", role);
+            fd.append("address", address);
+            fd.append("gender", gender || "");
+            fd.append("age", age?.toString() || "");
+            if (latitude) fd.append("latitude", String(latitude));
+            if (longitude) fd.append("longitude", String(longitude));
+
+            const r = await fetch(`${apiHost}/api/auth/complete-signup`, {
+              method: "POST",
+              headers: { Authorization: `Bearer ${tempToken}` },
+              body: fd,
+            });
+            if (!r.ok) {
+              const txt = await r.text();
+              throw new Error(`Signup upload failed ${r.status}: ${txt}`);
+            }
+            data = await r.json();
+          } catch (err) {
+            console.warn("Signup multipart failed, trying base64 fallback:", err);
+            // Base64 fallback
+            try {
+              const b64 = await FileSystem.readAsStringAsync(profilePhoto, { encoding: 'base64' });
+              const payload = {
+                profilePhotoBase64: `data:image/jpeg;base64,${b64}`,
+                name,
+                role,
+                address,
+                gender,
+                age,
+                latitude,
+                longitude,
+              } as any;
+              const fallbackRes = await fetch(`${apiHost}/api/auth/complete-signup-base64`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${tempToken}`,
+                },
+                body: JSON.stringify(payload),
+              });
+              if (!fallbackRes.ok) {
+                const txt = await fallbackRes.text();
+                throw new Error(`Signup base64 failed ${fallbackRes.status}: ${txt}`);
+              }
+              data = await fallbackRes.json();
+            } catch (b64Err) {
+              console.error("Signup base64 fallback failed:", b64Err);
+              Alert.alert("Error", "Signup failed");
+              setLoading(false);
+              return;
+            }
+          }
+        } else {
+          // No local image — use JSON simple endpoint
+          try {
             const fallbackResp = await api.post(
               "/auth/complete-signup-simple",
-              jsonBody,
               {
-                headers: { Authorization: `Bearer ${tempToken}` },
-              }
+                name,
+                role,
+                address,
+                gender,
+                age,
+                latitude,
+                longitude,
+              },
+              { headers: { Authorization: `Bearer ${tempToken}` } }
             );
             data = fallbackResp.data;
-          } catch (fallbackErr) {
-            console.error("complete-signup fallback failed:", fallbackErr);
-            Alert.alert("Error", "Signup failed. Please try again.");
+          } catch (err) {
+            console.error("Signup simple failed:", err);
+            Alert.alert("Error", "Signup failed");
             setLoading(false);
             return;
           }
         }
 
-        if (!data || !data.ok) {
-          console.error("complete-signup failed:", data);
+        if (!data?.ok) {
           Alert.alert("Error", data?.error || "Signup failed");
-          setLoading(false);
           return;
         }
 
-        // Persist returned permanent token and userId
         if (data.token) await AsyncStorage.setItem("token", data.token);
         if (data.user?.id)
           await AsyncStorage.setItem("userId", String(data.user.id));
-        if (data.user?.role)
+        if (data.user?.role) {
           await AsyncStorage.setItem(
             "userRole",
-            data.user.role?.toLowerCase().includes("provider")
+            data.user.role.toLowerCase().includes("provider")
               ? "ServiceProvider"
               : "user"
           );
+        }
 
-        Alert.alert("Success", "Signup completed and profile saved!");
+        Alert.alert("Success", "Signup completed!");
         navigation.navigate("Profile");
         return;
       }
 
-      // Existing user — regular profile update
-      await api.put("/profile/update", formData);
+      // ✅ Case 2: Update existing profile
+      // Use a fetch-based upload for device-friendly multipart handling.
+      const userToken = await AsyncStorage.getItem("token");
+      const apiHost = API_BASE_URL.replace(/\/api\/?$/, "");
 
-      // Persist the role locally once the profile is saved — make it immutable in the UI
-      if (role) {
-        await AsyncStorage.setItem(
-          "userRole",
-          (role || "").toLowerCase().includes("provider")
-            ? "ServiceProvider"
-            : "user"
-        );
+      if (profilePhoto && !profilePhoto.startsWith("http")) {
+        // Upload via fetch+FormData (recommended on Expo)
+        try {
+          const upload = async () => {
+            // convert file URI to blob
+            const resp = await fetch(profilePhoto);
+            const blob = await resp.blob();
+
+            const fd = new FormData();
+            fd.append("profilePhoto", blob as any, "profile.jpg");
+            fd.append("name", name);
+            fd.append("role", role);
+            fd.append("phoneNumber", phoneNumber);
+            fd.append("address", address);
+            if (latitude) fd.append("latitude", String(latitude));
+            if (longitude) fd.append("longitude", String(longitude));
+            fd.append("gender", gender || "");
+            fd.append("age", age?.toString() || "");
+
+            const res = await fetch(`${apiHost}/api/profile/update`, {
+              method: "PUT",
+              headers: {
+                Authorization: `Bearer ${userToken}`,
+                // IMPORTANT: do NOT set Content-Type — let fetch set the boundary
+              },
+              body: fd,
+            });
+
+            if (!res.ok) {
+              const txt = await res.text();
+              throw new Error(`Upload failed ${res.status}: ${txt}`);
+            }
+            return res.json();
+          };
+
+          data = await upload();
+        } catch (err) {
+          console.warn("fetch multipart upload failed, trying base64 fallback:", err);
+          // Fallback: read file as base64 and post to the base64 endpoint
+          try {
+            const b64 = await FileSystem.readAsStringAsync(profilePhoto, {
+              encoding: 'base64',
+            });
+            const payload = {
+              profilePhotoBase64: `data:image/jpeg;base64,${b64}`,
+              name,
+              role,
+              phoneNumber,
+              address,
+              latitude,
+              longitude,
+              gender,
+              age,
+            } as any;
+
+            const fallbackRes = await fetch(`${apiHost}/api/profile/upload-photo-base64`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${userToken}`,
+              },
+              body: JSON.stringify(payload),
+            });
+            if (!fallbackRes.ok) {
+              const txt = await fallbackRes.text();
+              throw new Error(`Base64 upload failed ${fallbackRes.status}: ${txt}`);
+            }
+            data = await fallbackRes.json();
+          } catch (b64Err) {
+            console.error("Base64 fallback failed:", b64Err);
+            throw b64Err;
+          }
+        }
+      } else {
+        // No new local image — send JSON payload via axios
+        const jsonBody: any = {
+          name,
+          role,
+          phoneNumber,
+          address,
+          gender,
+          age,
+        };
+        if (latitude) jsonBody.latitude = latitude;
+        if (longitude) jsonBody.longitude = longitude;
+
+        const updateResp = await api.put("/profile/update", jsonBody);
+        data = updateResp.data;
+      }
+
+      if (!data?.success || !data.user) {
+        Alert.alert("Error", "Failed to update profile.");
+        return;
+      }
+
+      // ✅ Update local state and storage (new profile pic URL!)
+      await AsyncStorage.setItem(
+        "userRole",
+        data.user.role?.toLowerCase().includes("provider")
+          ? "ServiceProvider"
+          : "user"
+      );
+      if (data.user.profilePhoto) {
+        await AsyncStorage.setItem("profilePhoto", data.user.profilePhoto);
+        setProfilePhoto(data.user.profilePhoto);
       }
 
       Alert.alert("Success", "Profile updated successfully!");
       navigation.navigate("Profile");
-    } catch (e) {
-      console.error("Profile update/complete-signup failed:", e);
+    } catch (error) {
+      console.error("handleSave error:", error);
       Alert.alert("Error", "Failed to save profile.");
     } finally {
       setLoading(false);

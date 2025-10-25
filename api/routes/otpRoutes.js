@@ -2,6 +2,7 @@ import express from "express";
 import {
   completeSignup,
   completeSignupSimple,
+  completeSignupBase64,
   sendOtp,
   verifyOtp,
 } from "../controllers/otpController.js";
@@ -13,6 +14,11 @@ router.post("/send-otp", sendOtp);
 router.post("/verify-otp", verifyOtp);
 router.post("/complete-signup", upload.single("profilePhoto"), completeSignup);
 router.post("/complete-signup-simple", completeSignupSimple);
+router.post(
+  "/complete-signup-base64",
+  express.json({ limit: "15mb" }),
+  completeSignupBase64
+);
 
 // Simple unauthenticated ping for reachability checks from clients
 router.get("/ping", (req, res) => {

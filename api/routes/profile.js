@@ -260,6 +260,73 @@ router.put("/subscribe", authMiddleware, async (req, res) => {
   }
 });
 
+/**
+ * Upload profile photo via base64 JSON payload
+ * POST /upload-photo-base64
+ * Body: { profilePhotoBase64: 'data:image/jpeg;base64,...' }
+ */
+router.post(
+  "/upload-photo-base64",
+  authMiddleware,
+  express.json({ limit: "15mb" }),
+  async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const { profilePhotoBase64, image } = req.body || {};
+      const dataUri = profilePhotoBase64 || image;
+
+      if (!dataUri || typeof dataUri !== "string") {
+        return res
+          .status(400)
+          .json({ success: false, message: "No image provided" });
+      }
+
+      // If Cloudinary is not configured, return helpful message
+      if (!process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+        console.warn("Cloudinary not configured; cannot upload base64 image");
+        return res
+          .status(503)
+          .json({ success: false, message: "Cloudinary not configured on server" });
+      }
+
+      // Upload the data URI directly to Cloudinary
+      let uploadRes;
+      try {
+        uploadRes = await cloudinary.uploader.upload(dataUri, {
+          folder: "maid-service",
+        });
+      } catch (uploadErr) {
+        console.error("Base64 upload to Cloudinary failed:", uploadErr);
+        return res
+          .status(502)
+          .json({ success: false, message: "Cloudinary upload failed" });
+      }
+
+      const secureUrl = uploadRes?.secure_url || null;
+      if (!secureUrl) {
+        return res
+          .status(500)
+          .json({ success: false, message: "Upload did not return a URL" });
+      }
+
+      // Persist to DB
+      const [rowsUpdated, [updatedUser]] = await User.update(
+        { profilePhoto: secureUrl },
+        { where: { id: userId }, returning: true }
+      );
+
+      if (rowsUpdated === 0) {
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
+
+      return res.json({ success: true, user: updatedUser });
+    } catch (err) {
+      console.error("/upload-photo-base64 error:", err && err.stack ? err.stack : err);
+      return res.status(500).json({ success: false, message: "Server error" });
+    }
+  }
+);
+
 // Lightweight Cloudinary connectivity test for production troubleshooting
 router.get("/tools/test-cloudinary", async (req, res) => {
   try {
