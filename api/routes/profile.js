@@ -1,6 +1,7 @@
 import express from "express";
 import fs from "fs";
 import cloudinary from "../config/cloudinary.js";
+import cloudinary, { uploadFile } from "../config/cloudinary.js";
 import { authMiddleware } from "../middleware/auth.js";
 import { upload } from "../middleware/multer.js";
 import db from "../models/index.js";
@@ -119,27 +120,35 @@ router.put(
       // Upload to Cloudinary if file present
       let cloudinaryUrl = null;
       if (localFilePath) {
-        if (
-          !process.env.CLOUDINARY_API_KEY ||
-          !process.env.CLOUDINARY_API_SECRET
-        ) {
-          // Cloudinary not configured — cleanup and error
-          if (fs.existsSync(localFilePath)) fs.unlinkSync(localFilePath);
-          await transaction.rollback();
-          return res
-            .status(500)
-            .json({ error: "Cloudinary not configured on server" });
+        // Attempt upload but do NOT fail the whole update if Cloudinary is
+        // not configured or upload fails — production may choose to disable
+        // Cloudinary and we still want profile field updates to succeed.
+        try {
+          if (
+            !process.env.CLOUDINARY_API_KEY ||
+            !process.env.CLOUDINARY_API_SECRET
+          ) {
+            console.warn("Cloudinary not configured; skipping profile photo upload");
+          } else {
+            const uploadRes = await cloudinary.uploader.upload(localFilePath, {
+              folder: "maid-service",
+            });
+            cloudinaryUrl = uploadRes.secure_url;
+            if (cloudinaryUrl) {
+              updatedUser.profilePhoto = cloudinaryUrl;
+              await updatedUser.save({ transaction });
+            }
+          }
+        } catch (uploadErr) {
+          console.error("Profile photo upload failed, but continuing update:", uploadErr && uploadErr.stack ? uploadErr.stack : uploadErr);
+        } finally {
+          // always try to remove the local temp file
+          try {
+            if (fs.existsSync(localFilePath)) fs.unlinkSync(localFilePath);
+          } catch (e) {
+            console.warn("Failed to delete profile temp file:", localFilePath, e);
+          }
         }
-
-        const uploadRes = await cloudinary.uploader.upload(localFilePath, {
-          folder: "maid-service",
-        });
-        cloudinaryUrl = uploadRes.secure_url;
-
-        updatedUser.profilePhoto = cloudinaryUrl;
-        await updatedUser.save({ transaction });
-
-        if (fs.existsSync(localFilePath)) fs.unlinkSync(localFilePath);
       }
 
       await transaction.commit();
@@ -287,18 +296,14 @@ router.post(
           ) {
             throw new Error("Cloudinary not configured on server");
           }
-          const uploadRes = await cloudinary.uploader.upload(localPath, {
-            folder: "maid-service/kyc",
-          });
+            const uploadRes = await uploadFile(localPath, { folder: "maid-service/kyc" });
           uploaded.front = uploadRes.secure_url;
         }
 
         if (req.files && req.files.kycBack && req.files.kycBack[0]) {
           const localPath = req.files.kycBack[0].path;
           localPathsToCleanup.push(localPath);
-          const uploadRes = await cloudinary.uploader.upload(localPath, {
-            folder: "maid-service/kyc",
-          });
+            const uploadRes = await uploadFile(localPath, { folder: "maid-service/kyc" });
           uploaded.back = uploadRes.secure_url;
         }
 
@@ -454,18 +459,14 @@ router.post(
           ) {
             throw new Error("Cloudinary not configured on server");
           }
-          const uploadRes = await cloudinary.uploader.upload(localPath, {
-            folder: "maid-service/kyc",
-          });
+            const uploadRes = await uploadFile(localPath, { folder: "maid-service/kyc" });
           uploaded.front = uploadRes.secure_url;
         }
 
         if (req.files && req.files.kycBack && req.files.kycBack[0]) {
           const localPath = req.files.kycBack[0].path;
           localPathsToCleanup.push(localPath);
-          const uploadRes = await cloudinary.uploader.upload(localPath, {
-            folder: "maid-service/kyc",
-          });
+            const uploadRes = await uploadFile(localPath, { folder: "maid-service/kyc" });
           uploaded.back = uploadRes.secure_url;
         }
 
