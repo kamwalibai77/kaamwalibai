@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import fs from "fs";
 import db from "../models/index.js";
 
 const Otp = db.Otp;
@@ -311,15 +312,25 @@ export const completeSignup = async (req, res) => {
     // If a profile photo was uploaded, and middleware saved req.file.path, handle cloudinary upload here
     if (req.file && req.file.path) {
       try {
-        const uploadRes = await import("../config/cloudinary.js");
-        const cloud = uploadRes.default || uploadRes;
-        const upl = await cloud.uploader.upload(req.file.path, {
-          folder: "maid-service",
-        });
-        newUser.profilePhoto = upl.secure_url;
-        await newUser.save();
+        const { uploadFile } = await import("../config/cloudinary.js");
+        const localPath = req.file.path;
+        console.log("Uploading signup profile photo from", localPath);
+        const upl = await uploadFile(localPath, { folder: "maid-service" });
+        if (upl && upl.secure_url) {
+          newUser.profilePhoto = upl.secure_url;
+          await newUser.save();
+          console.log("Signup profile photo uploaded to Cloudinary:", upl.secure_url);
+        } else {
+          console.warn("Signup profile upload did not return secure_url", upl);
+        }
+        // try cleanup
+        try {
+          if (fs.existsSync(localPath)) fs.unlinkSync(localPath);
+        } catch (cleanupErr) {
+          console.warn("Failed to cleanup signup temp file:", cleanupErr);
+        }
       } catch (e) {
-        console.warn("Failed to upload profile photo during signup:", e);
+        console.warn("Failed to upload profile photo during signup:", e && e.message ? e.message : e);
       }
     }
 
@@ -444,22 +455,16 @@ export const completeSignupBase64 = async (req, res) => {
     const dataUri = profilePhotoBase64 || image;
     if (dataUri && typeof dataUri === "string") {
       try {
-        const uploadRes = await import("../config/cloudinary.js");
-        const cloud = uploadRes.default || uploadRes;
-        if (
-          !process.env.CLOUDINARY_API_KEY ||
-          !process.env.CLOUDINARY_API_SECRET
-        ) {
-          console.warn(
-            "Cloudinary not configured; skipping profile photo upload during signup"
-          );
+        const { uploadFile } = await import("../config/cloudinary.js");
+        if (!process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+          console.warn("Cloudinary not configured; skipping profile photo upload during signup");
         } else {
-          const upl = await cloud.uploader.upload(dataUri, {
-            folder: "maid-service",
-          });
+          const upl = await uploadFile(dataUri, { folder: "maid-service" });
           if (upl && upl.secure_url) {
             newUser.profilePhoto = upl.secure_url;
             await newUser.save();
+          } else {
+            console.warn("Base64 signup upload did not return secure_url", upl);
           }
         }
       } catch (e) {
