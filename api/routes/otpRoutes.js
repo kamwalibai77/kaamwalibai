@@ -1,8 +1,8 @@
 import express from "express";
 import {
   completeSignup,
-  completeSignupSimple,
   completeSignupBase64,
+  completeSignupSimple,
   sendOtp,
   verifyOtp,
 } from "../controllers/otpController.js";

@@ -16,9 +16,11 @@ router.get("/tools/ping", (req, res) => {
   try {
     res.json({
       ok: true,
-      cloudinaryConfigured:
-        !!(process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET),
-      autoVerifyKyc: String(process.env.AUTO_VERIFY_KYC || "").toLowerCase() === "true",
+      cloudinaryConfigured: !!(
+        process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET
+      ),
+      autoVerifyKyc:
+        String(process.env.AUTO_VERIFY_KYC || "").toLowerCase() === "true",
       timestamp: new Date().toISOString(),
     });
   } catch (e) {
@@ -31,30 +33,67 @@ router.get("/tools/ping", (req, res) => {
 router.put("/tools/test-profile-update", authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { name, phoneNumber, address, gender, age, latitude, longitude, role } = req.body;
+    const {
+      name,
+      phoneNumber,
+      address,
+      gender,
+      age,
+      latitude,
+      longitude,
+      role,
+    } = req.body;
 
-    console.log("[Test Profile Update] incoming:", { userId, body: req.body, timestamp: new Date().toISOString() });
+    console.log("[Test Profile Update] incoming:", {
+      userId,
+      body: req.body,
+      timestamp: new Date().toISOString(),
+    });
 
     if (!phoneNumber || !address) {
-      return res.status(400).json({ success: false, message: "Number and Address required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Number and Address required" });
     }
 
     const existingUser = await User.findByPk(userId);
-    if (!existingUser) return res.status(404).json({ success: false, message: "User not found" });
+    if (!existingUser)
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
 
     let roleToSave = role;
     if (existingUser && existingUser.role) roleToSave = existingUser.role;
 
     const [rowsUpdated, [updatedUser]] = await User.update(
-      { name, phoneNumber, address, gender, age, latitude, longitude, role: roleToSave },
+      {
+        name,
+        phoneNumber,
+        address,
+        gender,
+        age,
+        latitude,
+        longitude,
+        role: roleToSave,
+      },
       { where: { id: userId }, returning: true }
     );
 
-    if (rowsUpdated === 0) return res.status(404).json({ success: false, message: "User not found" });
+    if (rowsUpdated === 0)
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
 
-    res.json({ success: true, message: "Test profile saved", user: updatedUser });
+    res.json({
+      success: true,
+      message: "Test profile saved",
+      user: updatedUser,
+    });
   } catch (err) {
-    console.error("Test profile update error:", err && err.stack ? err.stack : err);
+    console.error(
+      "Test profile update error:",
+      err && err.stack ? err.stack : err
+    );
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
@@ -184,7 +223,9 @@ router.put(
             !process.env.CLOUDINARY_API_KEY ||
             !process.env.CLOUDINARY_API_SECRET
           ) {
-            console.warn("Cloudinary not configured; skipping profile photo upload");
+            console.warn(
+              "Cloudinary not configured; skipping profile photo upload"
+            );
           } else {
             const uploadRes = await cloudinary.uploader.upload(localFilePath, {
               folder: "maid-service",
@@ -196,13 +237,20 @@ router.put(
             }
           }
         } catch (uploadErr) {
-          console.error("Profile photo upload failed, but continuing update:", uploadErr && uploadErr.stack ? uploadErr.stack : uploadErr);
+          console.error(
+            "Profile photo upload failed, but continuing update:",
+            uploadErr && uploadErr.stack ? uploadErr.stack : uploadErr
+          );
         } finally {
           // always try to remove the local temp file
           try {
             if (fs.existsSync(localFilePath)) fs.unlinkSync(localFilePath);
           } catch (e) {
-            console.warn("Failed to delete profile temp file:", localFilePath, e);
+            console.warn(
+              "Failed to delete profile temp file:",
+              localFilePath,
+              e
+            );
           }
         }
       }
@@ -282,11 +330,17 @@ router.post(
       }
 
       // If Cloudinary is not configured, return helpful message
-      if (!process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+      if (
+        !process.env.CLOUDINARY_API_KEY ||
+        !process.env.CLOUDINARY_API_SECRET
+      ) {
         console.warn("Cloudinary not configured; cannot upload base64 image");
         return res
           .status(503)
-          .json({ success: false, message: "Cloudinary not configured on server" });
+          .json({
+            success: false,
+            message: "Cloudinary not configured on server",
+          });
       }
 
       // Upload the data URI directly to Cloudinary
@@ -316,12 +370,17 @@ router.post(
       );
 
       if (rowsUpdated === 0) {
-        return res.status(404).json({ success: false, message: "User not found" });
+        return res
+          .status(404)
+          .json({ success: false, message: "User not found" });
       }
 
       return res.json({ success: true, user: updatedUser });
     } catch (err) {
-      console.error("/upload-photo-base64 error:", err && err.stack ? err.stack : err);
+      console.error(
+        "/upload-photo-base64 error:",
+        err && err.stack ? err.stack : err
+      );
       return res.status(500).json({ success: false, message: "Server error" });
     }
   }
@@ -332,19 +391,38 @@ router.get("/tools/test-cloudinary", async (req, res) => {
   try {
     // If Cloudinary not configured, return helpful message
     if (!process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
-      return res.json({ ok: false, message: "Cloudinary not configured in env" });
+      return res.json({
+        ok: false,
+        message: "Cloudinary not configured in env",
+      });
     }
 
     // Try a harmless API call: list a small number of uploaded resources
     try {
       const list = await cloudinary.api.resources({ max_results: 1 });
-      return res.json({ ok: true, connected: true, sample: list.resources?.length || 0 });
+      return res.json({
+        ok: true,
+        connected: true,
+        sample: list.resources?.length || 0,
+      });
     } catch (apiErr) {
-      console.error("Cloudinary API test failed:", apiErr && apiErr.stack ? apiErr.stack : apiErr);
-      return res.status(502).json({ ok: false, connected: false, error: apiErr.message || String(apiErr) });
+      console.error(
+        "Cloudinary API test failed:",
+        apiErr && apiErr.stack ? apiErr.stack : apiErr
+      );
+      return res
+        .status(502)
+        .json({
+          ok: false,
+          connected: false,
+          error: apiErr.message || String(apiErr),
+        });
     }
   } catch (err) {
-    console.error("/tools/test-cloudinary error:", err && err.stack ? err.stack : err);
+    console.error(
+      "/tools/test-cloudinary error:",
+      err && err.stack ? err.stack : err
+    );
     res.status(500).json({ ok: false, error: "server error" });
   }
 });
@@ -441,14 +519,18 @@ router.post(
           ) {
             throw new Error("Cloudinary not configured on server");
           }
-            const uploadRes = await uploadFile(localPath, { folder: "maid-service/kyc" });
+          const uploadRes = await uploadFile(localPath, {
+            folder: "maid-service/kyc",
+          });
           uploaded.front = uploadRes.secure_url;
         }
 
         if (req.files && req.files.kycBack && req.files.kycBack[0]) {
           const localPath = req.files.kycBack[0].path;
           localPathsToCleanup.push(localPath);
-            const uploadRes = await uploadFile(localPath, { folder: "maid-service/kyc" });
+          const uploadRes = await uploadFile(localPath, {
+            folder: "maid-service/kyc",
+          });
           uploaded.back = uploadRes.secure_url;
         }
 
@@ -604,14 +686,18 @@ router.post(
           ) {
             throw new Error("Cloudinary not configured on server");
           }
-            const uploadRes = await uploadFile(localPath, { folder: "maid-service/kyc" });
+          const uploadRes = await uploadFile(localPath, {
+            folder: "maid-service/kyc",
+          });
           uploaded.front = uploadRes.secure_url;
         }
 
         if (req.files && req.files.kycBack && req.files.kycBack[0]) {
           const localPath = req.files.kycBack[0].path;
           localPathsToCleanup.push(localPath);
-            const uploadRes = await uploadFile(localPath, { folder: "maid-service/kyc" });
+          const uploadRes = await uploadFile(localPath, {
+            folder: "maid-service/kyc",
+          });
           uploaded.back = uploadRes.secure_url;
         }
 

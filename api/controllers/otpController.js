@@ -274,17 +274,40 @@ export const completeSignup = async (req, res) => {
     const roleToSave = normalizeRole(role) || "user";
 
     // Create the user record
-    const newUser = await User.create({
-      name: name || `User_${Date.now()}`,
-      phoneNumber: String(payload.phone),
-      password: "",
-      role: roleToSave,
-      address: address || null,
-      gender: gender || null,
-      age: age ? Number(age) : null,
-      latitude: latitude ? Number(latitude) : null,
-      longitude: longitude ? Number(longitude) : null,
-    });
+    // If a user with this phone already exists (race/replay), return that user
+    const existing = await User.findOne({ where: { phoneNumber: String(payload.phone) } });
+    if (existing) {
+      const authToken = jwt.sign(
+        {
+          id: existing.id,
+          name: existing.name,
+          phoneNumber: existing.phoneNumber,
+          role: existing.role,
+        },
+        process.env.JWT_SECRET || "secret",
+        { expiresIn: "30d" }
+      );
+      console.warn("completeSignupBase64: user already exists for phone", payload.phone);
+      return res.json({ ok: true, token: authToken, user: existing, isNewUser: false });
+    }
+
+    let newUser;
+    try {
+      newUser = await User.create({
+        name: name || `User_${Date.now()}`,
+        phoneNumber: String(payload.phone),
+        password: "",
+        role: roleToSave,
+        address: address || null,
+        gender: gender || null,
+        age: age ? Number(age) : null,
+        latitude: latitude ? Number(latitude) : null,
+        longitude: longitude ? Number(longitude) : null,
+      });
+    } catch (createErr) {
+      console.error("completeSignupBase64 create user error:", createErr && createErr.stack ? createErr.stack : createErr);
+      return res.status(500).json({ error: "Failed to create user", details: (createErr && createErr.message) || String(createErr) });
+    }
 
     // If a profile photo was uploaded, and middleware saved req.file.path, handle cloudinary upload here
     if (req.file && req.file.path) {
@@ -350,7 +373,17 @@ export const completeSignupBase64 = async (req, res) => {
       return "user";
     };
 
-    const { name, role, address, gender, age, latitude, longitude, profilePhotoBase64, image } = req.body || {};
+    const {
+      name,
+      role,
+      address,
+      gender,
+      age,
+      latitude,
+      longitude,
+      profilePhotoBase64,
+      image,
+    } = req.body || {};
     const roleToSave = normalizeRole(role) || "user";
 
     const newUser = await User.create({
@@ -370,17 +403,27 @@ export const completeSignupBase64 = async (req, res) => {
       try {
         const uploadRes = await import("../config/cloudinary.js");
         const cloud = uploadRes.default || uploadRes;
-        if (!process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
-          console.warn("Cloudinary not configured; skipping profile photo upload during signup");
+        if (
+          !process.env.CLOUDINARY_API_KEY ||
+          !process.env.CLOUDINARY_API_SECRET
+        ) {
+          console.warn(
+            "Cloudinary not configured; skipping profile photo upload during signup"
+          );
         } else {
-          const upl = await cloud.uploader.upload(dataUri, { folder: "maid-service" });
+          const upl = await cloud.uploader.upload(dataUri, {
+            folder: "maid-service",
+          });
           if (upl && upl.secure_url) {
             newUser.profilePhoto = upl.secure_url;
             await newUser.save();
           }
         }
       } catch (e) {
-        console.warn("Failed to upload profile photo (base64) during signup:", e);
+        console.warn(
+          "Failed to upload profile photo (base64) during signup:",
+          e
+        );
       }
     }
 
@@ -397,7 +440,10 @@ export const completeSignupBase64 = async (req, res) => {
 
     return res.json({ ok: true, token: authToken, user: newUser });
   } catch (err) {
-    console.error("completeSignupBase64 error:", err && err.stack ? err.stack : err);
+    console.error(
+      "completeSignupBase64 error:",
+      err && err.stack ? err.stack : err
+    );
     return res.status(500).json({ error: "Failed to complete signup" });
   }
 };
@@ -434,7 +480,8 @@ export const completeSignupSimple = async (req, res) => {
       return "user";
     };
 
-    const { name, role, address, gender, age, latitude, longitude } = req.body || {};
+    const { name, role, address, gender, age, latitude, longitude } =
+      req.body || {};
     const roleToSave = normalizeRole(role) || "user";
 
     const newUser = await User.create({
@@ -462,7 +509,10 @@ export const completeSignupSimple = async (req, res) => {
 
     return res.json({ ok: true, token: authToken, user: newUser });
   } catch (err) {
-    console.error("completeSignupSimple error:", err && err.stack ? err.stack : err);
+    console.error(
+      "completeSignupSimple error:",
+      err && err.stack ? err.stack : err
+    );
     return res.status(500).json({ error: "Failed to complete signup" });
   }
 };

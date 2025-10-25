@@ -2,9 +2,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
-import * as FileSystem from "expo-file-system/legacy";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -184,10 +184,15 @@ export default function ProfileEditScreen({ navigation, route }: Props) {
             }
             data = await r.json();
           } catch (err) {
-            console.warn("Signup multipart failed, trying base64 fallback:", err);
+            console.warn(
+              "Signup multipart failed, trying base64 fallback:",
+              err
+            );
             // Base64 fallback
             try {
-              const b64 = await FileSystem.readAsStringAsync(profilePhoto, { encoding: 'base64' });
+              const b64 = await FileSystem.readAsStringAsync(profilePhoto, {
+                encoding: "base64",
+              });
               const payload = {
                 profilePhotoBase64: `data:image/jpeg;base64,${b64}`,
                 name,
@@ -198,17 +203,22 @@ export default function ProfileEditScreen({ navigation, route }: Props) {
                 latitude,
                 longitude,
               } as any;
-              const fallbackRes = await fetch(`${apiHost}/api/auth/complete-signup-base64`, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  Authorization: `Bearer ${tempToken}`,
-                },
-                body: JSON.stringify(payload),
-              });
+              const fallbackRes = await fetch(
+                `${apiHost}/api/auth/complete-signup-base64`,
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${tempToken}`,
+                  },
+                  body: JSON.stringify(payload),
+                }
+              );
               if (!fallbackRes.ok) {
                 const txt = await fallbackRes.text();
-                throw new Error(`Signup base64 failed ${fallbackRes.status}: ${txt}`);
+                throw new Error(
+                  `Signup base64 failed ${fallbackRes.status}: ${txt}`
+                );
               }
               data = await fallbackRes.json();
             } catch (b64Err) {
@@ -307,11 +317,14 @@ export default function ProfileEditScreen({ navigation, route }: Props) {
 
           data = await upload();
         } catch (err) {
-          console.warn("fetch multipart upload failed, trying base64 fallback:", err);
+          console.warn(
+            "fetch multipart upload failed, trying base64 fallback:",
+            err
+          );
           // Fallback: read file as base64 and post to the base64 endpoint
           try {
             const b64 = await FileSystem.readAsStringAsync(profilePhoto, {
-              encoding: 'base64',
+              encoding: "base64",
             });
             const payload = {
               profilePhotoBase64: `data:image/jpeg;base64,${b64}`,
@@ -325,17 +338,22 @@ export default function ProfileEditScreen({ navigation, route }: Props) {
               age,
             } as any;
 
-            const fallbackRes = await fetch(`${apiHost}/api/profile/upload-photo-base64`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${userToken}`,
-              },
-              body: JSON.stringify(payload),
-            });
+            const fallbackRes = await fetch(
+              `${apiHost}/api/profile/upload-photo-base64`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${userToken}`,
+                },
+                body: JSON.stringify(payload),
+              }
+            );
             if (!fallbackRes.ok) {
               const txt = await fallbackRes.text();
-              throw new Error(`Base64 upload failed ${fallbackRes.status}: ${txt}`);
+              throw new Error(
+                `Base64 upload failed ${fallbackRes.status}: ${txt}`
+              );
             }
             data = await fallbackRes.json();
           } catch (b64Err) {
