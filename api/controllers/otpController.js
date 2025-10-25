@@ -268,10 +268,10 @@ export const completeSignup = async (req, res) => {
     // If multipart/form-data, fields are in req.body and file in req.file
     const { name, role, address, gender, age, latitude, longitude } = req.body;
 
-    const roleToSave = normalizeRole(role);
-    if (!roleToSave) {
-      return res.status(400).json({ error: "Role is required" });
-    }
+    // Role is optional for a minimal signup flow. If not provided, default to
+    // a regular 'user'. This lets the mobile client create an account with
+    // just a phone number and continue onboarding later.
+    const roleToSave = normalizeRole(role) || "user";
 
     // Create the user record
     const newUser = await User.create({
@@ -316,6 +316,71 @@ export const completeSignup = async (req, res) => {
     return res.json({ ok: true, token: authToken, user: newUser });
   } catch (err) {
     console.error("completeSignup error:", err && err.stack ? err.stack : err);
+    return res.status(500).json({ error: "Failed to complete signup" });
+  }
+};
+
+// JSON-only variant of completeSignup for clients that cannot send multipart
+// payloads reliably. Creates the user from the phone number present in the
+// temporary token. Does not attempt to process uploaded files.
+export const completeSignupSimple = async (req, res) => {
+  try {
+    const auth = req.headers.authorization;
+    if (!auth || !auth.startsWith("Bearer "))
+      return res.status(401).json({ error: "Missing token" });
+    const token = auth.split(" ")[1];
+    let payload;
+    try {
+      payload = jwt.verify(token, process.env.JWT_SECRET || "secret");
+    } catch (e) {
+      return res.status(401).json({ error: "Invalid or expired token" });
+    }
+
+    if (!payload || !payload.phone || !payload.isNewUser)
+      return res.status(400).json({ error: "Invalid signup token" });
+
+    const normalizeRole = (r) => {
+      if (!r) return null;
+      const v = String(r).toLowerCase();
+      if (
+        v === "serviceprovider" ||
+        v === "service_provider" ||
+        v === "provider"
+      )
+        return "ServiceProvider";
+      if (v === "admin" || v === "superadmin") return "superadmin";
+      return "user";
+    };
+
+    const { name, role, address, gender, age, latitude, longitude } = req.body || {};
+    const roleToSave = normalizeRole(role) || "user";
+
+    const newUser = await User.create({
+      name: name || `User_${Date.now()}`,
+      phoneNumber: String(payload.phone),
+      password: "",
+      role: roleToSave,
+      address: address || null,
+      gender: gender || null,
+      age: age ? Number(age) : null,
+      latitude: latitude ? Number(latitude) : null,
+      longitude: longitude ? Number(longitude) : null,
+    });
+
+    const authToken = jwt.sign(
+      {
+        id: newUser.id,
+        name: newUser.name,
+        phoneNumber: newUser.phoneNumber,
+        role: newUser.role,
+      },
+      process.env.JWT_SECRET || "secret",
+      { expiresIn: "30d" }
+    );
+
+    return res.json({ ok: true, token: authToken, user: newUser });
+  } catch (err) {
+    console.error("completeSignupSimple error:", err && err.stack ? err.stack : err);
     return res.status(500).json({ error: "Failed to complete signup" });
   }
 };

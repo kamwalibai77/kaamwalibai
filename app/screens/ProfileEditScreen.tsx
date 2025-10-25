@@ -165,13 +165,48 @@ export default function ProfileEditScreen({ navigation, route }: Props) {
           return;
         }
 
-        const resp = await api.post("/auth/complete-signup", formData, {
-          headers: {
-            Authorization: `Bearer ${tempToken}`,
-          },
-        });
+        let data: any = null;
+        try {
+          // Try the multipart signup (with optional profilePhoto). This is the
+          // preferred route because it allows uploading a profile picture.
+          const resp = await api.post("/auth/complete-signup", formData, {
+            headers: {
+              Authorization: `Bearer ${tempToken}`,
+            },
+          });
+          data = resp.data;
+        } catch (multipartErr) {
+          console.warn("Multipart complete-signup failed, attempting JSON fallback:", multipartErr);
 
-        const data = resp.data;
+          // Fallback: some RN environments have trouble sending multipart/form-data.
+          // Use the JSON-only endpoint we added on the server which creates the
+          // user from the temporary token and accepts role selection.
+          try {
+            const jsonBody: any = {
+              name,
+              role,
+              address,
+              gender,
+              age,
+              latitude,
+              longitude,
+            };
+            const fallbackResp = await api.post(
+              "/auth/complete-signup-simple",
+              jsonBody,
+              {
+                headers: { Authorization: `Bearer ${tempToken}` },
+              }
+            );
+            data = fallbackResp.data;
+          } catch (fallbackErr) {
+            console.error("complete-signup fallback failed:", fallbackErr);
+            Alert.alert("Error", "Signup failed. Please try again.");
+            setLoading(false);
+            return;
+          }
+        }
+
         if (!data || !data.ok) {
           console.error("complete-signup failed:", data);
           Alert.alert("Error", data?.error || "Signup failed");

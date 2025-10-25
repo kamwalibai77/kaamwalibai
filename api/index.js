@@ -26,6 +26,25 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Quick request logger to help debug unreachable/Network Error issues from clients.
+// This is temporary — it prints method, url and a subset of headers to the server
+// console so you can confirm whether requests from the device or Expo reach
+// the node process.
+app.use((req, res, next) => {
+  try {
+    const safeHeaders = {
+      host: req.headers.host,
+      origin: req.headers.origin,
+      authorization: req.headers.authorization,
+      'content-type': req.headers['content-type'],
+    };
+    console.log('[REQ]', req.method, req.originalUrl, safeHeaders);
+  } catch (e) {
+    console.warn('[REQ] header log failed', e);
+  }
+  next();
+});
+
 // Middleware
 app.use(cors());
 app.use("/api/webhook", webhookRoutes); // must be before express.json

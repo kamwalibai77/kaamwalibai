@@ -1,6 +1,7 @@
 import express from "express";
 import {
   completeSignup,
+  completeSignupSimple,
   sendOtp,
   verifyOtp,
 } from "../controllers/otpController.js";
@@ -11,5 +12,11 @@ const router = express.Router();
 router.post("/send-otp", sendOtp);
 router.post("/verify-otp", verifyOtp);
 router.post("/complete-signup", upload.single("profilePhoto"), completeSignup);
+router.post("/complete-signup-simple", completeSignupSimple);
+
+// Simple unauthenticated ping for reachability checks from clients
+router.get("/ping", (req, res) => {
+  res.json({ ok: true, service: "auth", timestamp: new Date().toISOString() });
+});
 
 export default router;

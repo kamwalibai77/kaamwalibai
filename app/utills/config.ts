@@ -28,20 +28,26 @@ function getHostFromConstants(): string | null {
 
 // Manual override: if you want to force a LAN IP or ngrok URL, set this value.
 // Example for a physical device: const MANUAL_HOST = "192.168.1.42";
-// Example for ngrok (preferred for sharing): const MANUAL_HOST = "abcd-12-34-56-78.ngrok.io";
-const MANUAL_HOST: string | null = null;
+// Example for ngrok (preferred for sharing): const MANUAL_HOST = "https://abcd-12-34-56-78.ngrok.io";
+// NOTE: When running your local API via ngrok, paste the full ngrok URL below
+// (including https://). The server just started ngrok for you; set it to the
+// printed tunnel URL so the Expo app talks to the publicly-forwarded address.
+const MANUAL_HOST: string | null = "https://herlinda-salpiform-unplenteously.ngrok-free.dev";
 
+// If a MANUAL_HOST string is provided use it, otherwise try to infer from Expo
+// constants. Previous code could accidentally set `inferred` to boolean `true`
+// when MANUAL_HOST was present; use a clearer expression.
 const inferred =
-  (MANUAL_HOST && typeof MANUAL_HOST === "string") || getHostFromConstants();
+  MANUAL_HOST && typeof MANUAL_HOST === "string" ? MANUAL_HOST : getHostFromConstants();
 let HOST: string;
 
 if (inferred) {
   HOST = inferred;
 } else if (Platform.OS === "android") {
   // Default emulator loopback for Android emulator
-  HOST = "192.168.1.12";
+  HOST = "192.168.1.2";
 } else {
-  HOST = "192.168.1.12";
+  HOST = "192.168.1.2";
 }
 
 export const API_BASE_URL =

@@ -18,7 +18,6 @@ import {
 import Snackbar from "../../components/Snackbar";
 import { RootStackParamList } from "../navigation/AppNavigator";
 import api from "../services/api";
-import { API_BASE_URL } from "../utills/config";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Login">;
 
@@ -65,7 +64,7 @@ export default function LoginScreen({ navigation }: Props) {
     setPhoneError("");
     setLoading(true);
     try {
-      const resp = await api.post(`${API_BASE_URL}/auth/send-otp`, {
+      const resp = await api.post(`/auth/send-otp`, {
         phone: `+${COUNTRY_CODE}${phone}`,
       });
       let json = resp.data;
@@ -109,7 +108,7 @@ export default function LoginScreen({ navigation }: Props) {
       };
       if (role) payload.role = role === "provider" ? "provider" : "user";
 
-      const resp = await api.post(`${API_BASE_URL}/auth/verify-otp`, payload);
+  const resp = await api.post(`/auth/verify-otp`, payload);
       const json = resp.data;
       if (resp.data) {
         if (json.token) {
