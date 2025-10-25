@@ -1,6 +1,5 @@
 import express from "express";
 import fs from "fs";
-import cloudinary from "../config/cloudinary.js";
 import cloudinary, { uploadFile } from "../config/cloudinary.js";
 import { authMiddleware } from "../middleware/auth.js";
 import { upload } from "../middleware/multer.js";
