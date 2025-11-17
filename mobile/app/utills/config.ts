@@ -4,16 +4,16 @@ import { Platform } from "react-native";
 
 // Host resolution rules:
 // 1. If running via Expo/Expo Go during development, Constants.manifest.debuggerHost
-//    often contains your machine IP (e.g. "192.168.1.42:19000"). We prefer that.
+//    often contains your machine IP (e.g. "192.168.1.72:19000"). We prefer that.
 // 2. If not available, fall back to emulator loopbacks: Android emulator -> 10.0.2.2
 //    (Genymotion uses 10.0.3.2). iOS simulator can use localhost.
 // 3. For a physical device or a production APK, you should replace HOST below with
-//    your machine's LAN IP (e.g. "192.168.1.42") or use a tunnel (ngrok) and point
+//    your machine's LAN IP (e.g. "192.168.1.72") or use a tunnel (ngrok) and point
 //    SOCKET_URL/API_BASE_URL to the forwarded address (https://xxx.ngrok.io).
 
 function getHostFromConstants(): string | null {
   try {
-    // debuggerHost is like '192.168.1.42:19000'
+    // debuggerHost is like '192.168.1.72:19000'
     const dbg =
       (Constants as any)?.manifest?.debuggerHost ||
       (Constants as any)?.manifest?.packagerOpts?.host;
@@ -27,12 +27,12 @@ function getHostFromConstants(): string | null {
 }
 
 // Manual override: if you want to force a LAN IP or ngrok URL, set this value.
-// Example for a physical device: const MANUAL_HOST = "192.168.1.42";
+// Example for a physical device: const MANUAL_HOST = "192.168.1.72";
 // Example for ngrok (preferred for sharing): const MANUAL_HOST = "https://abcd-12-34-56-78.ngrok.io";
 // NOTE: When running your local API via ngrok, paste the full ngrok URL below
 // (including https://). The server just started ngrok for you; set it to the
 // printed tunnel URL so the Expo app talks to the publicly-forwarded address.
-const MANUAL_HOST: string | null = "192.168.1.4";
+const MANUAL_HOST: string | null = "192.168.1.7";
 
 // If a MANUAL_HOST string is provided use it, otherwise try to infer from Expo
 // constants. Previous code could accidentally set `inferred` to boolean `true`
@@ -47,9 +47,9 @@ if (inferred) {
   HOST = inferred;
 } else if (Platform.OS === "android") {
   // Default emulator loopback for Android emulator
-  HOST = "192.168.1.4";
+  HOST = "192.168.1.7";
 } else {
-  HOST = "192.168.1.4";
+  HOST = "192.168.1.7";
 }
 
 export const API_BASE_URL =

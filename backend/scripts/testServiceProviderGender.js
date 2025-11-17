@@ -11,7 +11,7 @@ const tryUrls = [
   `http://localhost:5000/api/service-provider?gender=${encodeURIComponent(
     gender
   )}`,
-  `http://192.168.1.4:5000/api/service-provider?gender=${encodeURIComponent(
+  `http://192.168.1.7:5000/api/service-provider?gender=${encodeURIComponent(
     gender
   )}`,
 ];
