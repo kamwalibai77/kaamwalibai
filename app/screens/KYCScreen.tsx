@@ -15,15 +15,16 @@ import {
 } from "react-native";
 import { API_BASE_URL } from "../utills/config";
 
-export default function KYCVerification() {
+export default function KYCVerification(): any {
   const navigation: any = useNavigation();
-  const [aadhaar, setAadhaar] = useState("");
-  const [name, setName] = useState("");
+  const [aadhaar, setAadhaar] = useState<string>("");
   const [pan, setPan] = useState("");
   const [kycStatus, setKycStatus] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [kycFront, setKycFront] = useState<any>(null);
-  const [kycBack, setKycBack] = useState<any>(null);
+  const [kycFront, setKycFront] = useState<string | { uri: string } | null>(
+    null
+  );
+  const [kycBack, setKycBack] = useState<string | { uri: string } | null>(null);
   const [consent, setConsent] = useState(false);
   // touched states for inline validation
   const [touchedAadhaar, setTouchedAadhaar] = useState(false);
@@ -94,9 +95,12 @@ export default function KYCVerification() {
 
       // Robust append helper: try to fetch the URI and append a blob (with filename),
       // fallback to RN file obj {uri,name,type} if anything fails.
-      const appendRNFile = async (fieldName: string, fileObj: any) => {
+      const appendRNFile = async (
+        fieldName: string,
+        fileObj: { uri?: string } | string | null
+      ) => {
         if (!fileObj) return;
-        const uri = fileObj.uri || fileObj;
+        const uri = (fileObj as any).uri || (fileObj as any);
         if (!uri) return;
 
         // try to derive filename and type
@@ -135,8 +139,10 @@ export default function KYCVerification() {
       console.log("[KYC submit] about to POST", {
         url,
         tokenPresent: !!token,
-        kycFrontUri: kycFront?.uri || kycFront,
-        kycBackUri: kycBack?.uri || kycBack,
+        kycFrontUri:
+          typeof kycFront === "string" ? kycFront : kycFront?.uri || null,
+        kycBackUri:
+          typeof kycBack === "string" ? kycBack : kycBack?.uri || null,
       });
 
       const res = await fetch(url, {
@@ -207,7 +213,7 @@ export default function KYCVerification() {
     }
   };
 
-  const pickImage = async (setter: any) => {
+  const pickImage = async (setter: (val: { uri: string } | null) => void) => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.8,
@@ -277,7 +283,9 @@ export default function KYCVerification() {
       <TouchableOpacity onPress={() => pickImage(setKycFront)}>
         {kycFront ? (
           <Image
-            source={{ uri: kycFront.uri || kycFront }}
+            source={{
+              uri: typeof kycFront === "string" ? kycFront : kycFront?.uri,
+            }}
             style={styles.preview}
           />
         ) : (
@@ -296,7 +304,9 @@ export default function KYCVerification() {
       <TouchableOpacity onPress={() => pickImage(setKycBack)}>
         {kycBack ? (
           <Image
-            source={{ uri: kycBack.uri || kycBack }}
+            source={{
+              uri: typeof kycBack === "string" ? kycBack : kycBack?.uri,
+            }}
             style={styles.preview}
           />
         ) : (

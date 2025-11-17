@@ -21,16 +21,16 @@ import api from "../services/api";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Login">;
 
-export default function LoginScreen({ navigation }: Props) {
-  const [phone, setPhone] = useState("");
-  const [phoneError, setPhoneError] = useState("");
+export default function LoginScreen({ navigation }: Props): any {
+  const [phone, setPhone] = useState<string>("");
+  const [phoneError, setPhoneError] = useState<string>("");
   const [role, setRole] = useState<"user" | "provider" | null>(null);
-  const [needsRole, setNeedsRole] = useState(false);
+  const [needsRole, setNeedsRole] = useState<boolean>(false);
   const [loading, setLoading] = useState(false);
   const [snackbarMsg, setSnackbarMsg] = useState<string | null>(null);
   const [step, setStep] = useState<"phone" | "otp">("phone");
-  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-  const otpInputs = useRef<(TextInput | null)[]>([]);
+  const [otp, setOtp] = useState<string[]>(["", "", "", "", "", ""]);
+  const otpInputs = useRef<Array<TextInput | null>>([]);
   const [cooldown, setCooldown] = useState(0);
 
   const COUNTRY_FLAG = "🇮🇳";
@@ -108,7 +108,7 @@ export default function LoginScreen({ navigation }: Props) {
       };
       if (role) payload.role = role === "provider" ? "provider" : "user";
 
-  const resp = await api.post(`/auth/verify-otp`, payload);
+      const resp = await api.post(`/auth/verify-otp`, payload);
       const json = resp.data;
       if (resp.data) {
         if (json.token) {
@@ -269,7 +269,7 @@ export default function LoginScreen({ navigation }: Props) {
                     style={styles.otpInput}
                     value={digit}
                     onChangeText={(text) => handleOtpChange(text, index)}
-                    maxLength={6}
+                    maxLength={1}
                     keyboardType="number-pad"
                   />
                 ))}

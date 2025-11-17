@@ -10,9 +10,9 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
+import { Card, List } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import BottomTab from "../../components/BottomTabs";
 import { RootStackParamList } from "../navigation/AppNavigator";
@@ -21,9 +21,10 @@ const PlaceholderImg = require("../../assets/images/default.png");
 
 type Props = NativeStackScreenProps<RootStackParamList, "Profile">;
 
-export default function ProfileScreen({ navigation }: Props) {
+export default function ProfileScreen({ navigation }: Props): any {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -72,28 +73,41 @@ export default function ProfileScreen({ navigation }: Props) {
           showsVerticalScrollIndicator={false}
         >
           {/* Profile Header */}
-          <View style={styles.profileCard}>
-            <Image
-              source={
-                user.profilePhoto ? { uri: user.profilePhoto } : PlaceholderImg
-              }
-              style={styles.profileImage}
-            />
-            {/* Verified badge for service providers (small circular badge overlapping avatar) */}
-            {user.role === "ServiceProvider" &&
-              user.kycStatus === "verified" && (
-                <View style={styles.verifiedBadge}>
-                  <View style={styles.verifiedInner}>
-                    <Ionicons name="checkmark" size={14} color="#fff" />
+          <Card style={styles.profileCard}>
+            <Card.Content style={{ alignItems: "center" }}>
+              <Image
+                source={
+                  !imageError && user.profilePhoto
+                    ? { uri: user.profilePhoto }
+                    : PlaceholderImg
+                }
+                style={styles.profileImage}
+                onError={() => {
+                  console.warn(
+                    "Profile image failed to load, falling back to placeholder"
+                  );
+                  setImageError(true);
+                }}
+                onLoad={() => {
+                  // clear any previous error when a new image loads
+                  setImageError(false);
+                }}
+              />
+              {user.role === "ServiceProvider" &&
+                user.kycStatus === "verified" && (
+                  <View style={styles.verifiedBadge}>
+                    <View style={styles.verifiedInner}>
+                      <Ionicons name="checkmark" size={14} color="#fff" />
+                    </View>
                   </View>
-                </View>
-              )}
-            <Text style={styles.userName}>{user.name}</Text>
-            <Text style={styles.userRole}>{user.role}</Text>
-            <Text style={styles.userLocation}>
-              {user.address || "Add Location"}
-            </Text>
-          </View>
+                )}
+              <Text style={styles.userName}>{user.name}</Text>
+              <Text style={styles.userRole}>{user.role}</Text>
+              <Text style={styles.userLocation}>
+                {user.address || "Add Location"}
+              </Text>
+            </Card.Content>
+          </Card>
 
           {/* Info Section */}
           <View style={styles.infoCard}>
@@ -118,65 +132,40 @@ export default function ProfileScreen({ navigation }: Props) {
           </View>
 
           {/* Action Section */}
-          <View style={styles.actionCard}>
-            <TouchableOpacity
-              style={styles.actionRow}
-              onPress={() => navigation.navigate("EditProfile")}
-            >
-              <Ionicons name="create-outline" size={20} color="#6366f1" />
-              <Text style={styles.actionText}>Edit Profile</Text>
-              <Ionicons
-                name="chevron-forward-outline"
-                size={18}
-                color="#cbd5e1"
+          <Card style={styles.actionCard}>
+            <List.Section>
+              <List.Item
+                title="Edit Profile"
+                description="Change your personal details"
+                left={() => <List.Icon color="#6366f1" icon="pencil-outline" />}
+                right={() => <List.Icon icon="chevron-right" />}
+                onPress={() => navigation.navigate("EditProfile")}
               />
-            </TouchableOpacity>
-
-            {/* Only show Complete KYC for Service Provider */}
-            {user.role === "ServiceProvider" && (
-              <TouchableOpacity
-                style={styles.actionRow}
-                onPress={() => navigation.navigate("KYC")}
-              >
-                <Ionicons
-                  name="document-text-outline"
-                  size={20}
-                  color="#6366f1"
+              {user.role === "ServiceProvider" && (
+                <List.Item
+                  title="Complete KYC"
+                  description="Upload documents to verify"
+                  left={() => (
+                    <List.Icon color="#6366f1" icon="file-document-outline" />
+                  )}
+                  right={() => <List.Icon icon="chevron-right" />}
+                  onPress={() => navigation.navigate("KYC")}
                 />
-                <Text style={styles.actionText}>Complete KYC</Text>
-                <Ionicons
-                  name="chevron-forward-outline"
-                  size={18}
-                  color="#cbd5e1"
-                />
-              </TouchableOpacity>
-            )}
-
-            <TouchableOpacity
-              style={styles.actionRow}
-              onPress={() => navigation.navigate("Settings")}
-            >
-              <Ionicons name="settings-outline" size={20} color="#6366f1" />
-              <Text style={styles.actionText}>Settings</Text>
-              <Ionicons
-                name="chevron-forward-outline"
-                size={18}
-                color="#cbd5e1"
+              )}
+              <List.Item
+                title="Settings"
+                left={() => <List.Icon color="#6366f1" icon="cog-outline" />}
+                right={() => <List.Icon icon="chevron-right" />}
+                onPress={() => navigation.navigate("Settings")}
               />
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.actionRow} onPress={handleLogout}>
-              <Ionicons name="log-out-outline" size={20} color="#ef4444" />
-              <Text style={[styles.actionText, { color: "#ef4444" }]}>
-                Logout
-              </Text>
-              <Ionicons
-                name="chevron-forward-outline"
-                size={18}
-                color="#cbd5e1"
+              <List.Item
+                title="Logout"
+                titleStyle={{ color: "#ef4444" }}
+                left={() => <List.Icon color="#ef4444" icon="logout" />}
+                onPress={handleLogout}
               />
-            </TouchableOpacity>
-          </View>
+            </List.Section>
+          </Card>
         </ScrollView>
       </LinearGradient>
       <BottomTab />

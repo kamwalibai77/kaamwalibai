@@ -5,14 +5,15 @@ import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Image,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import io from "socket.io-client";
+import Avatar from "../../components/Avatar";
 import BottomTab from "../../components/BottomTabs";
 import { RootStackParamList } from "../navigation/AppNavigator";
 import { SOCKET_URL } from "../utills/config";
@@ -163,50 +164,67 @@ export default function ChatScreen({ navigation }: Props) {
     return () => unsub();
   }, [token]);
 
-  const renderChatItem = ({ item }: { item: Chat }) => (
-    <TouchableOpacity
-      style={styles.chatItem}
-      onPress={() =>
-        navigation.navigate("ChatBox", {
-          userId: item.id,
-          name: item.name,
-          profilePhoto: item.profilePhoto,
-        })
-      }
-    >
-      <Image
-        source={{
-          uri:
-            item.profilePhoto ||
-            "https://randomuser.me/api/portraits/lego/1.jpg",
-        }}
-        style={styles.avatar}
-      />
-      <View style={styles.chatInfo}>
-        <View style={styles.chatTop}>
-          <Text style={styles.chatName} numberOfLines={1}>
-            {item.name}
-          </Text>
-          <View style={styles.chatRight}>
-            <Text style={styles.chatTime}>
-              {new Date(item.updatedAt).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </Text>
-            {item.unreadCount > 0 && (
-              <View style={styles.unreadBadge}>
-                <Text style={styles.unreadText}>{item.unreadCount}</Text>
+  // Chat list item (uses reusable Avatar)
+  const ChatListItem = ({ item }: { item: Chat }) => {
+    return (
+      <View style={styles.card}>
+        <TouchableOpacity
+          style={styles.chatItemInner}
+          activeOpacity={0.85}
+          onPress={() =>
+            navigation.navigate("ChatBox", {
+              userId: item.id,
+              name: item.name,
+              profilePhoto: item.profilePhoto,
+            })
+          }
+        >
+          <Avatar
+            uri={item.profilePhoto}
+            size={55}
+            showUnreadDot={item.unreadCount > 0}
+          />
+
+          <View style={styles.chatInfo}>
+            <View style={styles.chatTop}>
+              <Text style={styles.chatName} numberOfLines={1}>
+                {item.name}
+              </Text>
+              <View style={styles.chatRight}>
+                <Text style={styles.chatTime} numberOfLines={1}>
+                  {new Date(item.updatedAt).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </Text>
+                {item.unreadCount > 0 && (
+                  <View style={styles.unreadBadge}>
+                    <Text style={styles.unreadText}>{item.unreadCount}</Text>
+                  </View>
+                )}
               </View>
-            )}
+            </View>
+            <Text style={styles.chatLastMessage} numberOfLines={1}>
+              {item.lastMessage || "No messages yet"}
+            </Text>
           </View>
-        </View>
-        <Text style={styles.chatLastMessage} numberOfLines={1}>
-          {item.lastMessage || "No messages yet"}
-        </Text>
+        </TouchableOpacity>
       </View>
-    </TouchableOpacity>
-  );
+    );
+  };
+
+  // search state to filter chats
+  const [searchQuery, setSearchQuery] = useState("");
+  const filteredChats = chatList.filter((c) => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      String(c.name).toLowerCase().includes(q) ||
+      String(c.lastMessage || "")
+        .toLowerCase()
+        .includes(q)
+    );
+  });
 
   if (loading) {
     return (
@@ -230,6 +248,15 @@ export default function ChatScreen({ navigation }: Props) {
       </View>
 
       <View style={styles.container}>
+        <View style={styles.searchContainer}>
+          <TextInput
+            placeholder="Search chats"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            style={styles.searchInput}
+            placeholderTextColor="#9ca3af"
+          />
+        </View>
         {chatList.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>
@@ -238,9 +265,9 @@ export default function ChatScreen({ navigation }: Props) {
           </View>
         ) : (
           <FlatList
-            data={chatList}
+            data={filteredChats}
             keyExtractor={(item) => item.id.toString()}
-            renderItem={renderChatItem}
+            renderItem={({ item }) => <ChatListItem item={item} />}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 100, paddingTop: 10 }}
           />
@@ -303,4 +330,64 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   unreadText: { color: "#fff", fontSize: 12, fontWeight: "bold" },
+  /* new styles */
+  avatarWrapper: {
+    width: 62,
+    height: 62,
+    borderRadius: 31,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#eef2f7",
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+  },
+  unreadDot: {
+    position: "absolute",
+    right: 4,
+    bottom: 4,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: "#25d366",
+    borderWidth: 2,
+    borderColor: "#fff",
+  },
+  searchContainer: {
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    backgroundColor: "#fff",
+  },
+  searchInput: {
+    backgroundColor: "#f1f5f9",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 40,
+    fontSize: 14,
+    color: "#111827",
+  },
+  card: {
+    marginHorizontal: 12,
+    marginVertical: 6,
+    borderRadius: 14,
+    backgroundColor: "#ffffff",
+    padding: 6,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+  },
+  chatItemInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+  },
 });

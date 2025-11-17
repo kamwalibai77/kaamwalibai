@@ -36,17 +36,37 @@ app.use((req, res, next) => {
       host: req.headers.host,
       origin: req.headers.origin,
       authorization: req.headers.authorization,
-      'content-type': req.headers['content-type'],
+      "content-type": req.headers["content-type"],
     };
-    console.log('[REQ]', req.method, req.originalUrl, safeHeaders);
+    console.log("[REQ]", req.method, req.originalUrl, safeHeaders);
   } catch (e) {
-    console.warn('[REQ] header log failed', e);
+    console.warn("[REQ] header log failed", e);
   }
   next();
 });
 
 // Middleware
-app.use(cors());
+// Enable CORS for requests from the app / device. By default cors() allows
+// any origin, but for clarity we accept the Origin header and allow credentials.
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, curl) or any origin during dev.
+      if (!origin || process.env.NODE_ENV !== "production")
+        return callback(null, true);
+      // In production you should check the origin against an allowlist.
+      return callback(null, true);
+    },
+    credentials: true,
+  })
+);
+
+// Set a safe Referrer-Policy header for all responses to avoid noisy browser
+// console messages. This doesn't affect CORS but can reduce client-side warnings.
+app.use((req, res, next) => {
+  res.setHeader("Referrer-Policy", "no-referrer-when-downgrade");
+  next();
+});
 app.use("/api/webhook", webhookRoutes); // must be before express.json
 app.use(express.json());
 
@@ -82,10 +102,13 @@ const startServer = async () => {
     await db.sequelize.sync();
     console.log("✅ Database synced");
 
-    // Start server
-    server.listen(PORT, () =>
-      console.log(`🚀 Server running with WebSocket on port ${PORT}`)
-    );
+    // Start server and bind to 0.0.0.0 so it's reachable on the LAN IP
+    server.listen(PORT, "0.0.0.0", () => {
+      const host = process.env.HOST || "0.0.0.0";
+      console.log(
+        `🚀 Server running with WebSocket on port ${PORT} (bound to ${host})`
+      );
+    });
 
     // Periodic cleanup: remove expired OTPs
     const cleanupIntervalMs = Number(

@@ -2,7 +2,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import * as FileSystem from "expo-file-system/legacy";
+import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import { useEffect, useRef, useState } from "react";
@@ -25,13 +25,13 @@ import { API_BASE_URL } from "../utills/config";
 
 type Props = NativeStackScreenProps<RootStackParamList, "EditProfile">;
 
-export default function ProfileEditScreen({ navigation, route }: Props) {
-  const [id, setId] = useState("");
-  const [name, setName] = useState("");
-  const [role, setRole] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [address, setAddress] = useState("");
-  const [profilePhoto, setProfilePhoto] = useState("");
+export default function ProfileEditScreen({ navigation, route }: Props): any {
+  const [id, setId] = useState<string>("");
+  const [name, setName] = useState<string>("");
+  const [role, setRole] = useState<string>("");
+  const [phoneNumber, setPhoneNumber] = useState<string>("");
+  const [address, setAddress] = useState<string>("");
+  const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const needsRole = (route?.params as any)?.needsRole === true;
 

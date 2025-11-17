@@ -23,8 +23,9 @@ export default function BottomTabs() {
 
   const pathname = route.name as string;
 
-  const activeColor = "#4f46e5"; // stylish purple-blue
-  const inactiveColor = "#94a3b8"; // soft gray
+  // Use black for both active and inactive icons/labels per request
+  const activeColor = "#000000";
+  const inactiveColor = "#000000";
 
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -111,11 +112,19 @@ export default function BottomTabs() {
         style={styles.tabItem}
         onPress={() => navigation.navigate("Home")}
       >
-        <Ionicons
-          name="home-outline"
-          size={28}
-          color={pathname === "Home" ? activeColor : inactiveColor}
-        />
+        <View
+          style={
+            pathname === "Home"
+              ? [styles.iconWrapper, styles.iconActive]
+              : styles.iconWrapper
+          }
+        >
+          <Ionicons
+            name={pathname === "Home" ? "home" : "home-outline"}
+            size={22}
+            color={pathname === "Home" ? "#000000" : inactiveColor}
+          />
+        </View>
         <Text
           style={[
             styles.tabText,
@@ -134,11 +143,23 @@ export default function BottomTabs() {
           navigation.navigate("Chat");
         }}
       >
-        <MaterialCommunityIcons
-          name="chat-processing-outline"
-          size={28}
-          color={pathname === "Chat" ? activeColor : inactiveColor}
-        />
+        <View
+          style={
+            pathname === "Chat"
+              ? [styles.iconWrapper, styles.iconActive]
+              : styles.iconWrapper
+          }
+        >
+          <MaterialCommunityIcons
+            name={
+              pathname === "Chat"
+                ? "chat-processing"
+                : "chat-processing-outline"
+            }
+            size={22}
+            color={pathname === "Chat" ? "#000000" : inactiveColor}
+          />
+        </View>
         <View style={{ position: "relative", alignItems: "center" }}>
           <Text
             style={[
@@ -161,11 +182,19 @@ export default function BottomTabs() {
         style={styles.tabItem}
         onPress={() => navigation.navigate("Subscription")}
       >
-        <FontAwesome5
-          name="briefcase"
-          size={26}
-          color={pathname === "Subscription" ? activeColor : inactiveColor}
-        />
+        <View
+          style={
+            pathname === "Subscription"
+              ? [styles.iconWrapper, styles.iconActive]
+              : styles.iconWrapper
+          }
+        >
+          <FontAwesome5
+            name="briefcase"
+            size={20}
+            color={pathname === "Subscription" ? "#000000" : inactiveColor}
+          />
+        </View>
         <Text
           style={[
             styles.tabText,
@@ -184,11 +213,19 @@ export default function BottomTabs() {
           style={styles.tabItem}
           onPress={() => navigation.navigate("MyServices")}
         >
-          <FontAwesome5
-            name="briefcase"
-            size={26}
-            color={pathname === "MyServices" ? activeColor : inactiveColor}
-          />
+          <View
+            style={
+              pathname === "MyServices"
+                ? [styles.iconWrapper, styles.iconActive]
+                : styles.iconWrapper
+            }
+          >
+            <FontAwesome5
+              name="briefcase"
+              size={20}
+              color={pathname === "MyServices" ? "#000000" : inactiveColor}
+            />
+          </View>
           <Text
             style={[
               styles.tabText,
@@ -207,11 +244,19 @@ export default function BottomTabs() {
         style={styles.tabItem}
         onPress={() => navigation.navigate("Profile")}
       >
-        <Ionicons
-          name="person-circle-outline"
-          size={28}
-          color={pathname === "Profile" ? activeColor : inactiveColor}
-        />
+        <View
+          style={
+            pathname === "Profile"
+              ? [styles.iconWrapper, styles.iconActive]
+              : styles.iconWrapper
+          }
+        >
+          <Ionicons
+            name={pathname === "Profile" ? "person" : "person-circle-outline"}
+            size={22}
+            color={pathname === "Profile" ? "#000000" : inactiveColor}
+          />
+        </View>
         <Text
           style={[
             styles.tabText,
@@ -240,6 +285,23 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   tabItem: { alignItems: "center" },
+  iconWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 4,
+    backgroundColor: "transparent",
+  },
+  iconActive: {
+    backgroundColor: "#4f46e5",
+    shadowColor: "#000",
+    shadowOpacity: 0.18,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 12,
+    elevation: 6,
+  },
   tabText: { fontSize: 12, color: "#64748b", marginTop: 3, fontWeight: "700" },
   badge: {
     position: "absolute",
