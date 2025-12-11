@@ -8,6 +8,7 @@ import {
   useRoute,
 } from "@react-navigation/native";
 import axios from "axios";
+import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -464,17 +465,24 @@ export default function ChatBoxScreen() {
             isMe ? styles.myMessage : styles.theirMessage,
           ]}
         >
-          <Text style={styles.messageText}>{item.message}</Text>
+          <Text style={[styles.messageText, isMe && styles.myMessageText]}>
+            {item.message}
+          </Text>
           <View style={styles.timeWrapper}>
-            <Text style={styles.timeText}>
+            <Text
+              style={[
+                styles.timeText,
+                isMe && { color: "rgba(255,255,255,0.8)" },
+              ]}
+            >
               {new Date(item.createdAt).toLocaleTimeString([], {
                 hour: "2-digit",
                 minute: "2-digit",
               })}
             </Text>
             {isMe && item.read && <Text style={styles.readText}>✓✓</Text>}
-            <Text style={{ marginLeft: wp(1.5) }}>
-              {item.liked ? "❤️" : "🤍"}
+            <Text style={{ marginLeft: 4, fontSize: 14 }}>
+              {item.liked ? "❤️" : ""}
             </Text>
           </View>
         </View>
@@ -490,29 +498,44 @@ export default function ChatBoxScreen() {
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           keyboardVerticalOffset={hp(1)}
         >
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()}>
-              <Ionicons name="arrow-back" size={hp(3)} color="white" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => openUserProfile()}>
-              <Image
-                source={{
-                  uri:
-                    profilePhoto ||
-                    "https://randomuser.me/api/portraits/lego/1.jpg",
-                }}
-                style={styles.userImage}
-              />
-            </TouchableOpacity>
-            <Text style={styles.headerText}>{name}</Text>
-            {/* three-dot menu placed in header so it's visible even when navigator header is hidden */}
-            <TouchableOpacity
-              style={{ marginLeft: "auto", paddingHorizontal: wp(3) }}
-              onPress={() => setActionModalVisible(true)}
-            >
-              <Ionicons name="ellipsis-vertical" size={hp(3)} color="#fff" />
-            </TouchableOpacity>
-          </View>
+          <LinearGradient
+            colors={["#6366f1", "#8b5cf6", "#c084fc"]}
+            style={styles.headerGradient}
+          >
+            <View style={styles.header}>
+              <TouchableOpacity
+                onPress={() => navigation.goBack()}
+                style={styles.backButton}
+              >
+                <Ionicons name="arrow-back" size={24} color="white" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => openUserProfile()}
+                style={styles.userImageWrapper}
+              >
+                <Image
+                  source={{
+                    uri:
+                      profilePhoto ||
+                      "https://randomuser.me/api/portraits/lego/1.jpg",
+                  }}
+                  style={styles.userImage}
+                />
+              </TouchableOpacity>
+              <View style={styles.headerTextContainer}>
+                <Text style={styles.headerText} numberOfLines={1}>
+                  {name}
+                </Text>
+                <Text style={styles.headerStatus}>Active now</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.menuButton}
+                onPress={() => setActionModalVisible(true)}
+              >
+                <Ionicons name="ellipsis-vertical" size={22} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          </LinearGradient>
 
           {/* Profile Modal shown when tapping the user image */}
           <Modal
@@ -609,24 +632,28 @@ export default function ChatBoxScreen() {
           <View
             style={[
               styles.inputContainer,
-              { paddingBottom: Math.max(insets.bottom, hp(1.5)) },
+              { paddingBottom: Math.max(insets.bottom, 8) },
             ]}
           >
-            <TextInput
-              style={styles.input}
-              placeholder="Type your message..."
-              value={input}
-              onChangeText={setInput}
-              returnKeyType="send"
-              onSubmitEditing={sendMessage}
-            />
-            <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
-              <Ionicons
-                name={editingMessage ? "pencil-outline" : "send-outline"}
-                size={hp(3)}
-                color="#fff"
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={styles.input}
+                placeholder="Type a message..."
+                placeholderTextColor="#94a3b8"
+                value={input}
+                onChangeText={setInput}
+                returnKeyType="send"
+                onSubmitEditing={sendMessage}
+                multiline
               />
-            </TouchableOpacity>
+              <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
+                <Ionicons
+                  name={editingMessage ? "checkmark" : "send"}
+                  size={20}
+                  color="#fff"
+                />
+              </TouchableOpacity>
+            </View>
           </View>
           {/* Action modal for Give rating / Block / Report */}
           <Modal
@@ -716,93 +743,205 @@ export default function ChatBoxScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#ece5dd" },
-  container: { flex: 1 },
+  safeArea: { flex: 1, backgroundColor: "#f8fafc" },
+  container: { flex: 1, backgroundColor: "#f8fafc" },
+
+  headerGradient: {
+    paddingTop: Platform.OS === "ios" ? 50 : 12,
+    paddingBottom: 12,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    shadowColor: "#6366f1",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
   header: {
-    paddingTop: Platform.OS === "ios" ? hp(5) : hp(2.5),
-    paddingBottom: hp(1.8),
-    backgroundColor: "#075e54",
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: wp(3),
-    borderBottomWidth: 0.3,
-    borderBottomColor: "#ccc",
-    elevation: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
-  userImage: {
-    width: hp(4.5),
-    height: hp(4.5),
-    borderRadius: hp(2.25),
-    marginLeft: wp(3),
-    marginRight: wp(2),
-  },
-  headerText: { color: "white", fontSize: hp(2.1), fontWeight: "600" },
-  chatContainer: { paddingHorizontal: wp(3), paddingVertical: hp(1) },
-  messageWrapper: { marginVertical: hp(0.5) },
-  alignRight: { alignSelf: "flex-end" },
-  alignLeft: { alignSelf: "flex-start" },
-  messageBubble: {
-    paddingVertical: hp(1),
-    paddingHorizontal: wp(3),
-    borderRadius: wp(3),
-    maxWidth: "80%",
-    elevation: 2,
-  },
-  myMessage: { backgroundColor: "#b7ffa5ff", borderTopRightRadius: 5 },
-  theirMessage: { backgroundColor: "#fff", borderTopLeftRadius: 5 },
-  messageText: { fontSize: hp(1.9), color: "#000" },
-  timeWrapper: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    marginTop: hp(0.4),
-  },
-  timeText: { fontSize: hp(1.3), color: "#555" },
-  readText: { fontSize: hp(1.3), color: "#007aff" },
-  inputContainer: {
-    flexDirection: "row",
-    backgroundColor: "#f0f0f0",
-    alignItems: "center",
-    borderTopWidth: 0.5,
-    borderColor: "#ddd",
-    paddingHorizontal: wp(3),
-    paddingTop: hp(1),
-    elevation: 6,
-  },
-  input: {
-    flex: 1,
-    borderRadius: wp(6),
-    backgroundColor: "#fff",
-    paddingHorizontal: wp(4),
-    fontSize: hp(2),
-    height: hp(6),
-    marginRight: wp(2),
-  },
-  sendButton: {
-    width: hp(5),
-    height: hp(5),
-    borderRadius: hp(2.5),
-    backgroundColor: "#128c7e",
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
     justifyContent: "center",
     alignItems: "center",
   },
+  userImageWrapper: {
+    marginLeft: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  userImage: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    borderWidth: 2,
+    borderColor: "rgba(255, 255, 255, 0.3)",
+  },
+  headerTextContainer: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  headerText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
+  headerStatus: {
+    color: "rgba(255, 255, 255, 0.8)",
+    fontSize: 11,
+    marginTop: 2,
+    fontWeight: "500",
+  },
+  menuButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  chatContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    flexGrow: 1,
+  },
+  messageWrapper: {
+    marginVertical: 4,
+    maxWidth: "80%",
+  },
+  alignRight: { alignSelf: "flex-end" },
+  alignLeft: { alignSelf: "flex-start" },
+  messageBubble: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 18,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  myMessage: {
+    backgroundColor: "#8b5cf6",
+    borderBottomRightRadius: 4,
+  },
+  theirMessage: {
+    backgroundColor: "#ffffff",
+    borderBottomLeftRadius: 4,
+    borderWidth: 1,
+    borderColor: "#f1f5f9",
+  },
+  messageText: {
+    fontSize: 15,
+    color: "#1e293b",
+    lineHeight: 20,
+  },
+  myMessageText: {
+    color: "#ffffff",
+  },
+  timeWrapper: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    marginTop: 4,
+    gap: 4,
+  },
+  timeText: {
+    fontSize: 11,
+    color: "#64748b",
+    fontWeight: "500",
+  },
+  readText: {
+    fontSize: 11,
+    color: "rgba(255, 255, 255, 0.9)",
+    fontWeight: "600",
+    marginLeft: 2,
+  },
+
+  inputContainer: {
+    backgroundColor: "#ffffff",
+    borderTopWidth: 1,
+    borderTopColor: "#f1f5f9",
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f8fafc",
+    borderRadius: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  input: {
+    flex: 1,
+    fontSize: 15,
+    color: "#1e293b",
+    maxHeight: 100,
+    paddingVertical: 4,
+  },
+  sendButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#8b5cf6",
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 8,
+    shadowColor: "#8b5cf6",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+
   actionModalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: "rgba(0,0,0,0.6)",
     justifyContent: "center",
     alignItems: "center",
   },
   actionModalBox: {
-    width: "80%",
+    width: "85%",
     backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
+    padding: 20,
     alignItems: "stretch",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 12,
   },
   actionItem: {
-    paddingVertical: 12,
-    paddingHorizontal: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    borderBottomColor: "#f1f5f9",
+    borderRadius: 8,
   },
-  actionText: { fontSize: 16, fontWeight: "600", textAlign: "center" },
+  actionText: {
+    fontSize: 15,
+    fontWeight: "600",
+    textAlign: "center",
+    color: "#1e293b",
+  },
 });

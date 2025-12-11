@@ -1,29 +1,29 @@
 // app/screens/MyserviceScreen.tsx
-import React, { useState, useEffect } from "react";
+import BottomTab from "@/components/BottomTabs";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import FloatingAddButton from "@/components/FloatingAddButton";
+import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { LinearGradient } from "expo-linear-gradient";
+import { useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
   Dimensions,
+  FlatList,
   Modal,
   Platform,
-  Alert,
   ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
-import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../navigation/AppNavigator";
-import BottomTab from "@/components/BottomTabs";
-import FloatingAddButton from "@/components/FloatingAddButton";
-import AddService from "./AddServiceScreen";
-import ErrorBoundary from "@/components/ErrorBoundary";
-import { openModal, closeModal } from "@/components/ModalHost";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import serviceProviders from "../services/serviceProviders";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { RootStackParamList } from "../navigation/AppNavigator";
+import serviceProviders from "../services/serviceProviders";
+import AddService from "./AddServiceScreen";
 
 const { width } = Dimensions.get("window");
 
@@ -98,45 +98,109 @@ export default function MyserviceScreen({ navigation }: Props) {
   }, []);
 
   const renderJob = ({ item }: { item: any }) => (
-    <LinearGradient colors={["#eef2ff", "#e0e7ff"]} style={styles.jobCard}>
-      <View style={styles.jobInfo}>
-        <Text style={styles.jobServiceTypesIds}>
-          {item.serviceTypes.map((st: any) => st.name).join(", ")}
-        </Text>
-        <Text
-          style={styles.jobAmount}
-        >{`${item.amount} ${item.currency}/${item.rateType}`}</Text>
-        <Text style={styles.jobContactNumber}>{item.contactNumber}</Text>
+    <View style={styles.jobCard}>
+      <View style={styles.jobHeader}>
+        <View style={[styles.iconWrapper, { backgroundColor: "#e0e7ff" }]}>
+          <Ionicons name="briefcase" size={24} color="#8b5cf6" />
+        </View>
+        <View style={styles.jobInfo}>
+          <Text style={styles.jobServiceTypesIds}>
+            {item.serviceTypes.map((st: any) => st.name).join(", ")}
+          </Text>
+          <View style={styles.jobDetails}>
+            <View style={styles.detailRow}>
+              <Ionicons name="cash-outline" size={16} color="#10b981" />
+              <Text style={styles.jobAmount}>
+                {`${item.amount} ${item.currency}/${item.rateType}`}
+              </Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Ionicons name="call-outline" size={16} color="#64748b" />
+              <Text style={styles.jobContactNumber}>{item.contactNumber}</Text>
+            </View>
+          </View>
+        </View>
       </View>
 
       <View style={styles.actionButtons}>
         <TouchableOpacity
-          style={styles.iconButton}
+          style={[styles.iconButton, styles.editButton]}
           onPress={() => handleEdit(item)}
         >
-          <Ionicons name="pencil" size={22} color="#4f46e5" />
+          <Ionicons name="pencil" size={20} color="#8b5cf6" />
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.iconButton, { marginLeft: 12 }]}
+          style={[styles.iconButton, styles.deleteButton]}
           onPress={() => handleDelete(item.id)}
         >
-          <Ionicons name="trash" size={22} color="#ef4444" />
+          <Ionicons name="trash" size={20} color="#ef4444" />
         </TouchableOpacity>
       </View>
-    </LinearGradient>
+    </View>
   );
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <Text style={styles.headerTitle}>My Services</Text>
-        <FlatList
-          data={jobList}
-          keyExtractor={(item) => item.id}
-          renderItem={renderJob}
-          contentContainerStyle={{ paddingHorizontal: 15, paddingBottom: 100 }}
-          showsVerticalScrollIndicator={false}
-        />
+      <View style={{ flex: 1 }}>
+        {/* Gradient Header */}
+        <LinearGradient
+          colors={["#6366f1", "#8b5cf6", "#c084fc"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.header}
+        >
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+          >
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>My Services</Text>
+          <View style={styles.headerIcon}>
+            <Ionicons name="briefcase" size={24} color="#fff" />
+          </View>
+        </LinearGradient>
+
+        <View style={styles.container}>
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#8b5cf6" />
+              <Text style={styles.loadingText}>Loading services...</Text>
+            </View>
+          ) : jobList.length === 0 ? (
+            <View style={styles.emptyState}>
+              <View
+                style={[
+                  styles.iconWrapper,
+                  {
+                    width: 80,
+                    height: 80,
+                    borderRadius: 40,
+                    backgroundColor: "#e0e7ff",
+                  },
+                ]}
+              >
+                <Ionicons name="briefcase-outline" size={40} color="#8b5cf6" />
+              </View>
+              <Text style={styles.emptyTitle}>No Services Yet</Text>
+              <Text style={styles.emptyText}>
+                Tap the + button below to add your first service
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={jobList}
+              keyExtractor={(item) => item.id}
+              renderItem={renderJob}
+              contentContainerStyle={{
+                paddingHorizontal: 16,
+                paddingTop: 12,
+                paddingBottom: 100,
+              }}
+              showsVerticalScrollIndicator={false}
+            />
+          )}
+        </View>
 
         {/* ✅ Floating Add Button */}
         {/* Floating Add Button */}
@@ -155,16 +219,18 @@ export default function MyserviceScreen({ navigation }: Props) {
           transparent={false}
           onRequestClose={() => setModalOpen(false)}
         >
-          <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
+          <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }}>
             <View style={styles.modalHeader}>
               <TouchableOpacity
                 onPress={() => setModalOpen(false)}
-                style={{ padding: 8 }}
+                style={styles.modalBackButton}
               >
-                <Ionicons name="arrow-back" size={24} color="#1e293b" />
+                <Ionicons name="close" size={28} color="#1e293b" />
               </TouchableOpacity>
-              <Text style={styles.modalTitle}>Add Service</Text>
-              <View style={{ width: 32 }} /> {/* empty right spacer */}
+              <Text style={styles.modalTitle}>
+                {editingService ? "Edit Service" : "Add Service"}
+              </Text>
+              <View style={{ width: 40 }} />
             </View>
 
             <ScrollView contentContainerStyle={{ padding: 16 }}>
@@ -192,135 +258,270 @@ export default function MyserviceScreen({ navigation }: Props) {
           >
             <View style={styles.modalOverlay}>
               <View style={styles.confirmBox}>
+                <View
+                  style={[
+                    styles.iconWrapper,
+                    {
+                      backgroundColor: "#fee2e2",
+                      width: 60,
+                      height: 60,
+                      borderRadius: 30,
+                      marginBottom: 16,
+                    },
+                  ]}
+                >
+                  <Ionicons name="warning" size={32} color="#ef4444" />
+                </View>
+                <Text style={styles.confirmTitle}>Delete Service?</Text>
                 <Text style={styles.confirmText}>
-                  Are you sure you want to delete this service?
+                  Are you sure you want to delete this service? This action
+                  cannot be undone.
                 </Text>
                 <View style={styles.confirmButtons}>
                   <TouchableOpacity
-                    style={[styles.confirmBtn, { backgroundColor: "#ef4444" }]}
+                    style={[styles.confirmBtn, styles.confirmBtnCancel]}
+                    onPress={() => setConfirmVisible(false)}
+                  >
+                    <Text style={styles.confirmBtnTextCancel}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.confirmBtn, styles.confirmBtnDelete]}
                     onPress={() => {
                       if (selectedServiceId)
                         removeProviderService(selectedServiceId);
                       setConfirmVisible(false);
                     }}
                   >
-                    <Text style={styles.confirmBtnText}>Yes</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.confirmBtn, { backgroundColor: "#6b7280" }]}
-                    onPress={() => setConfirmVisible(false)}
-                  >
-                    <Text style={styles.confirmBtnText}>No</Text>
+                    <Text style={styles.confirmBtnText}>Delete</Text>
                   </TouchableOpacity>
                 </View>
               </View>
             </View>
           </Modal>
         )}
-      </View>
 
-      {/* ✅ Consistent bottom tab */}
-      <BottomTab />
+        {/* ✅ Consistent bottom tab */}
+        <BottomTab />
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#f8fafc" },
-  container: { flex: 1, paddingTop: 10 },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#1e293b",
-    marginLeft: 15,
-    marginBottom: 15,
-  },
-  jobCard: {
-    width: width - 30,
-    borderRadius: 20,
-    marginBottom: 15,
-    padding: 15,
+  header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 6,
-    elevation: 3,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 16,
   },
-  jobInfo: { flex: 1, paddingRight: 10 },
-  jobServiceTypesIds: {
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#fff",
+  },
+  headerIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  container: { flex: 1 },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 12,
     fontSize: 16,
-    fontWeight: "600",
-    color: "#6366f1",
-    marginBottom: 4,
+    color: "#64748b",
   },
-  jobAmount: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#10b981",
-    marginBottom: 4,
+  emptyState: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 40,
   },
-  jobContactNumber: { fontSize: 14, fontWeight: "500", color: "#374151" },
-  actionButtons: { flexDirection: "row", alignItems: "center" },
-  iconButton: {
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#1e293b",
+    marginTop: 20,
+    marginBottom: 8,
+  },
+  emptyText: {
+    fontSize: 15,
+    color: "#64748b",
+    textAlign: "center",
+    lineHeight: 22,
+  },
+  jobCard: {
     backgroundColor: "#fff",
-    borderRadius: 50,
-    padding: 8,
+    borderRadius: 16,
+    marginBottom: 12,
+    padding: 16,
     shadowColor: "#000",
     shadowOpacity: 0.08,
     shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 2,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  jobHeader: {
+    flexDirection: "row",
+    marginBottom: 12,
+  },
+  iconWrapper: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  jobInfo: { flex: 1 },
+  jobServiceTypesIds: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1e293b",
+    marginBottom: 8,
+  },
+  jobDetails: {
+    gap: 6,
+  },
+  detailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  jobAmount: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#10b981",
+  },
+  jobContactNumber: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#64748b",
+  },
+  actionButtons: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 8,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#f1f5f9",
+  },
+  iconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+  },
+  editButton: {
+    backgroundColor: "#f5f3ff",
+    borderColor: "#e9d5ff",
+  },
+  deleteButton: {
+    backgroundColor: "#fef2f2",
+    borderColor: "#fecaca",
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "center",
     alignItems: "center",
-    padding: 10,
-  },
-  modalContent: {
-    width: "100%",
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    maxHeight: "80%",
-    marginHorizontal: 20,
-    marginTop: 60,
-    padding: 12,
+    padding: 20,
   },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 15,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e2e8f0",
   },
-  modalTitle: { fontSize: 18, fontWeight: "600" },
+  modalBackButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1e293b",
+  },
   confirmBox: {
     width: "90%",
+    maxWidth: 400,
     backgroundColor: "#fff",
-    borderRadius: 15,
-    padding: 20,
+    borderRadius: 20,
+    padding: 24,
     alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  confirmTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#1e293b",
+    marginBottom: 8,
   },
   confirmText: {
-    fontSize: 16,
-    color: "#1e293b",
+    fontSize: 15,
+    color: "#64748b",
     textAlign: "center",
-    marginBottom: 20,
+    marginBottom: 24,
+    lineHeight: 22,
   },
   confirmButtons: {
     flexDirection: "row",
-    justifyContent: "space-between",
     width: "100%",
+    gap: 12,
   },
   confirmBtn: {
     flex: 1,
-    marginHorizontal: 5,
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: "center",
   },
-  confirmBtnText: { color: "#fff", fontWeight: "bold", fontSize: 15 },
+  confirmBtnCancel: {
+    backgroundColor: "#f1f5f9",
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+  },
+  confirmBtnDelete: {
+    backgroundColor: "#ef4444",
+  },
+  confirmBtnText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 15,
+  },
+  confirmBtnTextCancel: {
+    color: "#475569",
+    fontWeight: "600",
+    fontSize: 15,
+  },
 });

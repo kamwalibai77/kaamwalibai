@@ -235,17 +235,23 @@ export default function SubscriptionScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* ✅ Header same style as ChatScreen */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          {/* <Ionicons name="arrow-back" size={28} color="#4f46e5" /> */}
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Subscriptions</Text>
-        <View style={{ width: 28 }} />
-      </View>
+      {/* Modern Gradient Header */}
+      <LinearGradient
+        colors={["#6366f1", "#8b5cf6", "#c084fc"]}
+        style={styles.headerGradient}
+      >
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Plans & Pricing</Text>
+          <View style={styles.headerIcons}>
+            <TouchableOpacity style={styles.headerIconBtn}>
+              <Ionicons name="diamond-outline" size={22} color="#ffffff" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </LinearGradient>
 
       <View style={styles.container}>
-        <LinearGradient colors={["#eef2ff", "#e0e7ff"]} style={{ flex: 1 }}>
+        <View style={{ flex: 1, backgroundColor: "#f8fafc" }}>
           {/* Toggle: only show when role is not defined (e.g., guest or switchable) */}
           {!role && (
             <View style={styles.toggleContainer}>
@@ -257,9 +263,9 @@ export default function SubscriptionScreen({ navigation }: any) {
                 onPress={() => setSelectedRole("user")}
               >
                 <Ionicons
-                  name="person-outline"
-                  size={20}
-                  color={selectedRole === "user" ? "#fff" : "#6366f1"}
+                  name="person"
+                  size={18}
+                  color={selectedRole === "user" ? "#fff" : "#8b5cf6"}
                 />
                 <Text
                   style={[
@@ -267,7 +273,7 @@ export default function SubscriptionScreen({ navigation }: any) {
                     selectedRole === "user" && styles.toggleTextActive,
                   ]}
                 >
-                  User
+                  User Plans
                 </Text>
               </TouchableOpacity>
 
@@ -279,9 +285,9 @@ export default function SubscriptionScreen({ navigation }: any) {
                 onPress={() => setSelectedRole("provider")}
               >
                 <Ionicons
-                  name="briefcase-outline"
-                  size={20}
-                  color={selectedRole === "provider" ? "#fff" : "#6366f1"}
+                  name="briefcase"
+                  size={18}
+                  color={selectedRole === "provider" ? "#fff" : "#8b5cf6"}
                 />
                 <Text
                   style={[
@@ -289,7 +295,7 @@ export default function SubscriptionScreen({ navigation }: any) {
                     selectedRole === "provider" && styles.toggleTextActive,
                   ]}
                 >
-                  Service Provider
+                  Provider Plans
                 </Text>
               </TouchableOpacity>
             </View>
@@ -298,47 +304,58 @@ export default function SubscriptionScreen({ navigation }: any) {
           {/* Plans */}
           <ScrollView contentContainerStyle={styles.scroll}>
             {subscriptionDetails && (
-              <View
-                style={[
-                  styles.card,
-                  { borderWidth: 1, borderColor: "#e6eefc" },
-                ]}
-              >
-                <Text
-                  style={{ fontSize: 16, fontWeight: "700", marginBottom: 6 }}
-                >
-                  Your Subscription
-                </Text>
-                <Text style={{ fontSize: 14, color: "#334155" }}>
+              <View style={styles.currentSubCard}>
+                <View style={styles.currentSubHeader}>
+                  <Ionicons name="checkmark-circle" size={24} color="#10b981" />
+                  <Text style={styles.currentSubTitle}>
+                    Active Subscription
+                  </Text>
+                </View>
+                <Text style={styles.currentSubPlan}>
                   {subscriptionDetails.plan?.name ||
                     subscriptionDetails.plan?.duration ||
                     "Custom Plan"}
                 </Text>
-                <Text style={{ marginTop: 8, color: "#065f46" }}>
-                  {subscriptionDetails.remainingContacts != null
-                    ? `${subscriptionDetails.remainingContacts} contacts remaining`
-                    : "Contacts: N/A"}
-                </Text>
-                <Text style={{ marginTop: 6, color: "#0f172a" }}>
-                  {subscriptionDetails.remainingDays != null
-                    ? `${subscriptionDetails.remainingDays} days remaining`
-                    : "Expiry: N/A"}
-                </Text>
+                <View style={styles.currentSubDetails}>
+                  <View style={styles.currentSubDetailItem}>
+                    <Ionicons name="people" size={18} color="#8b5cf6" />
+                    <Text style={styles.currentSubDetailText}>
+                      {subscriptionDetails.remainingContacts != null
+                        ? `${subscriptionDetails.remainingContacts} contacts left`
+                        : "Contacts: N/A"}
+                    </Text>
+                  </View>
+                  <View style={styles.currentSubDetailItem}>
+                    <Ionicons name="time" size={18} color="#8b5cf6" />
+                    <Text style={styles.currentSubDetailText}>
+                      {subscriptionDetails.remainingDays != null
+                        ? `${subscriptionDetails.remainingDays} days left`
+                        : "Expiry: N/A"}
+                    </Text>
+                  </View>
+                </View>
               </View>
             )}
 
             {plansLoading ? (
-              <Text style={{ marginTop: 40 }}>Loading plans…</Text>
+              <View style={styles.emptyContainer}>
+                <View style={styles.emptyIconWrapper}>
+                  <Ionicons name="reload-circle" size={64} color="#cbd5e1" />
+                </View>
+                <Text style={styles.emptyText}>Loading plans...</Text>
+              </View>
             ) : plansError ? (
-              <View style={{ alignItems: "center", marginTop: 30 }}>
-                <Text style={{ color: "#ef4444", marginBottom: 8 }}>
-                  {plansError}
-                </Text>
+              <View style={styles.emptyContainer}>
+                <View style={styles.emptyIconWrapper}>
+                  <Ionicons
+                    name="alert-circle-outline"
+                    size={64}
+                    color="#ef4444"
+                  />
+                </View>
+                <Text style={styles.errorText}>{plansError}</Text>
                 <TouchableOpacity
-                  style={[
-                    styles.subscribeButton,
-                    { backgroundColor: "#ddd", paddingVertical: 10 },
-                  ]}
+                  style={styles.retryButton}
                   onPress={async () => {
                     setPlansLoading(true);
                     setPlansError(null);
@@ -357,7 +374,8 @@ export default function SubscriptionScreen({ navigation }: any) {
                     }
                   }}
                 >
-                  <Text style={{ fontWeight: "700" }}>Retry</Text>
+                  <Ionicons name="refresh" size={18} color="#fff" />
+                  <Text style={styles.retryButtonText}>Retry</Text>
                 </TouchableOpacity>
               </View>
             ) : (
@@ -369,29 +387,54 @@ export default function SubscriptionScreen({ navigation }: any) {
                 )
                 .map((plan) => (
                   <View key={plan.id} style={styles.card}>
+                    <View style={styles.planIconWrapper}>
+                      <Ionicons
+                        name={selectedRole === "user" ? "person" : "briefcase"}
+                        size={28}
+                        color="#8b5cf6"
+                      />
+                    </View>
+                    <Text style={styles.planDuration}>{plan.duration}</Text>
                     <Text style={styles.price}>{plan.price}</Text>
                     {selectedRole === "user" ? (
-                      <Text style={styles.details}>
-                        {plan.contacts ?? 0} Contacts • {plan.duration}
-                      </Text>
-                    ) : (
-                      <Text style={styles.details}>{plan.duration}</Text>
-                    )}
+                      <View style={styles.planFeature}>
+                        <Ionicons
+                          name="checkmark-circle"
+                          size={16}
+                          color="#10b981"
+                        />
+                        <Text style={styles.planFeatureText}>
+                          {plan.contacts ?? 0} Contacts
+                        </Text>
+                      </View>
+                    ) : null}
 
                     {purchasedPlan === plan.duration ? (
-                      <Text style={{ color: "green", fontWeight: "700" }}>
-                        Purchased ✅
-                      </Text>
+                      <View style={styles.purchasedBadge}>
+                        <Ionicons
+                          name="checkmark-circle"
+                          size={18}
+                          color="#10b981"
+                        />
+                        <Text style={styles.purchasedText}>Active Plan</Text>
+                      </View>
                     ) : (
                       <TouchableOpacity
                         style={styles.subscribeButton}
                         onPress={() => handleSubscribe(plan)}
                       >
                         <LinearGradient
-                          colors={["#6366f1", "#4f46e5"]}
+                          colors={["#8b5cf6", "#6366f1"]}
                           style={styles.subscribeGradient}
                         >
-                          <Text style={styles.subscribeText}>Subscribe</Text>
+                          <Text style={styles.subscribeText}>
+                            Subscribe Now
+                          </Text>
+                          <Ionicons
+                            name="arrow-forward"
+                            size={16}
+                            color="#fff"
+                          />
                         </LinearGradient>
                       </TouchableOpacity>
                     )}
@@ -399,7 +442,7 @@ export default function SubscriptionScreen({ navigation }: any) {
                 ))
             )}
           </ScrollView>
-        </LinearGradient>
+        </View>
 
         {/* ✅ BottomTab exactly like ChatScreen */}
         <BottomTab />
@@ -409,65 +452,227 @@ export default function SubscriptionScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#fff" },
-  container: { flex: 1, backgroundColor: "#fff" },
+  safeArea: { flex: 1, backgroundColor: "#f8fafc" },
+  container: { flex: 1, backgroundColor: "#f8fafc" },
 
+  headerGradient: {
+    paddingTop: 12,
+    paddingBottom: 18,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    backgroundColor: "#fff",
-    borderBottomWidth: 0.5,
-    borderBottomColor: "#d1d5db",
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 12,
   },
-  headerTitle: { fontSize: 18, fontWeight: "700", color: "#4f46e5" },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#ffffff",
+    letterSpacing: 0.5,
+    textShadowColor: "rgba(0, 0, 0, 0.2)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  headerIcons: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  headerIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
 
   toggleContainer: {
     flexDirection: "row",
     justifyContent: "center",
-    marginTop: 15,
-    marginBottom: 10,
+    marginTop: 20,
+    marginBottom: 16,
+    paddingHorizontal: 16,
   },
   toggleButton: {
     flexDirection: "row",
     alignItems: "center",
-    borderWidth: 1.5,
-    borderColor: "#6366f1",
+    borderWidth: 2,
+    borderColor: "#8b5cf6",
     paddingVertical: 10,
-    paddingHorizontal: 18,
-    borderRadius: 25,
+    paddingHorizontal: 20,
+    borderRadius: 20,
     marginHorizontal: 6,
     backgroundColor: "#fff",
-  },
-  toggleActive: { backgroundColor: "#6366f1" },
-  toggleText: {
-    marginLeft: 6,
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#6366f1",
-  },
-  toggleTextActive: { color: "#fff", fontWeight: "700" },
-  scroll: { padding: 20, alignItems: "center", paddingBottom: 100 },
-  card: {
-    width: width * 0.85,
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 18,
-    alignItems: "center",
-    shadowColor: "#000",
+    shadowColor: "#8b5cf6",
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 6,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  toggleActive: {
+    backgroundColor: "#8b5cf6",
+    shadowOpacity: 0.3,
     elevation: 4,
   },
+  toggleText: {
+    marginLeft: 6,
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#8b5cf6",
+  },
+  toggleTextActive: { color: "#fff", fontWeight: "700" },
+
+  scroll: {
+    padding: 16,
+    alignItems: "center",
+    paddingBottom: 100,
+  },
+
+  currentSubCard: {
+    width: width * 0.9,
+    backgroundColor: "#ffffff",
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: "#10b981",
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 12,
+    elevation: 6,
+    borderWidth: 2,
+    borderColor: "#d1fae5",
+  },
+  currentSubHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  currentSubTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#10b981",
+    marginLeft: 8,
+  },
+  currentSubPlan: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1e293b",
+    marginBottom: 12,
+  },
+  currentSubDetails: {
+    gap: 8,
+  },
+  currentSubDetailItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 6,
+  },
+  currentSubDetailText: {
+    fontSize: 14,
+    color: "#64748b",
+    marginLeft: 8,
+    fontWeight: "600",
+  },
+
+  emptyContainer: {
+    alignItems: "center",
+    paddingVertical: 60,
+    paddingHorizontal: 40,
+  },
+  emptyIconWrapper: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "#f1f5f9",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: "#64748b",
+    textAlign: "center",
+    fontWeight: "600",
+  },
+  errorText: {
+    fontSize: 15,
+    color: "#ef4444",
+    textAlign: "center",
+    marginBottom: 16,
+    fontWeight: "600",
+  },
+  retryButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#8b5cf6",
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 20,
+    gap: 8,
+    shadowColor: "#8b5cf6",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  retryButtonText: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "700",
+  },
+
+  card: {
+    width: width * 0.9,
+    backgroundColor: "#ffffff",
+    borderRadius: 20,
+    padding: 24,
+    marginBottom: 16,
+    alignItems: "center",
+    shadowColor: "#8b5cf6",
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 12,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: "#f1f5f9",
+  },
+  planIconWrapper: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "#f1f5f9",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  planDuration: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1e293b",
+    marginBottom: 8,
+  },
   price: {
-    fontSize: 26,
-    fontWeight: "bold",
-    color: "#4f46e5",
-    marginBottom: 6,
+    fontSize: 32,
+    fontWeight: "800",
+    color: "#8b5cf6",
+    marginBottom: 12,
+    letterSpacing: -0.5,
+  },
+  planFeature: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+    gap: 6,
+  },
+  planFeatureText: {
+    fontSize: 14,
+    color: "#64748b",
+    fontWeight: "600",
   },
   details: {
     fontSize: 16,
@@ -475,11 +680,38 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     textAlign: "center",
   },
-  subscribeButton: { width: "100%", borderRadius: 25, overflow: "hidden" },
+  purchasedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#d1fae5",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    gap: 6,
+  },
+  purchasedText: {
+    color: "#10b981",
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  subscribeButton: {
+    width: "100%",
+    borderRadius: 24,
+    overflow: "hidden",
+    marginTop: 8,
+  },
   subscribeGradient: {
-    paddingVertical: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
+    gap: 8,
   },
-  subscribeText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  subscribeText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
 });

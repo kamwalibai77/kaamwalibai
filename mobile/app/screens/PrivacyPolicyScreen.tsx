@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
+import { LinearGradient } from "expo-linear-gradient";
 import {
   ScrollView,
   StyleSheet,
@@ -13,117 +13,155 @@ import BottomTab from "../../components/BottomTabs";
 export default function PrivacyPolicyScreen({ navigation }: any) {
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* 🔙 Header with Back Button */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
+      <View style={{ flex: 1 }}>
+        {/* Gradient Header */}
+        <LinearGradient
+          colors={["#6366f1", "#8b5cf6", "#c084fc"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.header}
         >
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        <Ionicons
-          name="shield-checkmark-outline"
-          size={28}
-          color="#fff"
-          style={{ marginLeft: 8 }}
-        />
-        <Text style={styles.headerText}>Privacy & Policy</Text>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+          >
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Privacy Policy</Text>
+          <View style={styles.headerIcon}>
+            <Ionicons name="shield-checkmark" size={24} color="#fff" />
+          </View>
+        </LinearGradient>
+
+        {/* 📝 Scrollable content */}
+        <ScrollView
+          contentContainerStyle={styles.scrollContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Intro */}
+          <View style={styles.introSection}>
+            <Text style={styles.introTitle}>Your Privacy Matters</Text>
+            <Text style={styles.introText}>
+              At <Text style={styles.bold}>Kamwali Bai</Text>, we respect your
+              privacy and are committed to protecting your personal data. This
+              Privacy Policy explains how we collect, use, and safeguard your
+              information when you use our app and services.
+            </Text>
+          </View>
+
+          {/* Data Collection */}
+          <View style={styles.section}>
+            <View style={[styles.iconWrapper, { backgroundColor: "#dbeafe" }]}>
+              <Ionicons name="document-text" size={24} color="#3b82f6" />
+            </View>
+            <View style={styles.sectionContent}>
+              <Text style={styles.sectionTitle}>Information We Collect</Text>
+              <Text style={styles.listItem}>
+                • Personal details (name, phone, address)
+              </Text>
+              <Text style={styles.listItem}>
+                • Identity proofs (Aadhar, PAN, if provided)
+              </Text>
+              <Text style={styles.listItem}>
+                • Service preferences and feedback
+              </Text>
+              <Text style={styles.listItem}>
+                • Basic device information for app performance
+              </Text>
+            </View>
+          </View>
+
+          {/* Data Usage */}
+          <View style={styles.section}>
+            <View style={[styles.iconWrapper, { backgroundColor: "#e0e7ff" }]}>
+              <Ionicons name="lock-closed" size={24} color="#8b5cf6" />
+            </View>
+            <View style={styles.sectionContent}>
+              <Text style={styles.sectionTitle}>How We Use Your Data</Text>
+              <Text style={styles.listItem}>
+                • To provide reliable maid services
+              </Text>
+              <Text style={styles.listItem}>
+                • To verify and match service providers
+              </Text>
+              <Text style={styles.listItem}>
+                • To improve user experience and app performance
+              </Text>
+              <Text style={styles.listItem}>
+                • To communicate important updates or offers
+              </Text>
+            </View>
+          </View>
+
+          {/* Data Sharing */}
+          <View style={styles.section}>
+            <View style={[styles.iconWrapper, { backgroundColor: "#fef3c7" }]}>
+              <Ionicons name="people" size={24} color="#f59e0b" />
+            </View>
+            <View style={styles.sectionContent}>
+              <Text style={styles.sectionTitle}>Data Sharing</Text>
+              <Text style={styles.text}>
+                We <Text style={styles.bold}>do not sell or rent</Text> your
+                personal data. Information is only shared with:
+              </Text>
+              <Text style={styles.listItem}>
+                • Verified service providers to fulfill your request
+              </Text>
+              <Text style={styles.listItem}>
+                • Legal authorities, if required by law
+              </Text>
+            </View>
+          </View>
+
+          {/* Data Security */}
+          <View style={styles.section}>
+            <View style={[styles.iconWrapper, { backgroundColor: "#d1fae5" }]}>
+              <Ionicons name="shield" size={24} color="#10b981" />
+            </View>
+            <View style={styles.sectionContent}>
+              <Text style={styles.sectionTitle}>Data Security</Text>
+              <Text style={styles.text}>
+                We use strict security measures to safeguard your data against
+                unauthorized access, misuse, or disclosure. However, no method
+                of transmission is 100% secure, and we encourage safe usage
+                practices.
+              </Text>
+            </View>
+          </View>
+
+          {/* Contact */}
+          <View style={styles.section}>
+            <View style={[styles.iconWrapper, { backgroundColor: "#fee2e2" }]}>
+              <Ionicons name="mail" size={24} color="#ef4444" />
+            </View>
+            <View style={styles.sectionContent}>
+              <Text style={styles.sectionTitle}>Contact Us</Text>
+              <Text style={styles.text}>
+                If you have any questions about this Privacy Policy, please
+                contact us at:
+              </Text>
+              <View style={styles.contactItem}>
+                <Ionicons name="location" size={18} color="#8b5cf6" />
+                <Text style={styles.contactText}>
+                  Vijayshailya Complex, First Floor, {"\n"}Trimurti Nagar,
+                  Nagpur, Maharashtra – 440022
+                </Text>
+              </View>
+              <View style={styles.contactItem}>
+                <Ionicons name="call" size={18} color="#8b5cf6" />
+                <Text style={styles.contactText}>+91-XXXXXXXXXX</Text>
+              </View>
+              <View style={styles.contactItem}>
+                <Ionicons name="mail" size={18} color="#8b5cf6" />
+                <Text style={styles.contactText}>support@kamwalibai.in</Text>
+              </View>
+            </View>
+          </View>
+        </ScrollView>
+
+        {/* 🔻 Bottom Tab */}
+        <BottomTab />
       </View>
-
-      {/* 📝 Scrollable content */}
-      <ScrollView
-        contentContainerStyle={styles.scrollContainer}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Intro */}
-        <View style={styles.section}>
-          <Text style={styles.title}>Your Privacy Matters</Text>
-          <Text style={styles.text}>
-            At <Text style={styles.bold}>Kamwali Bai</Text>, we respect your
-            privacy and are committed to protecting your personal data. This
-            Privacy Policy explains how we collect, use, and safeguard your
-            information when you use our app and services.
-          </Text>
-        </View>
-
-        {/* Data Collection */}
-        <View style={styles.section}>
-          <Ionicons name="document-text-outline" size={22} color="#075e54" />
-          <Text style={styles.title}>Information We Collect</Text>
-          <Text style={styles.text}>
-            • Personal details (name, phone, address).
-          </Text>
-          <Text style={styles.text}>
-            • Identity proofs (Aadhar, PAN, if provided).
-          </Text>
-          <Text style={styles.text}>• Service preferences and feedback.</Text>
-          <Text style={styles.text}>
-            • Basic device information for app performance.
-          </Text>
-        </View>
-
-        {/* Data Usage */}
-        <View style={styles.section}>
-          <Ionicons name="lock-closed-outline" size={22} color="#075e54" />
-          <Text style={styles.title}>How We Use Your Data</Text>
-          <Text style={styles.text}>• To provide reliable maid services.</Text>
-          <Text style={styles.text}>
-            • To verify and match service providers.
-          </Text>
-          <Text style={styles.text}>
-            • To improve user experience and app performance.
-          </Text>
-          <Text style={styles.text}>
-            • To communicate important updates or offers.
-          </Text>
-        </View>
-
-        {/* Data Sharing */}
-        <View style={styles.section}>
-          <Ionicons name="people-outline" size={22} color="#075e54" />
-          <Text style={styles.title}>Data Sharing</Text>
-          <Text style={styles.text}>
-            We <Text style={styles.bold}>do not sell or rent</Text> your
-            personal data. Information is only shared with:
-          </Text>
-          <Text style={styles.text}>
-            • Verified service providers to fulfill your request.
-          </Text>
-          <Text style={styles.text}>
-            • Legal authorities, if required by law.
-          </Text>
-        </View>
-
-        {/* Data Security */}
-        <View style={styles.section}>
-          <Ionicons name="shield-outline" size={22} color="#075e54" />
-          <Text style={styles.title}>Data Security</Text>
-          <Text style={styles.text}>
-            We use strict security measures to safeguard your data against
-            unauthorized access, misuse, or disclosure. However, no method of
-            transmission is 100% secure, and we encourage safe usage practices.
-          </Text>
-        </View>
-
-        {/* Contact */}
-        <View style={styles.section}>
-          <Ionicons name="mail-outline" size={22} color="#075e54" />
-          <Text style={styles.title}>Contact Us</Text>
-          <Text style={styles.text}>
-            If you have any questions about this Privacy Policy, please contact
-            us at:
-          </Text>
-          <Text style={styles.text}>
-            📍 Vijayshailya Complex, First Floor, {"\n"}Trimurti Nagar, Nagpur,
-            Maharashtra – 440022
-          </Text>
-          <Text style={styles.text}>📞 Phone: +91-XXXXXXXXXX</Text>
-          <Text style={styles.text}>✉️ Email: support@kamwalibai.in</Text>
-        </View>
-      </ScrollView>
-
-      {/* 🔻 Bottom Tab */}
-      <BottomTab />
     </SafeAreaView>
   );
 }
@@ -131,52 +169,124 @@ export default function PrivacyPolicyScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#fff",
-  },
-  scrollContainer: {
-    paddingBottom: 100,
+    backgroundColor: "#f8fafc",
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#075e54",
-    paddingVertical: 15,
-    paddingHorizontal: 20,
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 16,
   },
   backButton: {
-    marginRight: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  headerText: {
-    color: "white",
+  headerTitle: {
     fontSize: 20,
-    fontWeight: "bold",
-    marginLeft: 5,
+    fontWeight: "700",
+    color: "#fff",
+  },
+  headerIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  scrollContainer: {
+    paddingBottom: 120,
+    paddingTop: 8,
+    backgroundColor: "#f8fafc",
+  },
+  introSection: {
+    backgroundColor: "#fff",
+    marginVertical: 8,
+    marginHorizontal: 16,
+    borderRadius: 16,
+    padding: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: "#8b5cf6",
+    shadowColor: "#8b5cf6",
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  introTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#8b5cf6",
+    marginBottom: 12,
+  },
+  introText: {
+    fontSize: 15,
+    color: "#475569",
+    lineHeight: 24,
   },
   section: {
-    backgroundColor: "white",
+    flexDirection: "row",
+    backgroundColor: "#fff",
     marginVertical: 8,
-    marginHorizontal: 12,
-    borderRadius: 10,
-    padding: 15,
+    marginHorizontal: 16,
+    borderRadius: 16,
+    padding: 16,
     shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 1 },
-    shadowRadius: 3,
-    elevation: 2,
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 8,
+    elevation: 3,
   },
-  title: {
+  iconWrapper: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 14,
+  },
+  sectionContent: {
+    flex: 1,
+  },
+  sectionTitle: {
     fontSize: 18,
-    fontWeight: "bold",
-    color: "#075e54",
-    marginBottom: 6,
+    fontWeight: "700",
+    color: "#1e293b",
+    marginBottom: 10,
   },
   text: {
     fontSize: 15,
-    color: "#333",
-    marginBottom: 4,
-    lineHeight: 22,
+    color: "#475569",
+    lineHeight: 24,
+    marginBottom: 8,
+  },
+  listItem: {
+    fontSize: 15,
+    color: "#475569",
+    lineHeight: 24,
+    marginBottom: 6,
+    paddingLeft: 8,
   },
   bold: {
-    fontWeight: "bold",
+    fontWeight: "700",
+    color: "#1e293b",
+  },
+  contactItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginTop: 12,
+    gap: 10,
+  },
+  contactText: {
+    fontSize: 15,
+    color: "#475569",
+    lineHeight: 22,
+    flex: 1,
   },
 });

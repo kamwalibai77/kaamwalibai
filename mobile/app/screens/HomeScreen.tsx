@@ -1,6 +1,6 @@
 // app/screens/HomeScreen.tsx
 import BottomTab from "@/components/BottomTabs";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
@@ -513,18 +513,45 @@ export default function HomeScreen({ navigation }: Props) {
           style={styles.providerImage}
           resizeMode="cover"
         />
+        <LinearGradient
+          colors={["transparent", "rgba(0,0,0,0.6)"]}
+          style={styles.imageOverlay}
+        >
+          <View style={styles.verifiedBadge}>
+            <Ionicons name="checkmark-circle" size={12} color="#10b981" />
+            <Text style={styles.verifiedText}>Verified</Text>
+          </View>
+        </LinearGradient>
       </View>
       <View style={styles.providerInfo}>
         <Text style={styles.providerName} numberOfLines={1}>
           {item.provider.name}
         </Text>
-        <Text style={styles.providerService} numberOfLines={1}>
-          {item.serviceTypes.map((st: any) => st.name).join(", ")}
-        </Text>
-        <Text style={styles.providerArea} numberOfLines={1}>
-          📍 {item.address}
-        </Text>
+        <View style={styles.ratingRow}>
+          {[1, 2, 3, 4, 5].map((star) => (
+            <Ionicons
+              key={star}
+              name={star <= 4 ? "star" : "star-outline"}
+              size={9}
+              color="#fbbf24"
+            />
+          ))}
+          <Text style={styles.ratingText}>4.5</Text>
+        </View>
+        <View style={styles.serviceBadge}>
+          <MaterialCommunityIcons name="broom" size={9} color="#8b5cf6" />
+          <Text style={styles.providerService} numberOfLines={1}>
+            {item.serviceTypes.map((st: any) => st.name).join(", ")}
+          </Text>
+        </View>
+        <View style={styles.locationRow}>
+          <Ionicons name="location-outline" size={9} color="#94a3b8" />
+          <Text style={styles.providerArea} numberOfLines={1}>
+            {item.address}
+          </Text>
+        </View>
         <View style={styles.providerPriceRow}>
+          <Ionicons name="cash-outline" size={11} color="#8b5cf6" />
           <Text style={styles.providerPrice}>₹{item.amount}</Text>
           <Text style={styles.providerRateType}>/{item.rateType}</Text>
         </View>
@@ -1309,16 +1336,16 @@ const styles = StyleSheet.create({
   },
   providerCard: {
     flex: 1,
-    margin: 6,
-    maxWidth: "48%",
+    margin: 5,
+    maxWidth: "44%",
     backgroundColor: "#ffffff",
-    borderRadius: 16,
+    borderRadius: 14,
     overflow: "hidden",
     shadowColor: "#8b5cf6",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 5,
     borderWidth: 1,
     borderColor: "#e0e7ff",
   },
@@ -1327,9 +1354,59 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8fafc",
     position: "relative",
   },
+  imageOverlay: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: "35%",
+    justifyContent: "flex-end",
+    paddingHorizontal: 6,
+    paddingBottom: 4,
+  },
+  verifiedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.95)",
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 8,
+    alignSelf: "flex-start",
+    gap: 2,
+  },
+  verifiedText: {
+    fontSize: 8,
+    fontWeight: "700",
+    color: "#10b981",
+    letterSpacing: 0.2,
+  },
   providerInfo: {
-    padding: 8,
+    padding: 6,
     backgroundColor: "#ffffff",
+  },
+  ratingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 3,
+    gap: 1,
+  },
+  ratingText: {
+    fontSize: 9,
+    fontWeight: "700",
+    color: "#1e293b",
+    marginLeft: 2,
+  },
+  serviceBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 2,
+    gap: 2,
+  },
+  locationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 4,
+    gap: 2,
   },
 
   // Offer carousel styles - Modern premium
@@ -1410,45 +1487,45 @@ const styles = StyleSheet.create({
 
   providerImage: {
     width: "100%",
-    aspectRatio: 1.4,
+    aspectRatio: 1.2,
     borderRadius: 0,
   },
   providerName: {
     fontWeight: "800",
-    fontSize: 13,
+    fontSize: 11,
     color: "#1e293b",
-    marginBottom: 3,
+    marginBottom: 2,
     letterSpacing: 0.2,
   },
   providerService: {
     color: "#64748b",
-    fontSize: 10,
-    marginBottom: 3,
+    fontSize: 9,
     fontWeight: "600",
+    flex: 1,
   },
   providerArea: {
-    fontSize: 9,
+    fontSize: 8,
     color: "#94a3b8",
-    marginBottom: 6,
+    flex: 1,
   },
   providerPriceRow: {
     flexDirection: "row",
-    alignItems: "baseline",
+    alignItems: "center",
     marginTop: 2,
-    paddingTop: 6,
+    paddingTop: 4,
     borderTopWidth: 1,
     borderTopColor: "#e2e8f0",
+    gap: 2,
   },
   providerPrice: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: "800",
     color: "#8b5cf6",
     letterSpacing: 0.3,
   },
   providerRateType: {
-    fontSize: 10,
+    fontSize: 9,
     color: "#64748b",
-    marginLeft: 2,
     fontWeight: "600",
   },
 

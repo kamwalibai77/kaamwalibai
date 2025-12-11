@@ -102,10 +102,7 @@ export default function AppNavigator() {
           component={require("../screens/FAQScreen").default}
         />
         <Stack.Screen name="ChatBox" component={ChatBoxScreen} />
-        {/* 👇 Only Service Providers can access MyServices */}
-        {(role || "").toLowerCase() === "serviceprovider" && (
-          <Stack.Screen name="MyServices" component={MyServicesScreen} />
-        )}
+        <Stack.Screen name="MyServices" component={MyServicesScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

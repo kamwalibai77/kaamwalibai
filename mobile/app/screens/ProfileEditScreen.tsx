@@ -2,8 +2,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
+import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -446,306 +447,429 @@ export default function ProfileEditScreen({ navigation, route }: Props): any {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" color="#2563eb" />
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: "#f8fafc",
+        }}
+      >
+        <ActivityIndicator size="large" color="#8b5cf6" />
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContainer}
-        showsVerticalScrollIndicator={false}
-        nestedScrollEnabled={true}
-        keyboardShouldPersistTaps="handled"
-      >
-        <Text style={styles.title}>Profile</Text>
-
-        <View style={styles.profileHeader}>
-          {profilePhoto ? (
-            <Image source={{ uri: profilePhoto }} style={styles.profileImage} />
-          ) : (
-            <View
-              style={[
-                styles.profileImage,
-                {
-                  backgroundColor: "#e6e7ee",
-                  justifyContent: "center",
-                  alignItems: "center",
-                },
-              ]}
-            >
-              <Ionicons name="person" size={36} color="#9ca3af" />
-            </View>
-          )}
-          <TouchableOpacity style={styles.editIcon} onPress={pickImage}>
-            <Ionicons name="camera" size={16} color="#fff" />
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }}>
+      <View style={{ flex: 1 }}>
+        {/* Gradient Header */}
+        <LinearGradient
+          colors={["#6366f1", "#8b5cf6", "#c084fc"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.header}
+        >
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+          >
+            <Ionicons name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
-        </View>
+          <Text style={styles.headerTitle}>Edit Profile</Text>
+          <View style={{ width: 24 }} />
+        </LinearGradient>
 
-        <View style={styles.formContainer}>
-          <Text style={styles.label}>Name</Text>
-          <TextInput
-            placeholder="Enter your name"
-            value={name}
-            onChangeText={setName}
-            style={styles.input}
-          />
-
-          <Text style={styles.label}>Address</Text>
-          <View style={styles.searchRow}>
-            <Ionicons
-              name="search-outline"
-              size={20}
-              color="gray"
-              style={{ marginRight: 8 }}
-            />
-            <TextInput
-              style={styles.inputNoBorder}
-              value={query}
-              placeholder="Search city, area or locality"
-              onChangeText={fetchSuggestions}
-            />
-            {/* 📍 Use Current Location Button */}
-            <TouchableOpacity
-              onPress={async () => {
-                let { status } =
-                  await Location.requestForegroundPermissionsAsync();
-                if (status !== "granted") {
-                  Alert.alert(
-                    "Permission denied",
-                    "Location access is needed."
-                  );
-                  return;
-                }
-                let loc = await Location.getCurrentPositionAsync({});
-                setLatitude(loc.coords.latitude);
-                setLongitude(loc.coords.longitude);
-
-                let [reverse] = await Location.reverseGeocodeAsync(loc.coords);
-                if (reverse) {
-                  const fullAddress = `${reverse.name || ""} ${
-                    reverse.street || ""
-                  }, ${reverse.city || ""}, ${reverse.region || ""}, ${
-                    reverse.country || ""
-                  }`;
-                  setAddress(fullAddress);
-                  setQuery(fullAddress);
-                }
-              }}
-            >
-              <Ionicons name="locate-outline" size={22} color="#2563eb" />
+        <ScrollView
+          contentContainerStyle={styles.scrollContainer}
+          showsVerticalScrollIndicator={false}
+          nestedScrollEnabled={true}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.profileHeader}>
+            {profilePhoto ? (
+              <Image
+                source={{ uri: profilePhoto }}
+                style={styles.profileImage}
+              />
+            ) : (
+              <View
+                style={[
+                  styles.profileImage,
+                  {
+                    backgroundColor: "#e0e7ff",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  },
+                ]}
+              >
+                <Ionicons name="person" size={48} color="#8b5cf6" />
+              </View>
+            )}
+            <TouchableOpacity style={styles.editIcon} onPress={pickImage}>
+              <Ionicons name="camera" size={18} color="#fff" />
             </TouchableOpacity>
           </View>
 
-          {suggestions.length > 0 && (
-            <View style={[styles.dropdown, { width: "100%" }]}>
-              {suggestions.map((item, idx) => (
-                <TouchableOpacity
-                  key={idx}
-                  style={styles.item}
-                  onPress={() => handleSelectAddress(item)}
-                >
-                  <Text style={styles.itemText}>{item.placeName}</Text>
-                  <Text style={styles.itemSubText}>
-                    {item.placeAddress || ""}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+          <View style={styles.formContainer}>
+            <View style={styles.inputGroup}>
+              <View style={styles.labelContainer}>
+                <Ionicons name="person-outline" size={18} color="#8b5cf6" />
+                <Text style={styles.label}>Name</Text>
+              </View>
+              <TextInput
+                placeholder="Enter your name"
+                value={name}
+                onChangeText={setName}
+                style={styles.input}
+                placeholderTextColor="#94a3b8"
+              />
             </View>
-          )}
 
-          <Text style={styles.label}>Mobile Number</Text>
-          <TextInput
-            placeholder="Enter mobile number"
-            value={phoneNumber}
-            onChangeText={(text) => {
-              let clean = text.replace(/\D/g, "");
-              if (clean.startsWith("91")) clean = clean.substring(2);
-              if (clean.length > 10) clean = clean.substring(0, 10);
-              setPhoneNumber(`+91${clean}`);
-            }}
-            style={styles.input}
-            keyboardType="phone-pad"
-            maxLength={13}
-            editable={false} // phone number is not editable
-          />
+            <View style={styles.inputGroup}>
+              <View style={styles.labelContainer}>
+                <Ionicons name="location-outline" size={18} color="#8b5cf6" />
+                <Text style={styles.label}>Address</Text>
+              </View>
+              <View style={styles.searchRow}>
+                <Ionicons
+                  name="search-outline"
+                  size={18}
+                  color="#94a3b8"
+                  style={{ marginRight: 8 }}
+                />
+                <TextInput
+                  style={styles.inputNoBorder}
+                  value={query}
+                  placeholder="Search city, area or locality"
+                  placeholderTextColor="#94a3b8"
+                  onChangeText={fetchSuggestions}
+                />
+                {/* 📍 Use Current Location Button */}
+                <TouchableOpacity
+                  onPress={async () => {
+                    let { status } =
+                      await Location.requestForegroundPermissionsAsync();
+                    if (status !== "granted") {
+                      Alert.alert(
+                        "Permission denied",
+                        "Location access is needed."
+                      );
+                      return;
+                    }
+                    let loc = await Location.getCurrentPositionAsync({});
+                    setLatitude(loc.coords.latitude);
+                    setLongitude(loc.coords.longitude);
 
-          <Text style={styles.label}>Role</Text>
-          {/* // If route asks for role and this is a NEW user (no id yet), show a selector.
-                  // Previously this depended on `!role` which could accidentally hide the selector. */}
-          {needsRole && !id ? (
-            <View style={{ marginTop: 8 }}>
-              <Text style={{ marginBottom: 8, color: "#374151" }}>
-                Select your role
-              </Text>
-              <View style={{ flexDirection: "row" }}>
-                <TouchableOpacity
-                  style={[
-                    styles.roleBtn,
-                    { marginRight: 8 },
-                    role === "user" && styles.roleActive,
-                  ]}
-                  onPress={() => setRole("user")}
-                >
-                  <Text
-                    style={
-                      role === "user" ? styles.roleTextActive : styles.roleText
+                    let [reverse] = await Location.reverseGeocodeAsync(
+                      loc.coords
+                    );
+                    if (reverse) {
+                      const fullAddress = `${reverse.name || ""} ${
+                        reverse.street || ""
+                      }, ${reverse.city || ""}, ${reverse.region || ""}, ${
+                        reverse.country || ""
+                      }`;
+                      setAddress(fullAddress);
+                      setQuery(fullAddress);
                     }
-                  >
-                    User
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.roleBtn,
-                    role === "serviceProvider" && styles.roleActive,
-                  ]}
-                  onPress={() => setRole("serviceProvider")}
+                  }}
                 >
-                  <Text
-                    style={
-                      role === "serviceProvider"
-                        ? styles.roleTextActive
-                        : styles.roleText
-                    }
-                  >
-                    Service Provider
-                  </Text>
+                  <Ionicons name="locate-outline" size={22} color="#8b5cf6" />
                 </TouchableOpacity>
               </View>
+
+              {suggestions.length > 0 && (
+                <View style={[styles.dropdown, { width: "100%" }]}>
+                  {suggestions.map((item, idx) => (
+                    <TouchableOpacity
+                      key={idx}
+                      style={styles.item}
+                      onPress={() => handleSelectAddress(item)}
+                    >
+                      <Text style={styles.itemText}>{item.placeName}</Text>
+                      <Text style={styles.itemSubText}>
+                        {item.placeAddress || ""}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
             </View>
-          ) : (
-            // Role should be non-editable once set (existing users). Show a friendly label.
-            <TextInput
-              placeholder="Role"
-              value={
-                role
-                  ? role.toLowerCase().includes("provider")
-                    ? "Service Provider"
-                    : "User"
-                  : ""
-              }
-              editable={false}
-              style={[styles.input, { backgroundColor: "#f8fafc" }]}
-            />
-          )}
 
-          <Text style={styles.label}>Gender</Text>
-          <View
-            style={[
-              styles.dropdownWrapper,
-              { zIndex: genderOpen ? 3000 : 1000 },
-            ]}
-          >
-            <DropDownPicker
-              open={genderOpen}
-              setOpen={setGenderOpen}
-              value={gender}
-              setValue={setGender}
-              items={genderItems}
-              placeholder="Select Gender"
-              style={styles.dropdown}
-              textStyle={styles.dropdownText}
-              dropDownContainerStyle={styles.dropDownContainer}
-              listMode="SCROLLVIEW"
-              scrollViewProps={{ nestedScrollEnabled: true }}
-            />
+            <View style={styles.inputGroup}>
+              <View style={styles.labelContainer}>
+                <Ionicons name="call-outline" size={18} color="#8b5cf6" />
+                <Text style={styles.label}>Mobile Number</Text>
+              </View>
+              <TextInput
+                placeholder="Enter mobile number"
+                value={phoneNumber}
+                onChangeText={(text) => {
+                  let clean = text.replace(/\D/g, "");
+                  if (clean.startsWith("91")) clean = clean.substring(2);
+                  if (clean.length > 10) clean = clean.substring(0, 10);
+                  setPhoneNumber(`+91${clean}`);
+                }}
+                style={[styles.input, styles.disabledInput]}
+                keyboardType="phone-pad"
+                maxLength={13}
+                editable={false} // phone number is not editable
+                placeholderTextColor="#94a3b8"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <View style={styles.labelContainer}>
+                <Ionicons name="briefcase-outline" size={18} color="#8b5cf6" />
+                <Text style={styles.label}>Role</Text>
+              </View>
+              {/* // If route asks for role and this is a NEW user (no id yet), show a selector.
+                  // Previously this depended on `!role` which could accidentally hide the selector. */}
+              {needsRole && !id ? (
+                <View style={{ marginTop: 8 }}>
+                  <View style={{ flexDirection: "row", gap: 12 }}>
+                    <TouchableOpacity
+                      style={[
+                        styles.roleBtn,
+                        role === "user" && styles.roleActive,
+                      ]}
+                      onPress={() => setRole("user")}
+                    >
+                      <Ionicons
+                        name="person"
+                        size={20}
+                        color={role === "user" ? "#fff" : "#8b5cf6"}
+                        style={{ marginBottom: 4 }}
+                      />
+                      <Text
+                        style={
+                          role === "user"
+                            ? styles.roleTextActive
+                            : styles.roleText
+                        }
+                      >
+                        User
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.roleBtn,
+                        role === "serviceProvider" && styles.roleActive,
+                      ]}
+                      onPress={() => setRole("serviceProvider")}
+                    >
+                      <Ionicons
+                        name="briefcase"
+                        size={20}
+                        color={role === "serviceProvider" ? "#fff" : "#8b5cf6"}
+                        style={{ marginBottom: 4 }}
+                      />
+                      <Text
+                        style={
+                          role === "serviceProvider"
+                            ? styles.roleTextActive
+                            : styles.roleText
+                        }
+                      >
+                        Service Provider
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : (
+                // Role should be non-editable once set (existing users). Show a friendly label.
+                <TextInput
+                  placeholder="Role"
+                  value={
+                    role
+                      ? role.toLowerCase().includes("provider")
+                        ? "Service Provider"
+                        : "User"
+                      : ""
+                  }
+                  editable={false}
+                  style={[styles.input, styles.disabledInput]}
+                  placeholderTextColor="#94a3b8"
+                />
+              )}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <View style={styles.labelContainer}>
+                <Ionicons
+                  name="male-female-outline"
+                  size={18}
+                  color="#8b5cf6"
+                />
+                <Text style={styles.label}>Gender</Text>
+              </View>
+              <View
+                style={[
+                  styles.dropdownWrapper,
+                  { zIndex: genderOpen ? 3000 : 1000 },
+                ]}
+              >
+                <DropDownPicker
+                  open={genderOpen}
+                  setOpen={setGenderOpen}
+                  value={gender}
+                  setValue={setGender}
+                  items={genderItems}
+                  placeholder="Select Gender"
+                  style={styles.dropdownStyle}
+                  textStyle={styles.dropdownText}
+                  dropDownContainerStyle={styles.dropDownContainer}
+                  listMode="SCROLLVIEW"
+                  scrollViewProps={{ nestedScrollEnabled: true }}
+                />
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <View style={styles.labelContainer}>
+                <Ionicons name="calendar-outline" size={18} color="#8b5cf6" />
+                <Text style={styles.label}>Age</Text>
+              </View>
+              <View
+                style={[
+                  styles.dropdownWrapper,
+                  { zIndex: ageOpen ? 2000 : 500 },
+                ]}
+              >
+                <DropDownPicker
+                  open={ageOpen}
+                  setOpen={setAgeOpen}
+                  value={age}
+                  setValue={setAge}
+                  items={ageItems}
+                  placeholder="Select Age"
+                  style={styles.dropdownStyle}
+                  textStyle={styles.dropdownText}
+                  dropDownContainerStyle={[
+                    styles.dropDownContainer,
+                    { maxHeight: 420 },
+                  ]}
+                  listMode="MODAL"
+                  modalProps={{ animationType: "slide" }}
+                  modalTitle="Select Age"
+                  modalContentContainerStyle={{ margin: 12 }}
+                  flatListProps={{ initialNumToRender: 20 }}
+                />
+              </View>
+            </View>
           </View>
 
-          <Text style={styles.label}>Age</Text>
-          <View
-            style={[styles.dropdownWrapper, { zIndex: ageOpen ? 2000 : 500 }]}
-          >
-            <DropDownPicker
-              open={ageOpen}
-              setOpen={setAgeOpen}
-              value={age}
-              setValue={setAge}
-              items={ageItems}
-              placeholder="Select Age"
-              style={styles.dropdown}
-              textStyle={styles.dropdownText}
-              dropDownContainerStyle={[
-                styles.dropDownContainer,
-                { maxHeight: 420 },
-              ]}
-              listMode="MODAL"
-              modalProps={{ animationType: "slide" }}
-              modalTitle="Select Age"
-              modalContentContainerStyle={{ margin: 12 }}
-              flatListProps={{ initialNumToRender: 20 }}
-            />
-          </View>
-        </View>
-
-        {/* Save button wrapped in container */}
-        <View style={{ width: "100%", marginBottom: 20 }}>
+          {/* Save button wrapped in container */}
           <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-            <Text style={styles.saveButtonText}>Save</Text>
+            <LinearGradient
+              colors={["#8b5cf6", "#7c3aed"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.saveButtonGradient}
+            >
+              <Text style={styles.saveButtonText}>Save Changes</Text>
+              <Ionicons name="checkmark-circle" size={20} color="#fff" />
+            </LinearGradient>
           </TouchableOpacity>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 16,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#fff",
+  },
   scrollContainer: {
     flexGrow: 1,
-    paddingVertical: 20,
+    paddingVertical: 24,
     paddingHorizontal: 20,
     alignItems: "center",
-    backgroundColor: "#fff",
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#2563eb",
-    marginBottom: 20,
+    backgroundColor: "#f8fafc",
+    paddingBottom: 120,
   },
   profileHeader: {
     alignItems: "center",
-    marginBottom: 24,
+    marginBottom: 32,
     position: "relative",
   },
   profileImage: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    borderWidth: 3,
-    borderColor: "#2563eb",
+    borderWidth: 4,
+    borderColor: "#8b5cf6",
   },
   editIcon: {
     position: "absolute",
     bottom: 0,
     right: 0,
-    backgroundColor: "#2563eb",
-    padding: 8,
-    borderRadius: 20,
-    borderWidth: 2,
+    backgroundColor: "#8b5cf6",
+    padding: 10,
+    borderRadius: 24,
+    borderWidth: 3,
     borderColor: "#fff",
+    shadowColor: "#8b5cf6",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   formContainer: {
     width: "100%",
     marginBottom: 20,
   },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  labelContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+    gap: 6,
+  },
   label: {
     fontSize: 14,
     fontWeight: "600",
-    marginBottom: 6,
     color: "#1e293b",
   },
   input: {
-    borderWidth: 1,
-    borderColor: "#cbd5e1",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 18,
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+    borderRadius: 12,
+    padding: 14,
     fontSize: 15,
     color: "#1e293b",
     backgroundColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  disabledInput: {
+    backgroundColor: "#f1f5f9",
+    color: "#64748b",
   },
   inputNoBorder: {
     flex: 1,
@@ -755,28 +879,64 @@ const styles = StyleSheet.create({
   searchRow: {
     flexDirection: "row",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    marginBottom: 12,
-    height: 45,
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    height: 50,
+    backgroundColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  dropdown: { maxHeight: 200, marginBottom: 12 },
+  dropdown: {
+    maxHeight: 200,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    marginTop: 8,
+  },
   item: {
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-  },
-  itemText: { fontSize: 16 },
-  itemSubText: { fontSize: 12, color: "gray" },
-  saveButton: {
-    backgroundColor: "#2563eb",
     paddingVertical: 14,
-    paddingHorizontal: 40,
-    borderRadius: 30,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
+  },
+  itemText: {
+    fontSize: 15,
+    color: "#1e293b",
+    fontWeight: "500",
+  },
+  itemSubText: {
+    fontSize: 13,
+    color: "#64748b",
+    marginTop: 2,
+  },
+  saveButton: {
+    borderRadius: 16,
+    marginTop: 12,
+    shadowColor: "#8b5cf6",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+    overflow: "hidden",
+  },
+  saveButtonGradient: {
+    flexDirection: "row",
     alignItems: "center",
-    marginTop: 10,
+    justifyContent: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    gap: 8,
   },
   saveButtonText: {
     color: "#fff",
@@ -784,32 +944,55 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   dropdownWrapper: {
-    marginBottom: 18,
     position: "relative",
   },
+  dropdownStyle: {
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+    borderRadius: 12,
+    backgroundColor: "#fff",
+    minHeight: 50,
+    paddingHorizontal: 14,
+  },
   dropdownText: {
-    fontSize: 14,
-    color: "#111827",
+    fontSize: 15,
+    color: "#1e293b",
   },
   dropDownContainer: {
-    borderColor: "#e5e7eb",
+    borderColor: "#e2e8f0",
+    borderWidth: 1.5,
     borderRadius: 12,
     maxHeight: 200,
     elevation: 8,
     shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 6,
+    shadowRadius: 8,
+    backgroundColor: "#fff",
   },
   roleBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: "#d1d5db",
-    marginRight: 8,
-    borderRadius: 8,
+    flex: 1,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderWidth: 2,
+    borderColor: "#e2e8f0",
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
   },
-  roleActive: { backgroundColor: "#4f46e5", borderColor: "#4f46e5" },
-  roleText: { color: "#374151", fontWeight: "500" },
-  roleTextActive: { color: "#fff", fontWeight: "600" },
+  roleActive: {
+    backgroundColor: "#8b5cf6",
+    borderColor: "#8b5cf6",
+  },
+  roleText: {
+    color: "#1e293b",
+    fontWeight: "600",
+    fontSize: 14,
+  },
+  roleTextActive: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 14,
+  },
 });

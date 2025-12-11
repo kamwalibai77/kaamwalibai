@@ -203,7 +203,11 @@ export default function BottomTabs() {
         {isServiceProvider && (
           <TouchableOpacity
             style={styles.tabItem}
-            onPress={() => navigation.navigate("MyServices")}
+            onPress={() => {
+              if (isServiceProvider) {
+                navigation.navigate("MyServices" as never);
+              }
+            }}
           >
             <View
               style={[
