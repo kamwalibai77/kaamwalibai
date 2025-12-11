@@ -2,15 +2,18 @@
 import BottomTab from "@/components/BottomTabs";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Dimensions,
   FlatList,
   Image,
   Linking,
   Modal,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -78,6 +81,34 @@ export default function HomeScreen({ navigation }: Props) {
   const [locationQuery, setLocationQuery] = useState("");
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const initializedRef = React.useRef(false);
+
+  // Offer carousel state
+  const [currentOfferIndex, setCurrentOfferIndex] = useState(0);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const { width: screenWidth } = Dimensions.get("window");
+
+  const offers = [
+    require("../../assets/images/offer.png"),
+    require("../../assets/images/offer2.png"),
+    require("../../assets/images/offer3.png"),
+    require("../../assets/images/offer4.png"),
+  ];
+
+  // Auto-scroll offers
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentOfferIndex((prevIndex) => {
+        const nextIndex = (prevIndex + 1) % offers.length;
+        scrollViewRef.current?.scrollTo({
+          x: nextIndex * (screenWidth - 32),
+          animated: true,
+        });
+        return nextIndex;
+      });
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [offers.length, screenWidth]);
 
   const getUserLocation = async () => {
     try {
@@ -476,23 +507,28 @@ export default function HomeScreen({ navigation }: Props) {
       style={styles.providerCard}
       onPress={() => openProviderModal(item)}
     >
-      <Image
-        source={getProfileSource(item.provider.profilePhoto)}
-        style={styles.providerImage}
-        resizeMode="cover"
-      />
-      <Text style={styles.providerName} numberOfLines={1}>
-        {item.provider.name}
-      </Text>
-      <Text style={styles.providerService} numberOfLines={1}>
-        {item.serviceTypes.map((st: any) => st.name).join(", ")}
-      </Text>
-      <Text style={styles.providerArea} numberOfLines={1}>
-        {item.address}
-      </Text>
-      <Text
-        numberOfLines={1}
-      >{`${item.amount} ${item.currency}/${item.rateType}`}</Text>
+      <View style={styles.providerImageContainer}>
+        <Image
+          source={getProfileSource(item.provider.profilePhoto)}
+          style={styles.providerImage}
+          resizeMode="cover"
+        />
+      </View>
+      <View style={styles.providerInfo}>
+        <Text style={styles.providerName} numberOfLines={1}>
+          {item.provider.name}
+        </Text>
+        <Text style={styles.providerService} numberOfLines={1}>
+          {item.serviceTypes.map((st: any) => st.name).join(", ")}
+        </Text>
+        <Text style={styles.providerArea} numberOfLines={1}>
+          📍 {item.address}
+        </Text>
+        <View style={styles.providerPriceRow}>
+          <Text style={styles.providerPrice}>₹{item.amount}</Text>
+          <Text style={styles.providerRateType}>/{item.rateType}</Text>
+        </View>
+      </View>
     </TouchableOpacity>
   );
 
@@ -507,7 +543,7 @@ export default function HomeScreen({ navigation }: Props) {
         <View
           style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
         >
-          <ActivityIndicator size="large" color="#6366f1" />
+          <ActivityIndicator size="large" color="#a855f7" />
         </View>
       </SafeAreaView>
     );
@@ -516,27 +552,34 @@ export default function HomeScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        {/* HEADER */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>कामवाली बाई</Text>
-          <TouchableOpacity
-            style={{ marginLeft: "auto", paddingHorizontal: 12 }}
-            onPress={() => setNotifModalVisible(true)}
-          >
-            <View>
-              <Ionicons
-                name="notifications-outline"
-                size={26}
-                color="#6a1010"
-              />
-              {notifications.length > 0 && (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{notifications.length}</Text>
-                </View>
-              )}
-            </View>
-          </TouchableOpacity>
-        </View>
+        {/* HEADER WITH GRADIENT */}
+        <LinearGradient
+          colors={["#6366f1", "#8b5cf6", "#c084fc"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.headerGradient}
+        >
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>कामवाली बाई</Text>
+            <TouchableOpacity
+              style={{ marginLeft: "auto", paddingHorizontal: 12 }}
+              onPress={() => setNotifModalVisible(true)}
+            >
+              <View>
+                <Ionicons
+                  name="notifications-outline"
+                  size={28}
+                  color="#ffffff"
+                />
+                {notifications.length > 0 && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{notifications.length}</Text>
+                  </View>
+                )}
+              </View>
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
 
         {/* Notifications Modal */}
         <Modal visible={notifModalVisible} transparent animationType="slide">
@@ -576,11 +619,12 @@ export default function HomeScreen({ navigation }: Props) {
 
         {/* Location Search Filter */}
         <View style={styles.searchContainer}>
-          <Ionicons name="location-outline" size={20} color="gray" />
+          <Ionicons name="location-outline" size={22} color="#8b5cf6" />
           <TextInput
             style={styles.searchInput}
             value={locationQuery}
             placeholder="Search city, area or locality"
+            placeholderTextColor="#94a3b8"
             onChangeText={fetchSuggestions}
           />
           {/* 📍 Use Current Location Button */}
@@ -608,7 +652,7 @@ export default function HomeScreen({ navigation }: Props) {
               }
             }}
           >
-            <Ionicons name="locate-outline" size={22} color="#6366f1" />
+            <Ionicons name="locate-outline" size={24} color="#a855f7" />
           </TouchableOpacity>
         </View>
         {suggestions.length > 0 && (
@@ -630,52 +674,30 @@ export default function HomeScreen({ navigation }: Props) {
             keyboardShouldPersistTaps="handled"
           />
         )}
-        {/* 
-        Search Services
-        <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#94a3b8" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Find Services"
-            value={searchQuery}
-            onChangeText={(text) => setSearchQuery(text)}
-          />
-        </View>
-        */}
-
-        {/* Advertisement Banner */}
-        <TouchableOpacity
-          activeOpacity={0.95}
-          onPress={() => {
-            // open ad link (change to your campaign URL)
-            Linking.openURL("https://your-ad-destination.example.com");
-          }}
-          style={styles.adContainer}
-        >
-          {/* Use a local asset: require('../../assets/images/ad-landscape.jpg')
-      OR a remote URL: { uri: 'https://example.com/ad.jpg' } */}
-          <Image
-            source={require("../../assets/images/offer.png")}
-            // source={{ uri: "https://example.com/ad-landscape.jpg" }}
-            style={styles.adImage}
-            resizeMode="cover"
-          />
-        </TouchableOpacity>
 
         {/* Services + Providers */}
         <FlatList
           data={displayedProviders}
           keyExtractor={(item) => item.id.toString()}
           numColumns={2}
-          columnWrapperStyle={{ justifyContent: "space-between" }}
+          columnWrapperStyle={{
+            justifyContent: "space-between",
+            paddingHorizontal: 10,
+          }}
           renderItem={renderProvider}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 100 }} // ✅ space for BottomTab
           ListHeaderComponent={() => (
             <>
-              <View style={styles.sectionHeaderRow}>
-                <Text style={styles.sectionTitle}>Services</Text>
-                {selectedServiceTypeIds.length > 0 && (
+              {/* Services section without label - just clear button if needed */}
+              {selectedServiceTypeIds.length > 0 && (
+                <View
+                  style={[
+                    styles.sectionHeaderRow,
+                    { marginTop: 4, marginBottom: 2 },
+                  ]}
+                >
+                  <View style={{ flex: 1 }} />
                   <TouchableOpacity
                     onPress={() => {
                       setSelectedServiceTypeIds([]);
@@ -685,14 +707,18 @@ export default function HomeScreen({ navigation }: Props) {
                   >
                     <Text style={styles.clearButtonText}>Clear</Text>
                   </TouchableOpacity>
-                )}
-              </View>
+                </View>
+              )}
               <FlatList
                 data={serviceTypes}
                 keyExtractor={(item) => item.id?.toString() ?? item.name}
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: 10 }}
+                contentContainerStyle={{
+                  paddingHorizontal: 10,
+                  paddingTop: 4,
+                  paddingBottom: 4,
+                }}
                 renderItem={({ item }) => {
                   const id = Number(item.id);
                   const selected = selectedServiceTypeIds.includes(id);
@@ -720,8 +746,8 @@ export default function HomeScreen({ navigation }: Props) {
                         <View style={styles.serviceIconPlaceholder}>
                           <Ionicons
                             name="construct"
-                            size={20}
-                            color="#94a3b8"
+                            size={24}
+                            color="#8b5cf6"
                           />
                         </View>
                       )}
@@ -732,8 +758,73 @@ export default function HomeScreen({ navigation }: Props) {
                   );
                 }}
               />
-              <Text style={styles.sectionTitle}>Nearby Providers</Text>
-              <View style={{ position: "absolute", right: 12, top: 4 }}>
+
+              {/* Advertisement Banner with Carousel - Moved below services */}
+              <View style={styles.offerSection}>
+                <View style={styles.offerHeader}>
+                  <Text style={styles.offerHeaderText}>🎉 Special Offers</Text>
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate("Subscription")}
+                  >
+                    <Text style={styles.viewAllText}>View All →</Text>
+                  </TouchableOpacity>
+                </View>
+                <ScrollView
+                  ref={scrollViewRef}
+                  horizontal
+                  pagingEnabled
+                  showsHorizontalScrollIndicator={false}
+                  onMomentumScrollEnd={(event) => {
+                    const index = Math.round(
+                      event.nativeEvent.contentOffset.x / (screenWidth - 32)
+                    );
+                    setCurrentOfferIndex(index);
+                  }}
+                  style={styles.offerCarousel}
+                >
+                  {offers.map((offer, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      activeOpacity={0.9}
+                      onPress={() => {
+                        Linking.openURL("https://your-offer-link.example.com");
+                      }}
+                      style={[styles.offerCard, { width: screenWidth - 32 }]}
+                    >
+                      <Image
+                        source={offer}
+                        style={styles.offerImage}
+                        resizeMode="cover"
+                      />
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+                <View style={styles.dotsContainer}>
+                  {offers.map((_, index) => (
+                    <View
+                      key={index}
+                      style={[
+                        styles.dot,
+                        currentOfferIndex === index && styles.activeDot,
+                      ]}
+                    />
+                  ))}
+                </View>
+              </View>
+
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginHorizontal: 16,
+                  marginTop: 4,
+                  marginBottom: 6,
+                }}
+              >
+                <Text style={[styles.sectionTitle, { margin: 0 }]}>
+                  Nearby Providers
+                </Text>
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
                   <TouchableOpacity
                     onPress={() => setSelectedGenderFilter("all")}
@@ -743,7 +834,14 @@ export default function HomeScreen({ navigation }: Props) {
                         styles.genderFilterActive,
                     ]}
                   >
-                    <Text style={styles.genderFilterText}>All</Text>
+                    <Text
+                      style={[
+                        styles.genderFilterText,
+                        selectedGenderFilter === "all" && { color: "#ffffff" },
+                      ]}
+                    >
+                      All
+                    </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => setSelectedGenderFilter("male")}
@@ -753,7 +851,14 @@ export default function HomeScreen({ navigation }: Props) {
                         styles.genderFilterActive,
                     ]}
                   >
-                    <Text style={styles.genderFilterText}>Male</Text>
+                    <Text
+                      style={[
+                        styles.genderFilterText,
+                        selectedGenderFilter === "male" && { color: "#ffffff" },
+                      ]}
+                    >
+                      Male
+                    </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => setSelectedGenderFilter("female")}
@@ -763,7 +868,16 @@ export default function HomeScreen({ navigation }: Props) {
                         styles.genderFilterActive,
                     ]}
                   >
-                    <Text style={styles.genderFilterText}>Female</Text>
+                    <Text
+                      style={[
+                        styles.genderFilterText,
+                        selectedGenderFilter === "female" && {
+                          color: "#ffffff",
+                        },
+                      ]}
+                    >
+                      Female
+                    </Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -771,7 +885,7 @@ export default function HomeScreen({ navigation }: Props) {
           )}
           ListFooterComponent={
             loading ? (
-              <ActivityIndicator size="small" color="#6366f1" />
+              <ActivityIndicator size="small" color="#a855f7" />
             ) : hasMore ? (
               <TouchableOpacity
                 style={styles.loadMoreBtn}
@@ -1048,32 +1162,63 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingVertical: 15,
-    backgroundColor: "#eef2ff",
-    borderBottomLeftRadius: 25,
-    borderBottomRightRadius: 25,
+    paddingTop: 12,
+    paddingBottom: 16,
+    backgroundColor: "transparent",
   },
-  headerTitle: { fontSize: 20, fontWeight: "bold", color: "#6a1010ff" },
+  headerGradient: {
+    paddingTop: 12,
+    paddingBottom: 18,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#ffffff",
+    letterSpacing: 0.5,
+    textShadowColor: "rgba(0, 0, 0, 0.3)",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
 
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    margin: 15,
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    elevation: 3,
+    marginHorizontal: 16,
+    marginTop: -25,
+    marginBottom: 8,
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 2,
+    shadowColor: "#6366f1",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 10,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.3)",
   },
 
-  searchInput: { flex: 1, height: 40, marginLeft: 8 },
+  searchInput: { flex: 1, height: 36, marginLeft: 8, fontSize: 14 },
 
-  sectionTitle: { fontSize: 18, fontWeight: "700", margin: 15 },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 8,
+    color: "#1e293b",
+    letterSpacing: 0.3,
+  },
 
   sectionHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 15,
+    paddingHorizontal: 16,
+    marginBottom: 6,
   },
 
   badge: {
@@ -1081,11 +1226,13 @@ const styles = StyleSheet.create({
     right: -6,
     top: -6,
     backgroundColor: "#ef4444",
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#ffffff",
   },
   badgeText: { color: "#fff", fontSize: 11, fontWeight: "700" },
   notifOverlay: {
@@ -1108,53 +1255,147 @@ const styles = StyleSheet.create({
   },
 
   clearButton: {
-    backgroundColor: "transparent",
-    paddingHorizontal: 8,
-    paddingVertical: 6,
+    backgroundColor: "#eef2ff",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#8b5cf6",
   },
-  clearButtonText: { color: "#6366f1", fontWeight: "600" },
+  clearButtonText: { color: "#8b5cf6", fontWeight: "800", fontSize: 11 },
 
   serviceCard: {
     flex: 1,
     aspectRatio: 1,
-    maxWidth: 100,
-    backgroundColor: "#fff",
-    borderRadius: 15,
+    maxWidth: 68,
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    marginHorizontal: 8,
-    elevation: 3,
+    marginHorizontal: 4,
+    marginVertical: 2,
+    shadowColor: "#6366f1",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: "#e0e7ff",
   },
   serviceCardSelected: {
-    // borderWidth: 2,
-    // borderColor: "#6366f1",
-    backgroundColor: "#86c0f7ff",
-    // shadowColor: "#6366f1",
+    backgroundColor: "#eef2ff",
+    borderWidth: 2,
+    borderColor: "#8b5cf6",
     elevation: 6,
+    shadowOpacity: 0.25,
+    transform: [{ scale: 1.03 }],
   },
-  serviceIcon: { width: 40, height: 40, borderRadius: 20 },
+  serviceIcon: { width: 36, height: 36, borderRadius: 18 },
   serviceIconPlaceholder: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: "#f1f5f9",
     justifyContent: "center",
     alignItems: "center",
   },
   serviceName: {
-    fontSize: 12,
-    marginTop: 5,
+    fontSize: 9,
+    marginTop: 4,
     textAlign: "center",
-    paddingHorizontal: 4,
+    paddingHorizontal: 3,
+    fontWeight: "600",
+    color: "#475569",
   },
   providerCard: {
     flex: 1,
-    margin: 5,
-    backgroundColor: "#fff",
-    borderRadius: 15,
-    padding: 10,
-    elevation: 3,
-    minWidth: "45%",
+    margin: 6,
+    maxWidth: "48%",
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    overflow: "hidden",
+    shadowColor: "#8b5cf6",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: "#e0e7ff",
+  },
+  providerImageContainer: {
+    width: "100%",
+    backgroundColor: "#f8fafc",
+    position: "relative",
+  },
+  providerInfo: {
+    padding: 8,
+    backgroundColor: "#ffffff",
+  },
+
+  // Offer carousel styles - Modern premium
+  offerSection: {
+    marginVertical: 8,
+    paddingHorizontal: 16,
+  },
+  offerHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  offerHeaderText: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#1e293b",
+    letterSpacing: 0.3,
+  },
+  viewAllText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#8b5cf6",
+  },
+  offerCarousel: {
+    marginBottom: 6,
+  },
+  offerCard: {
+    marginRight: 0,
+    borderRadius: 14,
+    overflow: "hidden",
+    backgroundColor: "#ffffff",
+    elevation: 4,
+    shadowColor: "#8b5cf6",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    borderWidth: 1,
+    borderColor: "#e0e7ff",
+  },
+  offerImage: {
+    width: "100%",
+    height: 130,
+  },
+  dotsContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 4,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#cbd5e1",
+    marginHorizontal: 3,
+  },
+  activeDot: {
+    width: 20,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#8b5cf6",
+    shadowColor: "#8b5cf6",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
   adContainer: {
     alignItems: "center",
@@ -1167,19 +1408,68 @@ const styles = StyleSheet.create({
     backgroundColor: "#e2e8f0",
   },
 
-  providerImage: { width: "100%", aspectRatio: 1.5, borderRadius: 10 },
-  providerName: { fontWeight: "bold", marginTop: 5 },
-  providerService: { color: "gray", fontSize: 12 },
-  providerArea: { fontSize: 12, marginTop: 2 },
+  providerImage: {
+    width: "100%",
+    aspectRatio: 1.4,
+    borderRadius: 0,
+  },
+  providerName: {
+    fontWeight: "800",
+    fontSize: 13,
+    color: "#1e293b",
+    marginBottom: 3,
+    letterSpacing: 0.2,
+  },
+  providerService: {
+    color: "#64748b",
+    fontSize: 10,
+    marginBottom: 3,
+    fontWeight: "600",
+  },
+  providerArea: {
+    fontSize: 9,
+    color: "#94a3b8",
+    marginBottom: 6,
+  },
+  providerPriceRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    marginTop: 2,
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: "#e2e8f0",
+  },
+  providerPrice: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#8b5cf6",
+    letterSpacing: 0.3,
+  },
+  providerRateType: {
+    fontSize: 10,
+    color: "#64748b",
+    marginLeft: 2,
+    fontWeight: "600",
+  },
 
   loadMoreBtn: {
     margin: 20,
-    padding: 12,
-    backgroundColor: "#6366f1",
-    borderRadius: 8,
+    padding: 14,
+    backgroundColor: "#8b5cf6",
+    borderRadius: 16,
     alignItems: "center",
+    shadowColor: "#8b5cf6",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
   },
-  loadMoreText: { color: "#fff", fontWeight: "600" },
+  loadMoreText: {
+    color: "#fff",
+    fontWeight: "800",
+    fontSize: 15,
+    letterSpacing: 0.5,
+  },
 
   modalOverlay: {
     flex: 1,
@@ -1247,12 +1537,22 @@ const styles = StyleSheet.create({
   suggestionText: { fontSize: 14, fontWeight: "600" },
   suggestionSubText: { fontSize: 12, color: "gray" },
   genderFilterBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    marginLeft: 6,
-    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginLeft: 4,
+    borderRadius: 10,
     backgroundColor: "#f1f5f9",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
   },
-  genderFilterActive: { backgroundColor: "#c7d2fe" },
-  genderFilterText: { fontSize: 12, color: "#0f172a", fontWeight: "600" },
+  genderFilterActive: {
+    backgroundColor: "#8b5cf6",
+    borderColor: "#8b5cf6",
+    shadowColor: "#8b5cf6",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  genderFilterText: { fontSize: 10, color: "#475569", fontWeight: "700" },
 });

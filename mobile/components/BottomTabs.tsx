@@ -106,213 +106,233 @@ export default function BottomTabs() {
     (role || "").toLowerCase() === "serviceprovider";
 
   return (
-    <View style={styles.tabBar}>
-      {/* Home */}
-      <TouchableOpacity
-        style={styles.tabItem}
-        onPress={() => navigation.navigate("Home")}
-      >
-        <View
-          style={
-            pathname === "Home"
-              ? [styles.iconWrapper, styles.iconActive]
-              : styles.iconWrapper
-          }
-        >
-          <Ionicons
-            name={pathname === "Home" ? "home" : "home-outline"}
-            size={22}
-            color={pathname === "Home" ? "#000000" : inactiveColor}
-          />
-        </View>
-        <Text
-          style={[
-            styles.tabText,
-            { color: pathname === "Home" ? activeColor : inactiveColor },
-          ]}
-        >
-          Home
-        </Text>
-      </TouchableOpacity>
-
-      {/* Chat */}
-      <TouchableOpacity
-        style={styles.tabItem}
-        onPress={() => {
-          setUnreadCount(0);
-          navigation.navigate("Chat");
-        }}
-      >
-        <View
-          style={
-            pathname === "Chat"
-              ? [styles.iconWrapper, styles.iconActive]
-              : styles.iconWrapper
-          }
-        >
-          <MaterialCommunityIcons
-            name={
-              pathname === "Chat"
-                ? "chat-processing"
-                : "chat-processing-outline"
-            }
-            size={22}
-            color={pathname === "Chat" ? "#000000" : inactiveColor}
-          />
-        </View>
-        <View style={{ position: "relative", alignItems: "center" }}>
-          <Text
-            style={[
-              styles.tabText,
-              { color: pathname === "Chat" ? activeColor : inactiveColor },
-            ]}
-          >
-            Chat
-          </Text>
-          {unreadCount > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{unreadCount}</Text>
-            </View>
-          )}
-        </View>
-      </TouchableOpacity>
-
-      {/* Subscriptions */}
-      <TouchableOpacity
-        style={styles.tabItem}
-        onPress={() => navigation.navigate("Subscription")}
-      >
-        <View
-          style={
-            pathname === "Subscription"
-              ? [styles.iconWrapper, styles.iconActive]
-              : styles.iconWrapper
-          }
-        >
-          <FontAwesome5
-            name="briefcase"
-            size={20}
-            color={pathname === "Subscription" ? "#000000" : inactiveColor}
-          />
-        </View>
-        <Text
-          style={[
-            styles.tabText,
-            {
-              color: pathname === "Subscription" ? activeColor : inactiveColor,
-            },
-          ]}
-        >
-          Subscriptions
-        </Text>
-      </TouchableOpacity>
-
-      {/* My Services (for Service Providers only) */}
-      {isServiceProvider && (
+    <View style={styles.tabBarContainer}>
+      <View style={styles.tabBar}>
+        {/* Home */}
         <TouchableOpacity
           style={styles.tabItem}
-          onPress={() => navigation.navigate("MyServices")}
+          onPress={() => navigation.navigate("Home")}
         >
           <View
-            style={
-              pathname === "MyServices"
-                ? [styles.iconWrapper, styles.iconActive]
-                : styles.iconWrapper
-            }
+            style={[
+              styles.iconWrapper,
+              pathname === "Home" && styles.iconActive,
+            ]}
           >
-            <FontAwesome5
-              name="briefcase"
-              size={20}
-              color={pathname === "MyServices" ? "#000000" : inactiveColor}
+            <Ionicons
+              name={pathname === "Home" ? "home" : "home-outline"}
+              size={24}
+              color={pathname === "Home" ? "#ffffff" : "#94a3b8"}
             />
           </View>
           <Text
             style={[
               styles.tabText,
-              {
-                color: pathname === "MyServices" ? activeColor : inactiveColor,
-              },
+              pathname === "Home" && styles.tabTextActive,
             ]}
           >
-            My Services
+            Home
           </Text>
         </TouchableOpacity>
-      )}
 
-      {/* Profile */}
-      <TouchableOpacity
-        style={styles.tabItem}
-        onPress={() => navigation.navigate("Profile")}
-      >
-        <View
-          style={
-            pathname === "Profile"
-              ? [styles.iconWrapper, styles.iconActive]
-              : styles.iconWrapper
-          }
+        {/* Chat */}
+        <TouchableOpacity
+          style={styles.tabItem}
+          onPress={() => {
+            setUnreadCount(0);
+            navigation.navigate("Chat");
+          }}
         >
-          <Ionicons
-            name={pathname === "Profile" ? "person" : "person-circle-outline"}
-            size={22}
-            color={pathname === "Profile" ? "#000000" : inactiveColor}
-          />
-        </View>
-        <Text
-          style={[
-            styles.tabText,
-            { color: pathname === "Profile" ? activeColor : inactiveColor },
-          ]}
+          <View
+            style={[
+              styles.iconWrapper,
+              pathname === "Chat" && styles.iconActive,
+            ]}
+          >
+            <MaterialCommunityIcons
+              name={
+                pathname === "Chat" ? "message-text" : "message-text-outline"
+              }
+              size={24}
+              color={pathname === "Chat" ? "#ffffff" : "#94a3b8"}
+            />
+            {unreadCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{unreadCount}</Text>
+              </View>
+            )}
+          </View>
+          <Text
+            style={[
+              styles.tabText,
+              pathname === "Chat" && styles.tabTextActive,
+            ]}
+          >
+            Chat
+          </Text>
+        </TouchableOpacity>
+
+        {/* Subscriptions */}
+        <TouchableOpacity
+          style={styles.tabItem}
+          onPress={() => navigation.navigate("Subscription")}
         >
-          Profile
-        </Text>
-      </TouchableOpacity>
+          <View
+            style={[
+              styles.iconWrapper,
+              pathname === "Subscription" && styles.iconActive,
+            ]}
+          >
+            <Ionicons
+              name={pathname === "Subscription" ? "star" : "star-outline"}
+              size={24}
+              color={pathname === "Subscription" ? "#ffffff" : "#94a3b8"}
+            />
+          </View>
+          <Text
+            style={[
+              styles.tabText,
+              pathname === "Subscription" && styles.tabTextActive,
+            ]}
+          >
+            Plans
+          </Text>
+        </TouchableOpacity>
+
+        {/* My Services (for Service Providers only) */}
+        {isServiceProvider && (
+          <TouchableOpacity
+            style={styles.tabItem}
+            onPress={() => navigation.navigate("MyServices")}
+          >
+            <View
+              style={[
+                styles.iconWrapper,
+                pathname === "MyServices" && styles.iconActive,
+              ]}
+            >
+              <FontAwesome5
+                name="briefcase"
+                size={22}
+                color={pathname === "MyServices" ? "#ffffff" : "#94a3b8"}
+              />
+            </View>
+            <Text
+              style={[
+                styles.tabText,
+                pathname === "MyServices" && styles.tabTextActive,
+              ]}
+            >
+              Services
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Profile */}
+        <TouchableOpacity
+          style={styles.tabItem}
+          onPress={() => navigation.navigate("Profile")}
+        >
+          <View
+            style={[
+              styles.iconWrapper,
+              pathname === "Profile" && styles.iconActive,
+            ]}
+          >
+            <Ionicons
+              name={pathname === "Profile" ? "person" : "person-outline"}
+              size={24}
+              color={pathname === "Profile" ? "#ffffff" : "#94a3b8"}
+            />
+          </View>
+          <Text
+            style={[
+              styles.tabText,
+              pathname === "Profile" && styles.tabTextActive,
+            ]}
+          >
+            Profile
+          </Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  tabBarContainer: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 6,
+    paddingBottom: 2,
+  },
   tabBar: {
     flexDirection: "row",
     justifyContent: "space-around",
-    paddingVertical: 14,
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 25,
-    borderTopRightRadius: 25,
+    alignItems: "center",
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+    backgroundColor: "#ffffff",
+    borderRadius: 20,
     shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: -3 },
     shadowRadius: 8,
     elevation: 4,
   },
-  tabItem: { alignItems: "center" },
+  tabItem: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 1,
+    paddingHorizontal: 2,
+  },
   iconWrapper: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: 1,
     backgroundColor: "transparent",
+    position: "relative",
   },
   iconActive: {
-    backgroundColor: "#4f46e5",
-    shadowColor: "#000",
-    shadowOpacity: 0.18,
-    shadowOffset: { width: 0, height: 6 },
-    shadowRadius: 12,
-    elevation: 6,
+    backgroundColor: "#6366f1",
+    shadowColor: "#6366f1",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
   },
-  tabText: { fontSize: 12, color: "#64748b", marginTop: 3, fontWeight: "700" },
+  tabText: {
+    fontSize: 11,
+    color: "#94a3b8",
+    fontWeight: "600",
+    marginTop: 1,
+  },
+  tabTextActive: {
+    color: "#6366f1",
+    fontWeight: "700",
+  },
   badge: {
     position: "absolute",
-    right: -10,
-    top: -6,
+    right: 2,
+    top: 0,
     backgroundColor: "#ef4444",
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#ffffff",
   },
-  badgeText: { color: "#fff", fontSize: 11, fontWeight: "700" },
+  badgeText: {
+    color: "#fff",
+    fontSize: 9,
+    fontWeight: "700",
+    paddingHorizontal: 3,
+  },
 });

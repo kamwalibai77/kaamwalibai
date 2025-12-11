@@ -1,11 +1,14 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   Dimensions,
   Image,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -13,6 +16,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import Snackbar from "../../components/Snackbar";
@@ -32,9 +36,27 @@ export default function LoginScreen({ navigation }: Props): any {
   const [otp, setOtp] = useState<string[]>(["", "", "", "", "", ""]);
   const otpInputs = useRef<Array<TextInput | null>>([]);
   const [cooldown, setCooldown] = useState(0);
+  const [focusedInput, setFocusedInput] = useState<number | null>(null);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
 
   const COUNTRY_FLAG = "🇮🇳";
   const COUNTRY_CODE = "91";
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   useEffect(() => {
     let t: ReturnType<typeof setTimeout> | null = null;
@@ -195,276 +217,488 @@ export default function LoginScreen({ navigation }: Props): any {
     }
   };
 
-  const { height } = Dimensions.get("window");
+  const { height, width } = Dimensions.get("window");
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <ScrollView
-        contentContainerStyle={[
-          styles.scrollContainer,
-          { minHeight: height - 40 },
-        ]}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={styles.card}>
-          {/* Logo + App Name + Tagline */}
-          <Image
-            source={require("../../assets/images/logo.png")}
-            style={styles.logo}
-          />
-          <Text style={styles.appName}>MyKaamwalibai</Text>
-          <Text style={styles.tagline}>Trusted help at your doorstep</Text>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <View style={styles.container}>
+        <LinearGradient
+          colors={["#6366f1", "#8b5cf6"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={styles.gradient}
+        />
 
-          <Text style={styles.title}>
-            {step === "phone" ? "Welcome 👋" : "Enter OTP"}
-          </Text>
-          <Text style={styles.subtitle}>
-            {step === "phone"
-              ? "Sign in / Sign up with mobile"
-              : `OTP sent to ${COUNTRY_FLAG} +${COUNTRY_CODE} ${phone}`}
-          </Text>
-
-          {step === "phone" ? (
-            <>
-              <View style={styles.phoneContainer}>
-                <Text style={styles.flag}>{COUNTRY_FLAG}</Text>
-                <Text style={styles.callingCode}>+{COUNTRY_CODE}</Text>
-                <TextInput
-                  style={styles.phoneInput}
-                  placeholder="Enter mobile number"
-                  keyboardType="phone-pad"
-                  value={phone}
-                  onChangeText={handlePhoneChange}
-                  maxLength={10}
-                />
-              </View>
-              {phoneError ? (
-                <Text style={styles.errorText}>{phoneError}</Text>
-              ) : null}
-
-              <TouchableOpacity
-                style={styles.button}
-                onPress={sendOtp}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.buttonText}>Send OTP</Text>
-                )}
-              </TouchableOpacity>
-            </>
-          ) : (
-            <>
-              <View style={styles.otpContainer}>
-                {otp.map((digit, index) => (
-                  <TextInput
-                    key={index}
-                    ref={(ref) => {
-                      otpInputs.current[index] = ref;
-                    }}
-                    style={styles.otpInput}
-                    value={digit}
-                    onChangeText={(text) => handleOtpChange(text, index)}
-                    maxLength={1}
-                    keyboardType="number-pad"
+        <KeyboardAvoidingView
+          style={styles.keyboardView}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          <ScrollView
+            contentContainerStyle={styles.scrollContainer}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <Animated.View
+              style={[
+                styles.card,
+                {
+                  opacity: fadeAnim,
+                  transform: [{ translateY: slideAnim }],
+                },
+              ]}
+            >
+              {/* Logo Section */}
+              <View style={styles.logoSection}>
+                <View style={styles.logoCircle}>
+                  <Image
+                    source={require("../../assets/images/logo.png")}
+                    style={styles.logo}
                   />
-                ))}
+                </View>
+                <Text style={styles.appName}>MyKaamwalibai</Text>
+                <Text style={styles.tagline}>
+                  Your trusted home service partner
+                </Text>
               </View>
 
-              <TouchableOpacity
-                style={styles.button}
-                onPress={verify}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.buttonText}>Verify</Text>
-                )}
-              </TouchableOpacity>
+              {/* Welcome Text */}
+              <View style={styles.welcomeSection}>
+                <Text style={styles.welcomeTitle}>
+                  {step === "phone" ? "Welcome!" : "Verify OTP"}
+                </Text>
+                <Text style={styles.welcomeSubtitle}>
+                  {step === "phone"
+                    ? "Enter your mobile number to continue"
+                    : `Enter the code sent to +${COUNTRY_CODE} ${phone}`}
+                </Text>
+              </View>
 
-              {needsRole && (
-                <View
-                  style={{ marginTop: 20, width: "100%", alignItems: "center" }}
-                >
-                  <Text
-                    style={{ marginBottom: 12, color: "#333", fontSize: 16 }}
-                  >
-                    Sign up as
-                  </Text>
-                  <View style={styles.roleRow}>
-                    <TouchableOpacity
+              {step === "phone" ? (
+                <>
+                  {/* Phone Input */}
+                  <View style={styles.inputWrapper}>
+                    <View
                       style={[
-                        styles.roleBtn,
-                        role === "user" && styles.roleActive,
+                        styles.phoneContainer,
+                        focusedInput === 0 && styles.inputFocused,
+                        phoneError && styles.inputError,
                       ]}
-                      onPress={() => setRole("user")}
                     >
-                      <Text
-                        style={
-                          role === "user"
-                            ? styles.roleTextActive
-                            : styles.roleText
-                        }
-                      >
-                        User
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[
-                        styles.roleBtn,
-                        role === "provider" && styles.roleActive,
-                      ]}
-                      onPress={() => setRole("provider")}
-                    >
-                      <Text
-                        style={
-                          role === "provider"
-                            ? styles.roleTextActive
-                            : styles.roleText
-                        }
-                      >
-                        Service Provider
-                      </Text>
-                    </TouchableOpacity>
+                      <Text style={styles.countryCode}>🇮🇳 +{COUNTRY_CODE}</Text>
+                      <View style={styles.separator} />
+                      <TextInput
+                        style={styles.phoneInput}
+                        placeholder="Enter mobile number"
+                        placeholderTextColor="#94a3b8"
+                        keyboardType="phone-pad"
+                        value={phone}
+                        onChangeText={handlePhoneChange}
+                        maxLength={10}
+                        onFocus={() => setFocusedInput(0)}
+                        onBlur={() => setFocusedInput(null)}
+                      />
+                    </View>
+                    {phoneError ? (
+                      <Text style={styles.errorText}>⚠️ {phoneError}</Text>
+                    ) : null}
                   </View>
+
+                  {/* Send OTP Button */}
                   <TouchableOpacity
-                    style={[styles.button, { marginTop: 12 }]}
-                    onPress={verify}
-                    disabled={loading || !role}
+                    style={[
+                      styles.primaryButton,
+                      (loading || phone.length !== 10) && styles.buttonDisabled,
+                    ]}
+                    onPress={sendOtp}
+                    disabled={loading || phone.length !== 10}
+                    activeOpacity={0.8}
                   >
                     {loading ? (
                       <ActivityIndicator color="#fff" />
                     ) : (
-                      <Text style={styles.buttonText}>Continue</Text>
+                      <Text style={styles.primaryButtonText}>Send OTP</Text>
                     )}
                   </TouchableOpacity>
-                </View>
+                </>
+              ) : (
+                <>
+                  {/* OTP Input */}
+                  <View style={styles.otpWrapper}>
+                    <View style={styles.otpContainer}>
+                      {otp.map((digit, index) => (
+                        <View
+                          key={index}
+                          style={[
+                            styles.otpBox,
+                            focusedInput === index + 1 && styles.otpBoxFocused,
+                            digit && styles.otpBoxFilled,
+                          ]}
+                        >
+                          <TextInput
+                            ref={(ref) => {
+                              otpInputs.current[index] = ref;
+                            }}
+                            style={styles.otpInput}
+                            value={digit}
+                            onChangeText={(text) =>
+                              handleOtpChange(text, index)
+                            }
+                            maxLength={1}
+                            keyboardType="number-pad"
+                            onFocus={() => setFocusedInput(index + 1)}
+                            onBlur={() => setFocusedInput(null)}
+                          />
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+
+                  {/* Verify Button */}
+                  <TouchableOpacity
+                    style={[
+                      styles.primaryButton,
+                      (loading || otp.join("").length !== 6) &&
+                        styles.buttonDisabled,
+                    ]}
+                    onPress={verify}
+                    disabled={loading || otp.join("").length !== 6}
+                    activeOpacity={0.8}
+                  >
+                    {loading ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <Text style={styles.primaryButtonText}>
+                        Verify & Continue
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+
+                  {/* Role Selection */}
+                  {needsRole && (
+                    <View style={styles.roleSection}>
+                      <Text style={styles.roleTitle}>Select Account Type</Text>
+                      <View style={styles.roleOptions}>
+                        <TouchableOpacity
+                          style={[
+                            styles.roleCard,
+                            role === "user" && styles.roleCardActive,
+                          ]}
+                          onPress={() => setRole("user")}
+                        >
+                          <Text style={styles.roleIcon}>👤</Text>
+                          <Text
+                            style={[
+                              styles.roleLabel,
+                              role === "user" && styles.roleLabelActive,
+                            ]}
+                          >
+                            User
+                          </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[
+                            styles.roleCard,
+                            role === "provider" && styles.roleCardActive,
+                          ]}
+                          onPress={() => setRole("provider")}
+                        >
+                          <Text style={styles.roleIcon}>🛠️</Text>
+                          <Text
+                            style={[
+                              styles.roleLabel,
+                              role === "provider" && styles.roleLabelActive,
+                            ]}
+                          >
+                            Service Provider
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Action Links */}
+                  <View style={styles.actions}>
+                    <TouchableOpacity onPress={() => setStep("phone")}>
+                      <Text style={styles.linkText}>Change Number</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.actionDivider}>•</Text>
+                    <TouchableOpacity onPress={sendOtp} disabled={cooldown > 0}>
+                      <Text
+                        style={[
+                          styles.linkText,
+                          cooldown > 0 && styles.linkDisabled,
+                        ]}
+                      >
+                        {cooldown > 0 ? `Resend (${cooldown}s)` : "Resend OTP"}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
               )}
 
-              <View style={{ marginTop: 16, alignItems: "center" }}>
-                <TouchableOpacity onPress={() => setStep("phone")}>
-                  <Text style={styles.link}>Change phone number</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={sendOtp}
-                  disabled={cooldown > 0}
-                  style={{ marginTop: 8 }}
-                >
-                  <Text style={styles.link}>
-                    {cooldown > 0 ? `Resend OTP in ${cooldown}s` : "Resend OTP"}
-                  </Text>
-                </TouchableOpacity>
+              {/* Footer */}
+              <View style={styles.footer}>
+                <Text style={styles.footerText}>
+                  By continuing, you agree to our{" "}
+                  <Text style={styles.footerLink}>Terms</Text> &{" "}
+                  <Text style={styles.footerLink}>Privacy Policy</Text>
+                </Text>
               </View>
-            </>
-          )}
-        </View>
-      </ScrollView>
-      <Snackbar message={snackbarMsg} onDismiss={() => setSnackbarMsg(null)} />
-    </KeyboardAvoidingView>
+            </Animated.View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+        <Snackbar
+          message={snackbarMsg}
+          onDismiss={() => setSnackbarMsg(null)}
+        />
+      </View>
+    </TouchableWithoutFeedback>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f3f4f6",
+    backgroundColor: "#f8fafc",
+  },
+  gradient: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: "45%",
+  },
+  keyboardView: {
+    flex: 1,
   },
   scrollContainer: {
     flexGrow: 1,
     justifyContent: "center",
-    alignItems: "center",
     padding: 20,
+    paddingTop: 60,
   },
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 24,
-    width: "100%",
-    maxWidth: 420,
+    backgroundColor: "#ffffff",
+    borderRadius: 24,
+    padding: 28,
     shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 10,
+    shadowRadius: 12,
     elevation: 5,
-    alignItems: "center",
   },
-  logo: { width: 120, height: 120, resizeMode: "contain", marginBottom: 8 },
+  logoSection: {
+    alignItems: "center",
+    marginBottom: 32,
+  },
+  logoCircle: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: "#f1f5f9",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  logo: {
+    width: 60,
+    height: 60,
+    resizeMode: "contain",
+  },
   appName: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#1e293b",
+    marginBottom: 6,
+  },
+  tagline: {
+    fontSize: 14,
+    color: "#64748b",
+    fontWeight: "500",
+  },
+  welcomeSection: {
+    marginBottom: 28,
+  },
+  welcomeTitle: {
     fontSize: 22,
     fontWeight: "700",
-    color: "#4f46e5",
-    marginBottom: 4,
+    color: "#1e293b",
+    marginBottom: 8,
   },
-  tagline: { fontSize: 14, color: "#6b7280", marginBottom: 12 },
-  title: { fontSize: 22, fontWeight: "700", color: "#111827", marginBottom: 6 },
-  subtitle: {
+  welcomeSubtitle: {
     fontSize: 14,
-    color: "#6b7280",
-    marginBottom: 20,
-    textAlign: "center",
+    color: "#64748b",
+    lineHeight: 20,
+  },
+  inputWrapper: {
+    marginBottom: 24,
   },
   phoneContainer: {
     flexDirection: "row",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#d1d5db",
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
     borderRadius: 12,
-    paddingHorizontal: 10,
-    marginBottom: 8,
-    width: "100%",
-    backgroundColor: "#f9fafb",
-    height: 55,
+    paddingHorizontal: 16,
+    backgroundColor: "#f8fafc",
+    height: 56,
   },
-  flag: { fontSize: 24 },
-  callingCode: { fontSize: 16, marginHorizontal: 6, fontWeight: "600" },
-  phoneInput: { flex: 1, fontSize: 16, padding: 10 },
+  inputFocused: {
+    borderColor: "#6366f1",
+    backgroundColor: "#ffffff",
+  },
+  inputError: {
+    borderColor: "#ef4444",
+  },
+  countryCode: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1e293b",
+  },
+  separator: {
+    width: 1,
+    height: 24,
+    backgroundColor: "#e2e8f0",
+    marginHorizontal: 12,
+  },
+  phoneInput: {
+    flex: 1,
+    fontSize: 16,
+    color: "#1e293b",
+    fontWeight: "500",
+  },
   errorText: {
-    color: "red",
     fontSize: 13,
-    alignSelf: "flex-start",
-    marginBottom: 10,
+    color: "#ef4444",
+    marginTop: 8,
+    marginLeft: 4,
+  },
+  otpWrapper: {
+    marginBottom: 24,
   },
   otpContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 30,
-    width: "90%",
+  },
+  otpBox: {
+    width: 48,
+    height: 56,
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+    borderRadius: 12,
+    backgroundColor: "#f8fafc",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  otpBoxFocused: {
+    borderColor: "#6366f1",
+    backgroundColor: "#ffffff",
+  },
+  otpBoxFilled: {
+    borderColor: "#6366f1",
+    backgroundColor: "#f0f4ff",
   },
   otpInput: {
-    width: "14%",
-    height: 55,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 10,
-    textAlign: "center",
     fontSize: 20,
-    fontWeight: "600",
-    backgroundColor: "#f9fafb",
-  },
-  button: {
+    fontWeight: "700",
+    color: "#1e293b",
+    textAlign: "center",
     width: "100%",
-    backgroundColor: "#4f46e5",
-    paddingVertical: 14,
-    borderRadius: 10,
+  },
+  primaryButton: {
+    backgroundColor: "#6366f1",
+    borderRadius: 12,
+    height: 56,
+    justifyContent: "center",
     alignItems: "center",
-    marginTop: 6,
+    shadowColor: "#6366f1",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  buttonText: { color: "#fff", fontWeight: "600", fontSize: 16 },
-  roleRow: { flexDirection: "row", marginTop: 10 },
-  roleBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: "#d1d5db",
-    marginHorizontal: 6,
-    borderRadius: 8,
+  buttonDisabled: {
+    backgroundColor: "#cbd5e1",
+    shadowOpacity: 0,
   },
-  roleActive: { backgroundColor: "#4f46e5", borderColor: "#4f46e5" },
-  roleText: { color: "#374151", fontWeight: "500" },
-  roleTextActive: { color: "#fff", fontWeight: "600" },
-  link: { color: "#4f46e5", fontSize: 14, fontWeight: "500" },
+  primaryButtonText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#ffffff",
+  },
+  roleSection: {
+    marginTop: 24,
+    marginBottom: 16,
+  },
+  roleTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#475569",
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  roleOptions: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  roleCard: {
+    flex: 1,
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+    borderRadius: 12,
+    padding: 16,
+    alignItems: "center",
+    backgroundColor: "#f8fafc",
+  },
+  roleCardActive: {
+    borderColor: "#6366f1",
+    backgroundColor: "#f0f4ff",
+  },
+  roleIcon: {
+    fontSize: 32,
+    marginBottom: 8,
+  },
+  roleLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#64748b",
+  },
+  roleLabelActive: {
+    color: "#6366f1",
+  },
+  actions: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 20,
+    gap: 12,
+  },
+  actionDivider: {
+    fontSize: 14,
+    color: "#cbd5e1",
+  },
+  linkText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#6366f1",
+  },
+  linkDisabled: {
+    color: "#94a3b8",
+  },
+  footer: {
+    marginTop: 28,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: "#f1f5f9",
+  },
+  footerText: {
+    fontSize: 12,
+    color: "#94a3b8",
+    textAlign: "center",
+    lineHeight: 18,
+  },
+  footerLink: {
+    color: "#6366f1",
+    fontWeight: "600",
+  },
 });

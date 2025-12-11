@@ -9,6 +9,30 @@ import { ioServer } from "../sockets/socket.js";
 const router = express.Router();
 const User = db.User;
 
+// GET /profile - Retrieve user profile
+router.get("/", authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await User.findByPk(userId, {
+      attributes: { exclude: ["password"] },
+    });
+
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    res.json({
+      success: true,
+      user: user,
+    });
+  } catch (err) {
+    console.error("Get profile error:", err && err.stack ? err.stack : err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
 // Lightweight tools for production debugging without file uploads.
 // - GET /tools/ping: quick health info (Cloudinary configured, AUTO_VERIFY flag)
 // - PUT /tools/test-profile-update: JSON-only profile save to verify DB/auth
@@ -335,12 +359,10 @@ router.post(
         !process.env.CLOUDINARY_API_SECRET
       ) {
         console.warn("Cloudinary not configured; cannot upload base64 image");
-        return res
-          .status(503)
-          .json({
-            success: false,
-            message: "Cloudinary not configured on server",
-          });
+        return res.status(503).json({
+          success: false,
+          message: "Cloudinary not configured on server",
+        });
       }
 
       // Upload the data URI directly to Cloudinary
@@ -410,13 +432,11 @@ router.get("/tools/test-cloudinary", async (req, res) => {
         "Cloudinary API test failed:",
         apiErr && apiErr.stack ? apiErr.stack : apiErr
       );
-      return res
-        .status(502)
-        .json({
-          ok: false,
-          connected: false,
-          error: apiErr.message || String(apiErr),
-        });
+      return res.status(502).json({
+        ok: false,
+        connected: false,
+        error: apiErr.message || String(apiErr),
+      });
     }
   } catch (err) {
     console.error(
@@ -624,10 +644,8 @@ router.get("/maps/suggest", async (req, res) => {
     if (!response.ok) {
       const body = await response.text().catch(() => "<no body>");
       console.error("LocationIQ non-OK response:", response.status, body);
-      return res.status(502).json({
-        error: "Location provider returned an error",
-        status: response.status,
-      });
+      // Return empty array instead of error to prevent app from crashing
+      return res.json({ suggestedLocations: [] });
     }
 
     const data = await response.json();
@@ -644,9 +662,8 @@ router.get("/maps/suggest", async (req, res) => {
     return res.json({ suggestedLocations });
   } catch (err) {
     console.error("LocationIQ API Error:", err && err.stack ? err.stack : err);
-    return res
-      .status(500)
-      .json({ error: "Failed to fetch location suggestions" });
+    // Return empty array instead of error to prevent app from crashing
+    return res.json({ suggestedLocations: [] });
   }
 });
 
