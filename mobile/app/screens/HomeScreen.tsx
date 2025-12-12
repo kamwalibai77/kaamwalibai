@@ -502,27 +502,47 @@ export default function HomeScreen({ navigation }: Props) {
     setSuggestions([]);
   };
 
-  const renderProvider = ({ item }: { item: any }) => (
-    <TouchableOpacity
-      style={styles.providerCard}
-      onPress={() => openProviderModal(item)}
-    >
-      <View style={styles.providerImageContainer}>
-        <Image
-          source={getProfileSource(item.provider.profilePhoto)}
-          style={styles.providerImage}
-          resizeMode="cover"
-        />
-        <LinearGradient
-          colors={["transparent", "rgba(0,0,0,0.6)"]}
-          style={styles.imageOverlay}
-        >
-          <View style={styles.verifiedBadge}>
-            <Ionicons name="checkmark-circle" size={12} color="#10b981" />
-            <Text style={styles.verifiedText}>Verified</Text>
-          </View>
-        </LinearGradient>
-      </View>
+  const renderProvider = ({ item }: { item: any }) => {
+    // Determine KYC badge status
+    const provider = item.provider;
+    const kycStatus = provider.kycStatus;
+    const kycSubmittedAt = provider.kycSubmittedAt;
+    
+    let badgeStyle = styles.kycBadgeUnverified;
+    let badgeText = "Unverified";
+    let badgeIcon = "alert-circle";
+    
+    if (kycStatus === "verified") {
+      badgeStyle = styles.kycBadgeVerified;
+      badgeText = "Verified";
+      badgeIcon = "checkmark-circle";
+    } else if (kycStatus === "pending" && kycSubmittedAt) {
+      badgeStyle = styles.kycBadgeSubmitted;
+      badgeText = "In Review";
+      badgeIcon = "time-outline";
+    }
+    
+    return (
+      <TouchableOpacity
+        style={styles.providerCard}
+        onPress={() => openProviderModal(item)}
+      >
+        <View style={styles.providerImageContainer}>
+          <Image
+            source={getProfileSource(item.provider.profilePhoto)}
+            style={styles.providerImage}
+            resizeMode="cover"
+          />
+          <LinearGradient
+            colors={["transparent", "rgba(0,0,0,0.6)"]}
+            style={styles.imageOverlay}
+          >
+            <View style={[styles.verifiedBadge, badgeStyle]}>
+              <Ionicons name={badgeIcon as any} size={12} color="#fff" />
+              <Text style={styles.verifiedText}>{badgeText}</Text>
+            </View>
+          </LinearGradient>
+        </View>
       <View style={styles.providerInfo}>
         <Text style={styles.providerName} numberOfLines={1}>
           {item.provider.name}
@@ -557,43 +577,8 @@ export default function HomeScreen({ navigation }: Props) {
         </View>
       </View>
     </TouchableOpacity>
-  );
-
-  const getProfileSource = (uri: string | undefined | null) => {
-    if (uri && typeof uri === "string" && uri.trim() !== "") return { uri };
-    return PlaceholderImg;
-  };
-
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View
-          style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
-        >
-          <ActivityIndicator size="large" color="#a855f7" />
-        </View>
-      </SafeAreaView>
     );
-  }
-
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        {/* HEADER WITH GRADIENT */}
-        <LinearGradient
-          colors={["#6366f1", "#8b5cf6", "#c084fc"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.headerGradient}
-        >
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>कामवाली बाई</Text>
-            <TouchableOpacity
-              style={{ marginLeft: "auto", paddingHorizontal: 12 }}
-              onPress={() => setNotifModalVisible(true)}
-            >
-              <View>
-                <Ionicons
+  };
                   name="notifications-outline"
                   size={28}
                   color="#ffffff"
@@ -964,12 +949,50 @@ export default function HomeScreen({ navigation }: Props) {
           >
             <View style={styles.modalOverlay}>
               <View style={styles.providerModal}>
-                <Image
-                  source={getProfileSource(
-                    selectedProvider.provider.profilePhoto
+                {/* Profile Image with KYC Badge */}
+                <View style={styles.modalImageWrapper}>
+                  <Image
+                    source={getProfileSource(
+                      selectedProvider.provider.profilePhoto
+                    )}
+                    style={styles.providerModalImage}
+                  />
+                  {/* KYC Badge */}
+                  {selectedProvider.provider.role === "ServiceProvider" && (
+                    <View
+                      style={[
+                        styles.modalKycBadge,
+                        selectedProvider.provider.kycStatus === "verified"
+                          ? styles.modalKycBadgeVerified
+                          : selectedProvider.provider.kycStatus === "pending" &&
+                            selectedProvider.provider.kycSubmittedAt
+                          ? styles.modalKycBadgeSubmitted
+                          : styles.modalKycBadgeUnverified,
+                      ]}
+                    >
+                      <Ionicons
+                        name={
+                          selectedProvider.provider.kycStatus === "verified"
+                            ? "checkmark-circle"
+                            : selectedProvider.provider.kycStatus === "pending" &&
+                              selectedProvider.provider.kycSubmittedAt
+                            ? "time-outline"
+                            : "alert-circle"
+                        }
+                        size={12}
+                        color="#fff"
+                      />
+                      <Text style={styles.modalKycBadgeText}>
+                        {selectedProvider.provider.kycStatus === "verified"
+                          ? "Verified"
+                          : selectedProvider.provider.kycStatus === "pending" &&
+                            selectedProvider.provider.kycSubmittedAt
+                          ? "In Review"
+                          : "Unverified"}
+                      </Text>
+                    </View>
                   )}
-                  style={styles.providerModalImage}
-                />
+                </View>
                 <Text style={styles.providerModalName}>
                   {selectedProvider.provider.name}
                 </Text>
@@ -1376,8 +1399,18 @@ const styles = StyleSheet.create({
   verifiedText: {
     fontSize: 8,
     fontWeight: "700",
-    color: "#10b981",
+    color: "#ffffff",
     letterSpacing: 0.2,
+  },
+  // KYC Badge Styles
+  kycBadgeVerified: {
+    backgroundColor: "rgba(59, 130, 246, 0.95)", // Blue for verified
+  },
+  kycBadgeSubmitted: {
+    backgroundColor: "rgba(16, 185, 129, 0.95)", // Green for in review
+  },
+  kycBadgeUnverified: {
+    backgroundColor: "rgba(156, 163, 175, 0.95)", // Grey for unverified
   },
   providerInfo: {
     padding: 4,
@@ -1586,6 +1619,37 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   providerModalImage: { width: 100, height: 100, borderRadius: 50 },
+  modalImageWrapper: {
+    position: "relative",
+    marginBottom: 10,
+  },
+  modalKycBadge: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: "#fff",
+    gap: 3,
+  },
+  modalKycBadgeVerified: {
+    backgroundColor: "#3b82f6", // Blue
+  },
+  modalKycBadgeSubmitted: {
+    backgroundColor: "#10b981", // Green
+  },
+  modalKycBadgeUnverified: {
+    backgroundColor: "#9ca3af", // Grey
+  },
+  modalKycBadgeText: {
+    fontSize: 9,
+    fontWeight: "700",
+    color: "#fff",
+  },
   providerModalName: { fontSize: 18, fontWeight: "700", marginVertical: 5 },
   providerModalService: { color: "gray", marginBottom: 15 },
   providerModalActions: {

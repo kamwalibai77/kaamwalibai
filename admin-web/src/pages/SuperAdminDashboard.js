@@ -741,6 +741,16 @@ export default function SuperAdminDashboard() {
             </div>
 
             <div className="modal-body">
+              {/* Warning banner if documents are missing */}
+              {(!selectedProvider.kycFrontUrl ||
+                !selectedProvider.kycBackUrl) && (
+                <div className="kyc-warning-banner">
+                  <strong>⚠️ Warning:</strong> Some KYC documents are missing.
+                  The image upload may have failed. You can reject this KYC to
+                  allow the provider to resubmit with proper documents.
+                </div>
+              )}
+
               <div className="kyc-info-section">
                 <h3>Personal Information</h3>
                 <div className="info-grid">
@@ -790,7 +800,7 @@ export default function SuperAdminDashboard() {
                       />
                     </div>
                   )}
-                  {selectedProvider.kycFrontUrl && (
+                  {selectedProvider.kycFrontUrl ? (
                     <div className="document-item">
                       <label>Aadhaar Card Front</label>
                       <img
@@ -799,8 +809,16 @@ export default function SuperAdminDashboard() {
                         className="kyc-document-img"
                       />
                     </div>
+                  ) : (
+                    <div className="document-item">
+                      <label>Aadhaar Card Front</label>
+                      <div className="kyc-document-missing">
+                        <p>⚠️ Document not uploaded</p>
+                        <small>The image upload may have failed</small>
+                      </div>
+                    </div>
                   )}
-                  {selectedProvider.kycBackUrl && (
+                  {selectedProvider.kycBackUrl ? (
                     <div className="document-item">
                       <label>PAN Card / Aadhaar Back</label>
                       <img
@@ -808,6 +826,14 @@ export default function SuperAdminDashboard() {
                         alt="Document Back"
                         className="kyc-document-img"
                       />
+                    </div>
+                  ) : (
+                    <div className="document-item">
+                      <label>PAN Card / Aadhaar Back</label>
+                      <div className="kyc-document-missing">
+                        <p>⚠️ Document not uploaded</p>
+                        <small>The image upload may have failed</small>
+                      </div>
                     </div>
                   )}
                 </div>

@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
+import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { useState } from "react";
@@ -99,42 +100,74 @@ export default function KYCVerification(): any {
         "I consent to submit my Aadhaar for verification"
       );
 
-      // Robust append helper: try to fetch the URI and append a blob (with filename),
-      // fallback to RN file obj {uri,name,type} if anything fails.
-      const appendRNFile = async (
-        fieldName: string,
-        fileObj: { uri?: string } | string | null
-      ) => {
-        if (!fileObj) return;
-        const uri = (fileObj as any).uri || (fileObj as any);
-        if (!uri) return;
+      // Get file URIs
+      const kycFrontUri =
+        typeof kycFront === "string" ? kycFront : kycFront?.uri;
+      const kycBackUri = typeof kycBack === "string" ? kycBack : kycBack?.uri;
 
-        // try to derive filename and type
-        let name = (uri.split("/").pop() || `${fieldName}.jpg`).split("?")[0];
-        if (!name.includes(".")) name = `${name}.jpg`;
-        const lower = name.toLowerCase();
-        const type = lower.endsWith(".png") ? "image/png" : "image/jpeg";
+      if (!kycFrontUri || !kycBackUri) {
+        throw new Error("File URIs are missing");
+      }
 
-        try {
-          // fetch the file and convert to blob, then append with filename
-          const fetched = await fetch(uri);
-          const blob = await fetched.blob();
-          // FormData.append in RN accepts (fieldName, blob, filename)
-          form.append(fieldName, blob as any, name);
-          return;
-        } catch (err) {
-          // fallback to RN file object
-          try {
-            form.append(fieldName, { uri, name, type } as any);
-            return;
-          } catch (err2) {
-            console.log("appendRNFile fallback failed", fieldName, err2);
-          }
+      // Debug: log file info
+      console.log("[KYC submit] File URIs:", {
+        kycFrontUri,
+        kycBackUri,
+      });
+
+      // Check file sizes to ensure they're not empty
+      try {
+        const frontInfo = await FileSystem.getInfoAsync(kycFrontUri);
+        const backInfo = await FileSystem.getInfoAsync(kycBackUri);
+
+        console.log("[KYC submit] File info:", {
+          front: { exists: frontInfo.exists, size: frontInfo.size },
+          back: { exists: backInfo.exists, size: backInfo.size },
+        });
+
+        if (!frontInfo.exists || !backInfo.exists) {
+          throw new Error("One or more files do not exist");
         }
+
+        if ((frontInfo.size || 0) === 0 || (backInfo.size || 0) === 0) {
+          throw new Error("One or more files are empty (0 bytes)");
+        }
+      } catch (err) {
+        console.error("[KYC submit] File check error:", err);
+        throw new Error(
+          "Failed to verify file integrity: " + (err as Error).message
+        );
+      }
+
+      // Helper to create proper file object for FormData
+      const createFileObject = (uri: string, fieldName: string) => {
+        // Get filename from URI
+        let filename = uri.split("/").pop() || `${fieldName}.jpg`;
+        filename = filename.split("?")[0]; // Remove query params
+
+        // Ensure filename has extension
+        if (!filename.includes(".")) {
+          filename = `${filename}.jpg`;
+        }
+
+        // Determine MIME type from extension
+        const extension = filename.toLowerCase().split(".").pop();
+        let mimeType = "image/jpeg";
+        if (extension === "png") mimeType = "image/png";
+        else if (extension === "webp") mimeType = "image/webp";
+        else if (extension === "heic" || extension === "heif")
+          mimeType = "image/jpeg";
+
+        return {
+          uri,
+          name: filename,
+          type: mimeType,
+        };
       };
 
-      await appendRNFile("kycFront", kycFront);
-      await appendRNFile("kycBack", kycBack);
+      // Append files to FormData
+      form.append("kycFront", createFileObject(kycFrontUri, "kycFront") as any);
+      form.append("kycBack", createFileObject(kycBackUri, "kycBack") as any);
 
       // Use fetch for multipart uploads in React Native. Do NOT set Content-Type;
       // let the runtime include the boundary. Add Accept to help some servers.
@@ -145,10 +178,8 @@ export default function KYCVerification(): any {
       console.log("[KYC submit] about to POST", {
         url,
         tokenPresent: !!token,
-        kycFrontUri:
-          typeof kycFront === "string" ? kycFront : kycFront?.uri || null,
-        kycBackUri:
-          typeof kycBack === "string" ? kycBack : kycBack?.uri || null,
+        hasKycFront: !!kycFrontUri,
+        hasKycBack: !!kycBackUri,
       });
 
       const res = await fetch(url, {

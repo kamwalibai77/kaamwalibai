@@ -453,6 +453,22 @@
   padding-bottom: 10px;
 }
 
+.kyc-warning-banner {
+  background: #fef3c7;
+  border: 2px solid #f59e0b;
+  border-radius: 10px;
+  padding: 15px;
+  margin-bottom: 20px;
+  color: #92400e;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.kyc-warning-banner strong {
+  font-weight: 700;
+  font-size: 15px;
+}
+
 .info-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -507,6 +523,32 @@
 .kyc-document-img:hover {
   transform: scale(1.05);
   border-color: #667eea;
+}
+
+.kyc-document-missing {
+  width: 100%;
+  height: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #fef3c7;
+  border: 2px dashed #f59e0b;
+  border-radius: 12px;
+  color: #92400e;
+  text-align: center;
+  padding: 20px;
+}
+
+.kyc-document-missing p {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+}
+
+.kyc-document-missing small {
+  font-size: 13px;
+  color: #b45309;
 }
 
 .kyc-actions {
