@@ -6,6 +6,7 @@ import db from "./models/index.js";
 import { initSocket } from "./sockets/socket.js";
 
 // Routes
+import adminRoutes from "./routes/adminRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import availabilityRoutes from "./routes/availabilityTimeRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
@@ -74,6 +75,7 @@ app.use(express.urlencoded({ limit: "50mb", extended: true }));
 // REST API Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/auth", otpRoutes);
+app.use("/api/admin", adminRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/chat", chatRoutes);

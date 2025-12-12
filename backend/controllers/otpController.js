@@ -199,6 +199,20 @@ export const verifyOtp = async (req, res) => {
     // Check if user exists
     let user = await User.findOne({ where: { phoneNumber: String(phone) } });
     if (user) {
+      // If role param is 'admin', verify user has admin role
+      if (role === "admin") {
+        const adminRoles = [
+          "superadmin",
+          "customerSuccess",
+          "supportMaintenance",
+        ];
+        if (!adminRoles.includes(user.role)) {
+          return res
+            .status(403)
+            .json({ error: "Access denied. Admin privileges required." });
+        }
+      }
+
       // consume OTP and login
       await record.update({ used: true });
       const token = jwt.sign(

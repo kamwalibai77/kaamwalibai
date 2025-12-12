@@ -14,7 +14,13 @@ export default (sequelize, DataTypes) => {
       allowNull: false,
     },
     role: {
-      type: DataTypes.ENUM("user", "ServiceProvider", "superadmin"), // ✅ role column
+      type: DataTypes.ENUM(
+        "user",
+        "ServiceProvider",
+        "superadmin",
+        "customerSuccess",
+        "supportMaintenance"
+      ), // ✅ role column with admin types
     },
     address: {
       type: DataTypes.STRING,
@@ -52,7 +58,7 @@ export default (sequelize, DataTypes) => {
     kycStatus: {
       type: DataTypes.ENUM("none", "pending", "verified", "rejected"),
       allowNull: false,
-      defaultValue: "none",
+      defaultValue: "pending",
     },
     kycFrontUrl: {
       type: DataTypes.STRING,

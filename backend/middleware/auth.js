@@ -22,10 +22,32 @@ export const authMiddleware = async (req, res, next) => {
       return res.status(401).json({ error: "User not found" });
     }
 
-    req.user = { id: user.id, role: user.role };
+    req.user = { id: user.id, role: user.role, name: user.name };
     next();
   } catch (err) {
     console.error("Auth Error:", err);
     res.status(401).json({ error: "Unauthorized" });
   }
+};
+
+// Alias for consistency
+export const authenticate = authMiddleware;
+
+// Role-based access control middleware
+export const requireRole = (allowedRoles) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    if (!allowedRoles.includes(req.user.role)) {
+      return res.status(403).json({
+        error: "Access denied. Insufficient permissions.",
+        requiredRoles: allowedRoles,
+        userRole: req.user.role,
+      });
+    }
+
+    next();
+  };
 };
