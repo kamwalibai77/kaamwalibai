@@ -94,15 +94,20 @@ export default function ProfileScreen({ navigation }: Props): any {
             <View style={styles.profileImageWrapper}>
               <Image
                 source={
-                  !imageError && user.profilePhoto
+                  !imageError &&
+                  user.profilePhoto &&
+                  user.profilePhoto.startsWith("http")
                     ? { uri: user.profilePhoto }
                     : PlaceholderImg
                 }
                 style={styles.profileImage}
-                onError={() => {
-                  console.warn(
-                    "Profile image failed to load, falling back to placeholder"
-                  );
+                onError={(error) => {
+                  if (user.profilePhoto) {
+                    console.warn(
+                      "Profile image failed to load:",
+                      user.profilePhoto.substring(0, 100)
+                    );
+                  }
                   setImageError(true);
                 }}
                 onLoad={() => {
@@ -267,8 +272,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f8fafc" },
 
   headerGradient: {
-    paddingTop: 12,
-    paddingBottom: 18,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
   },
@@ -276,9 +279,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 12,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 16,
   },
   headerTitle: {
     fontSize: 22,

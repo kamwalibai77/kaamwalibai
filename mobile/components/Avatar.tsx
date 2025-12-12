@@ -19,7 +19,10 @@ export default function Avatar({
   // placeholder image in the project
   const placeholder = require("../assets/images/default.png");
 
-  const source = !uri || error ? placeholder : ({ uri } as any);
+  // Only use URI if it's valid (starts with http/https)
+  const isValidUri =
+    uri && (uri.startsWith("http://") || uri.startsWith("https://"));
+  const source = !isValidUri || error ? placeholder : ({ uri } as any);
 
   return (
     <View

@@ -1,9 +1,12 @@
 // app/screens/AddServiceScreen.tsx
+import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Dimensions,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -15,8 +18,11 @@ import {
   View,
 } from "react-native";
 import DropDownPicker from "react-native-dropdown-picker";
+import { SafeAreaView } from "react-native-safe-area-context";
 import serviceprovidersApi from "../services/serviceProviders";
 import serviceTypesApi from "../services/serviceTypes";
+
+const { width } = Dimensions.get("window");
 
 const RATE_OPTIONS = [
   { label: "Per Hour", value: "hourly" },
@@ -166,217 +172,344 @@ export default function AddServiceScreen({
   };
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
-    >
-      <ScrollView
-        contentContainerStyle={styles.container}
-        keyboardShouldPersistTaps="handled"
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 0}
       >
-        <View style={styles.card}>
-          <Text style={styles.sectionLabel}>Service Type</Text>
-          <View
-            style={[
-              styles.dropdownWrapper,
-              { zIndex: servicesOpen ? 5000 : 3000 },
-            ]}
-          >
-            <DropDownPicker
-              open={servicesOpen}
-              setOpen={setServicesOpen}
-              onOpen={onOpenServices}
-              mode="BADGE"
-              multiple={true}
-              min={1}
-              max={serviceItems.length}
-              value={selectedServices}
-              setValue={setSelectedServices}
-              items={serviceItems}
-              setItems={setServiceItems}
-              placeholder="Select Services"
-              listMode={Platform.OS === "web" ? "SCROLLVIEW" : "MODAL"}
-              dropDownDirection="AUTO"
-              dropDownContainerStyle={styles.dropDownContainer}
-              style={styles.dropdown}
-              textStyle={styles.dropdownText}
-              scrollViewProps={{ nestedScrollEnabled: true }}
-            />
-          </View>
-
-          <Text style={styles.sectionLabel}>Rate Type</Text>
-          <View
-            style={[styles.dropdownWrapper, { zIndex: rateOpen ? 4000 : 2000 }]}
-          >
-            <DropDownPicker
-              open={rateOpen}
-              setOpen={setRateOpen}
-              onOpen={onOpenRate}
-              multiple={false}
-              value={selectedRate}
-              setValue={setSelectedRate}
-              items={rateItems}
-              setItems={setRateItems}
-              placeholder="Select Rate Type"
-              listMode={Platform.OS === "web" ? "SCROLLVIEW" : "MODAL"}
-              dropDownDirection="AUTO"
-              dropDownContainerStyle={styles.dropDownContainer}
-              style={styles.dropdown}
-              textStyle={styles.dropdownText}
-            />
-          </View>
-
-          <Text style={styles.sectionLabel}>Cost</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter Cost"
-            placeholderTextColor="#888"
-            keyboardType="numeric"
-            value={cost}
-            onChangeText={(text) => {
-              const numericText = text.replace(/[^0-9]/g, "");
-              setCost(numericText);
-            }}
-          />
-          {errCost && <Text style={styles.errText}>{errCost}</Text>}
-
-          <Text style={styles.sectionLabel}>Contact Number</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Active Contact Number"
-            placeholderTextColor="#888"
-            keyboardType="phone-pad"
-            value={contactNumber}
-            onChangeText={(text) => {
-              const numericText = text.replace(/[^0-9]/g, "").slice(0, 10);
-              setContactNumber(numericText);
-            }}
-            maxLength={15}
-          />
-          {errContact && <Text style={styles.errText}>{errContact}</Text>}
-
-          <Text style={styles.sectionLabel}>Availability</Text>
-          <View
-            style={[
-              styles.dropdownWrapper,
-              { zIndex: availabilityOpen ? 6000 : 1000 },
-            ]}
-          >
-            <DropDownPicker
-              open={availabilityOpen}
-              setOpen={setAvailabilityOpen}
-              multiple={true}
-              min={0}
-              max={4}
-              value={selectedAvailability}
-              setValue={setSelectedAvailability}
-              items={availabilityItems}
-              listMode={Platform.OS === "web" ? "SCROLLVIEW" : "MODAL"}
-              placeholder="Select availability slots"
-              dropDownContainerStyle={styles.dropDownContainer}
-              style={styles.dropdown}
-              textStyle={styles.dropdownText}
-            />
-          </View>
-        </View>
-
-        <TouchableOpacity
-          style={[styles.button, posting && { opacity: 0.7 }]}
-          onPress={validateAndSubmit}
-          disabled={posting}
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          {posting ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>
-              🚀 {serviceData ? "Update" : "Post"} Service
+          {/* Header */}
+          <LinearGradient
+            colors={["#6366f1", "#8b5cf6", "#a855f7"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.headerGradient}
+          >
+            <Ionicons name="briefcase" size={44} color="#ffffff" />
+            <Text style={styles.heading}>
+              {serviceData ? "Update Service" : "Post New Service"}
             </Text>
-          )}
-        </TouchableOpacity>
+            <Text style={styles.subheading}>
+              {serviceData
+                ? "Edit your service details"
+                : "Share your expertise with clients"}
+            </Text>
+          </LinearGradient>
 
-        <View style={{ height: 120 }} />
-      </ScrollView>
-    </KeyboardAvoidingView>
+          {/* Service Type Card */}
+          <View style={styles.card}>
+            <View style={styles.labelRow}>
+              <Ionicons name="list" size={18} color="#6366f1" />
+              <Text style={styles.sectionLabel}>Service Type</Text>
+            </View>
+            <View
+              style={[
+                styles.dropdownWrapper,
+                { zIndex: servicesOpen ? 5000 : 3000 },
+              ]}
+            >
+              <DropDownPicker
+                open={servicesOpen}
+                setOpen={setServicesOpen}
+                onOpen={onOpenServices}
+                mode="BADGE"
+                multiple={true}
+                min={1}
+                max={serviceItems.length}
+                value={selectedServices}
+                setValue={setSelectedServices}
+                items={serviceItems}
+                setItems={setServiceItems}
+                placeholder="Select Services"
+                listMode={Platform.OS === "web" ? "SCROLLVIEW" : "MODAL"}
+                dropDownDirection="AUTO"
+                dropDownContainerStyle={styles.dropDownContainer}
+                style={styles.dropdown}
+                textStyle={styles.dropdownText}
+                scrollViewProps={{ nestedScrollEnabled: true }}
+              />
+            </View>
+          </View>
+
+          {/* Rate Type Card */}
+          <View style={styles.card}>
+            <View style={styles.labelRow}>
+              <Ionicons name="time" size={18} color="#6366f1" />
+              <Text style={styles.sectionLabel}>Rate Type</Text>
+            </View>
+            <View
+              style={[
+                styles.dropdownWrapper,
+                { zIndex: rateOpen ? 4000 : 2000 },
+              ]}
+            >
+              <DropDownPicker
+                open={rateOpen}
+                setOpen={setRateOpen}
+                onOpen={onOpenRate}
+                multiple={false}
+                value={selectedRate}
+                setValue={setSelectedRate}
+                items={rateItems}
+                setItems={setRateItems}
+                placeholder="Select Rate Type"
+                listMode={Platform.OS === "web" ? "SCROLLVIEW" : "MODAL"}
+                dropDownDirection="AUTO"
+                dropDownContainerStyle={styles.dropDownContainer}
+                style={styles.dropdown}
+                textStyle={styles.dropdownText}
+              />
+            </View>
+          </View>
+
+          {/* Cost Card */}
+          <View style={styles.card}>
+            <View style={styles.labelRow}>
+              <Ionicons name="cash" size={18} color="#6366f1" />
+              <Text style={styles.sectionLabel}>Cost (INR)</Text>
+            </View>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your rate"
+              placeholderTextColor="#94a3b8"
+              keyboardType="numeric"
+              value={cost}
+              onChangeText={(text) => {
+                const numericText = text.replace(/[^0-9]/g, "");
+                setCost(numericText);
+              }}
+            />
+            {errCost && (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={14} color="#ef4444" />
+                <Text style={styles.errText}>{errCost}</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Contact Card */}
+          <View style={styles.card}>
+            <View style={styles.labelRow}>
+              <Ionicons name="call" size={18} color="#6366f1" />
+              <Text style={styles.sectionLabel}>Contact Number</Text>
+            </View>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter 10-digit phone number"
+              placeholderTextColor="#94a3b8"
+              keyboardType="phone-pad"
+              value={contactNumber}
+              onChangeText={(text) => {
+                const numericText = text.replace(/[^0-9]/g, "").slice(0, 10);
+                setContactNumber(numericText);
+              }}
+              maxLength={15}
+            />
+            {errContact && (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={14} color="#ef4444" />
+                <Text style={styles.errText}>{errContact}</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Availability Card */}
+          <View style={styles.card}>
+            <View style={styles.labelRow}>
+              <Ionicons name="calendar" size={18} color="#6366f1" />
+              <Text style={styles.sectionLabel}>Availability Slots</Text>
+            </View>
+            <View
+              style={[
+                styles.dropdownWrapper,
+                { zIndex: availabilityOpen ? 6000 : 1000 },
+              ]}
+            >
+              <DropDownPicker
+                open={availabilityOpen}
+                setOpen={setAvailabilityOpen}
+                multiple={true}
+                min={0}
+                max={4}
+                value={selectedAvailability}
+                setValue={setSelectedAvailability}
+                items={availabilityItems}
+                listMode={Platform.OS === "web" ? "SCROLLVIEW" : "MODAL"}
+                placeholder="Select availability slots"
+                dropDownContainerStyle={styles.dropDownContainer}
+                style={styles.dropdown}
+                textStyle={styles.dropdownText}
+              />
+            </View>
+          </View>
+
+          {/* Submit Button */}
+          <TouchableOpacity
+            onPress={validateAndSubmit}
+            disabled={posting}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={
+                posting
+                  ? ["#cbd5e1", "#94a3b8"]
+                  : ["#10b981", "#059669", "#047857"]
+              }
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.submitButton}
+            >
+              {posting ? (
+                <ActivityIndicator color="#ffffff" />
+              ) : (
+                <>
+                  <Ionicons
+                    name={serviceData ? "checkmark-circle" : "rocket"}
+                    size={20}
+                    color="#ffffff"
+                  />
+                  <Text style={styles.buttonText}>
+                    {serviceData ? "Update Service" : "Post Service"}
+                  </Text>
+                </>
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#f8fafc",
+  },
+  scrollView: {
+    flex: 1,
+  },
   container: {
-    padding: 20,
-    backgroundColor: "#f3f4f6",
+    paddingHorizontal: 16,
+    backgroundColor: "#f8fafc",
+  },
+  headerGradient: {
+    borderRadius: 20,
+    padding: 24,
+    alignItems: "center",
+    marginTop: 16,
+    marginBottom: 20,
+    shadowColor: "#6366f1",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  heading: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#ffffff",
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  subheading: {
+    fontSize: 13,
+    color: "#e0e7ff",
+    textAlign: "center",
+    fontWeight: "500",
   },
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: "#ffffff",
     borderRadius: 16,
-    padding: 18,
+    padding: 16,
+    marginBottom: 16,
     shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 6,
-    elevation: 4,
-    marginBottom: 20,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  labelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
   },
   sectionLabel: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "600",
-    color: "#374151",
-    marginBottom: 8,
-    marginTop: 12,
+    color: "#1e293b",
+    marginLeft: 8,
   },
   dropdownWrapper: {
-    marginBottom: 14,
     position: "relative",
   },
   dropdown: {
-    borderColor: "#e5e7eb",
+    borderColor: "#e2e8f0",
     borderRadius: 12,
     paddingVertical: 10,
-    backgroundColor: "#f9fafb",
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
   },
   dropdownText: {
     fontSize: 14,
-    color: "#111827",
+    color: "#1e293b",
   },
   dropDownContainer: {
-    borderColor: "#e5e7eb",
+    borderColor: "#e2e8f0",
     borderRadius: 12,
-    maxHeight: 200,
+    maxHeight: 220,
     elevation: 8,
     shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 6,
+    shadowRadius: 8,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+    borderColor: "#e2e8f0",
     borderRadius: 12,
-    padding: 12,
+    padding: 14,
     fontSize: 15,
-    color: "#111827",
-    backgroundColor: "#f9fafb",
-    marginBottom: 6,
+    color: "#1e293b",
+    backgroundColor: "#f8fafc",
+  },
+  errorContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
   },
   errText: {
-    color: "#dc2626",
-    marginBottom: 6,
+    color: "#ef4444",
     fontSize: 13,
+    fontWeight: "500",
+    marginLeft: 4,
   },
-  button: {
-    backgroundColor: "#6366f1",
-    padding: 16,
-    borderRadius: 14,
+  submitButton: {
+    flexDirection: "row",
     alignItems: "center",
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowOffset: { width: 0, height: 3 },
-    shadowRadius: 6,
+    justifyContent: "center",
+    paddingVertical: 16,
+    borderRadius: 14,
+    marginTop: 8,
+    marginBottom: 16,
+    shadowColor: "#10b981",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   buttonText: {
-    color: "#fff",
+    color: "#ffffff",
     fontSize: 16,
     fontWeight: "700",
+    marginLeft: 8,
   },
 });

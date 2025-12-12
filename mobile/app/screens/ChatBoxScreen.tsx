@@ -655,7 +655,9 @@ export default function ChatBoxScreen() {
                   <View style={{ alignItems: "center" }}>
                     <Image
                       source={
-                        profileUser.profilePhoto
+                        profileUser.profilePhoto &&
+                        (profileUser.profilePhoto.startsWith("http://") ||
+                          profileUser.profilePhoto.startsWith("https://"))
                           ? { uri: profileUser.profilePhoto }
                           : require("../../assets/images/default.png")
                       }
@@ -664,6 +666,9 @@ export default function ChatBoxScreen() {
                         height: 100,
                         borderRadius: 50,
                         marginBottom: 12,
+                      }}
+                      onError={() => {
+                        // Silently fallback - already using placeholder
                       }}
                     />
                     <Text style={{ fontSize: 18, fontWeight: "700" }}>
@@ -868,21 +873,14 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f8fafc" },
 
   headerGradient: {
-    paddingTop: Platform.OS === "ios" ? 50 : 12,
-    paddingBottom: 12,
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
-    shadowColor: "#6366f1",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    // No extra padding - SafeAreaView handles the top inset
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingTop: 12,
+    paddingBottom: 16,
   },
   backButton: {
     width: 36,

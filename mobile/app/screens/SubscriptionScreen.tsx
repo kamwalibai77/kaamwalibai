@@ -304,37 +304,64 @@ export default function SubscriptionScreen({ navigation }: any) {
           {/* Plans */}
           <ScrollView contentContainerStyle={styles.scroll}>
             {subscriptionDetails && (
-              <View style={styles.currentSubCard}>
+              <LinearGradient
+                colors={["#10b981", "#059669", "#047857"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.currentSubCard}
+              >
+                <View style={styles.glowEffect} />
                 <View style={styles.currentSubHeader}>
-                  <Ionicons name="checkmark-circle" size={24} color="#10b981" />
-                  <Text style={styles.currentSubTitle}>
-                    Active Subscription
-                  </Text>
+                  <View style={styles.activeIconWrapper}>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={32}
+                      color="#ffffff"
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.currentSubTitle}>
+                      Active Subscription
+                    </Text>
+                    <Text style={styles.currentSubPlan}>
+                      {subscriptionDetails.plan?.name ||
+                        subscriptionDetails.plan?.duration ||
+                        "Premium Plan"}
+                    </Text>
+                  </View>
                 </View>
-                <Text style={styles.currentSubPlan}>
-                  {subscriptionDetails.plan?.name ||
-                    subscriptionDetails.plan?.duration ||
-                    "Custom Plan"}
-                </Text>
+
+                <View style={styles.divider} />
+
                 <View style={styles.currentSubDetails}>
                   <View style={styles.currentSubDetailItem}>
-                    <Ionicons name="people" size={18} color="#8b5cf6" />
-                    <Text style={styles.currentSubDetailText}>
-                      {subscriptionDetails.remainingContacts != null
-                        ? `${subscriptionDetails.remainingContacts} contacts left`
-                        : "Contacts: N/A"}
-                    </Text>
+                    <View style={styles.detailIconWrapper}>
+                      <Ionicons name="people" size={20} color="#10b981" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.detailLabel}>Contacts</Text>
+                      <Text style={styles.detailValue}>
+                        {subscriptionDetails.remainingContacts != null
+                          ? subscriptionDetails.remainingContacts
+                          : "N/A"}
+                      </Text>
+                    </View>
                   </View>
                   <View style={styles.currentSubDetailItem}>
-                    <Ionicons name="time" size={18} color="#8b5cf6" />
-                    <Text style={styles.currentSubDetailText}>
-                      {subscriptionDetails.remainingDays != null
-                        ? `${subscriptionDetails.remainingDays} days left`
-                        : "Expiry: N/A"}
-                    </Text>
+                    <View style={styles.detailIconWrapper}>
+                      <Ionicons name="time" size={20} color="#10b981" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.detailLabel}>Days Left</Text>
+                      <Text style={styles.detailValue}>
+                        {subscriptionDetails.remainingDays != null
+                          ? subscriptionDetails.remainingDays
+                          : "N/A"}
+                      </Text>
+                    </View>
                   </View>
                 </View>
-              </View>
+              </LinearGradient>
             )}
 
             {plansLoading ? (
@@ -379,67 +406,187 @@ export default function SubscriptionScreen({ navigation }: any) {
                 </TouchableOpacity>
               </View>
             ) : (
-              (plans || [])
-                .filter((p) =>
-                  selectedRole === "user"
-                    ? p.type === "user"
-                    : p.type === "provider"
-                )
-                .map((plan) => (
-                  <View key={plan.id} style={styles.card}>
-                    <View style={styles.planIconWrapper}>
-                      <Ionicons
-                        name={selectedRole === "user" ? "person" : "briefcase"}
-                        size={28}
-                        color="#8b5cf6"
-                      />
-                    </View>
-                    <Text style={styles.planDuration}>{plan.duration}</Text>
-                    <Text style={styles.price}>{plan.price}</Text>
-                    {selectedRole === "user" ? (
-                      <View style={styles.planFeature}>
-                        <Ionicons
-                          name="checkmark-circle"
-                          size={16}
-                          color="#10b981"
-                        />
-                        <Text style={styles.planFeatureText}>
-                          {plan.contacts ?? 0} Contacts
-                        </Text>
-                      </View>
-                    ) : null}
+              <View style={styles.plansGrid}>
+                {(plans || [])
+                  .filter((p) =>
+                    selectedRole === "user"
+                      ? p.type === "user"
+                      : p.type === "provider"
+                  )
+                  .map((plan, index) => {
+                    const isPurchased = purchasedPlan === plan.duration;
+                    const isPopular = index === 1; // Mark middle plan as popular
 
-                    {purchasedPlan === plan.duration ? (
-                      <View style={styles.purchasedBadge}>
-                        <Ionicons
-                          name="checkmark-circle"
-                          size={18}
-                          color="#10b981"
-                        />
-                        <Text style={styles.purchasedText}>Active Plan</Text>
-                      </View>
-                    ) : (
-                      <TouchableOpacity
-                        style={styles.subscribeButton}
-                        onPress={() => handleSubscribe(plan)}
+                    return (
+                      <View
+                        key={plan.id}
+                        style={[styles.card, isPopular && styles.popularCard]}
                       >
+                        {isPopular && (
+                          <View style={styles.popularBadge}>
+                            <LinearGradient
+                              colors={["#f59e0b", "#d97706"]}
+                              start={{ x: 0, y: 0 }}
+                              end={{ x: 1, y: 0 }}
+                              style={styles.popularBadgeGradient}
+                            >
+                              <Ionicons name="star" size={14} color="#fff" />
+                              <Text style={styles.popularBadgeText}>
+                                MOST POPULAR
+                              </Text>
+                            </LinearGradient>
+                          </View>
+                        )}
+
                         <LinearGradient
-                          colors={["#8b5cf6", "#6366f1"]}
-                          style={styles.subscribeGradient}
+                          colors={
+                            isPurchased
+                              ? ["#d1fae5", "#ffffff"]
+                              : isPopular
+                              ? ["#fef3c7", "#ffffff"]
+                              : ["#f8fafc", "#ffffff"]
+                          }
+                          style={styles.cardGradient}
                         >
-                          <Text style={styles.subscribeText}>
-                            Subscribe Now
-                          </Text>
-                          <Ionicons
-                            name="arrow-forward"
-                            size={16}
-                            color="#fff"
-                          />
+                          <View style={styles.cardContent}>
+                            {/* Plan Icon */}
+                            <View
+                              style={[
+                                styles.planIconWrapper,
+                                isPurchased && styles.planIconActive,
+                                isPopular && styles.planIconPopular,
+                              ]}
+                            >
+                              <LinearGradient
+                                colors={
+                                  isPurchased
+                                    ? ["#10b981", "#059669"]
+                                    : isPopular
+                                    ? ["#f59e0b", "#d97706"]
+                                    : ["#8b5cf6", "#6366f1"]
+                                }
+                                style={styles.iconGradient}
+                              >
+                                <Ionicons
+                                  name={
+                                    isPurchased
+                                      ? "checkmark-circle"
+                                      : selectedRole === "user"
+                                      ? "person"
+                                      : "briefcase"
+                                  }
+                                  size={24}
+                                  color="#ffffff"
+                                />
+                              </LinearGradient>
+                            </View>
+
+                            {/* Plan Title */}
+                            <Text style={styles.planDuration}>
+                              {plan.duration}
+                            </Text>
+
+                            {/* Price */}
+                            <View style={styles.priceWrapper}>
+                              <Text style={styles.currencySymbol}>₹</Text>
+                              <Text style={styles.price}>
+                                {plan.price && typeof plan.price === "string"
+                                  ? plan.price.replace(/[^\d]/g, "")
+                                  : String(plan.price || "0").replace(
+                                      /[^\d]/g,
+                                      ""
+                                    )}
+                              </Text>
+                            </View>
+
+                            {/* Features List */}
+                            <View style={styles.featuresContainer}>
+                              {selectedRole === "user" && (
+                                <View style={styles.planFeature}>
+                                  <View style={styles.featureIconWrapper}>
+                                    <Ionicons
+                                      name="people"
+                                      size={14}
+                                      color="#8b5cf6"
+                                    />
+                                  </View>
+                                  <Text style={styles.planFeatureText}>
+                                    {plan.contacts ?? 0} Service Contacts
+                                  </Text>
+                                </View>
+                              )}
+
+                              <View style={styles.planFeature}>
+                                <View style={styles.featureIconWrapper}>
+                                  <Ionicons
+                                    name="shield-checkmark"
+                                    size={14}
+                                    color="#8b5cf6"
+                                  />
+                                </View>
+                                <Text style={styles.planFeatureText}>
+                                  Premium Support
+                                </Text>
+                              </View>
+
+                              <View style={styles.planFeature}>
+                                <View style={styles.featureIconWrapper}>
+                                  <Ionicons
+                                    name="flash"
+                                    size={14}
+                                    color="#8b5cf6"
+                                  />
+                                </View>
+                                <Text style={styles.planFeatureText}>
+                                  Instant Access
+                                </Text>
+                              </View>
+                            </View>
+
+                            {/* Subscribe Button */}
+                            {isPurchased ? (
+                              <View style={styles.purchasedBadge}>
+                                <Ionicons
+                                  name="checkmark-circle"
+                                  size={16}
+                                  color="#10b981"
+                                />
+                                <Text style={styles.purchasedText}>
+                                  Active Plan
+                                </Text>
+                              </View>
+                            ) : (
+                              <TouchableOpacity
+                                style={styles.subscribeButton}
+                                onPress={() => handleSubscribe(plan)}
+                              >
+                                <LinearGradient
+                                  colors={
+                                    isPopular
+                                      ? ["#f59e0b", "#d97706"]
+                                      : ["#8b5cf6", "#6366f1"]
+                                  }
+                                  start={{ x: 0, y: 0 }}
+                                  end={{ x: 1, y: 0 }}
+                                  style={styles.subscribeGradient}
+                                >
+                                  <Text style={styles.subscribeText}>
+                                    Subscribe Now
+                                  </Text>
+                                  <Ionicons
+                                    name="arrow-forward-circle"
+                                    size={16}
+                                    color="#fff"
+                                  />
+                                </LinearGradient>
+                              </TouchableOpacity>
+                            )}
+                          </View>
                         </LinearGradient>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                ))
+                      </View>
+                    );
+                  })}
+              </View>
             )}
           </ScrollView>
         </View>
@@ -456,8 +603,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f8fafc" },
 
   headerGradient: {
-    paddingTop: 12,
-    paddingBottom: 18,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
   },
@@ -465,9 +610,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 12,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 16,
   },
   headerTitle: {
     fontSize: 22,
@@ -533,50 +678,101 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
 
+  plansGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    width: width - 32,
+    paddingHorizontal: 0,
+  },
+
   currentSubCard: {
-    width: width * 0.9,
-    backgroundColor: "#ffffff",
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 20,
+    width: width * 0.92,
+    borderRadius: 24,
+    padding: 0,
+    marginBottom: 24,
     shadowColor: "#10b981",
-    shadowOpacity: 0.15,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 12,
-    elevation: 6,
-    borderWidth: 2,
-    borderColor: "#d1fae5",
+    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 8 },
+    shadowRadius: 16,
+    elevation: 10,
+    overflow: "hidden",
+  },
+  glowEffect: {
+    position: "absolute",
+    top: -50,
+    right: -50,
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
   },
   currentSubHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
+    padding: 20,
+    gap: 16,
+  },
+  activeIconWrapper: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "rgba(255, 255, 255, 0.25)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   currentSubTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#10b981",
-    marginLeft: 8,
+    fontSize: 13,
+    fontWeight: "600",
+    color: "rgba(255, 255, 255, 0.9)",
+    textTransform: "uppercase",
+    letterSpacing: 1,
   },
   currentSubPlan: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#1e293b",
-    marginBottom: 12,
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#ffffff",
+    marginTop: 4,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    marginHorizontal: 20,
   },
   currentSubDetails: {
-    gap: 8,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    gap: 12,
   },
   currentSubDetailItem: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 6,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    padding: 12,
+    borderRadius: 16,
+    gap: 10,
   },
-  currentSubDetailText: {
-    fontSize: 14,
-    color: "#64748b",
-    marginLeft: 8,
+  detailIconWrapper: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#ffffff",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  detailLabel: {
+    fontSize: 10,
+    color: "rgba(255, 255, 255, 0.8)",
     fontWeight: "600",
+  },
+  detailValue: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#ffffff",
+    marginTop: 2,
   },
 
   emptyContainer: {
@@ -627,52 +823,127 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    width: width * 0.9,
-    backgroundColor: "#ffffff",
-    borderRadius: 20,
-    padding: 24,
+    width: (width - 40) / 2,
     marginBottom: 16,
-    alignItems: "center",
-    shadowColor: "#8b5cf6",
+    borderRadius: 16,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  popularCard: {
+    shadowColor: "#f59e0b",
     shadowOpacity: 0.15,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 10,
     elevation: 6,
-    borderWidth: 1,
-    borderColor: "#f1f5f9",
+  },
+  popularBadge: {
+    position: "absolute",
+    top: 12,
+    right: -30,
+    zIndex: 10,
+    transform: [{ rotate: "45deg" }],
+  },
+  popularBadgeGradient: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 4,
+    paddingHorizontal: 30,
+    gap: 3,
+  },
+  popularBadgeText: {
+    color: "#ffffff",
+    fontSize: 8,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  cardGradient: {
+    borderRadius: 16,
+    overflow: "hidden",
+  },
+  cardContent: {
+    padding: 12,
+    alignItems: "center",
   },
   planIconWrapper: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "#f1f5f9",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    marginBottom: 8,
+    shadowColor: "#8b5cf6",
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  planIconActive: {
+    shadowColor: "#10b981",
+  },
+  planIconPopular: {
+    shadowColor: "#f59e0b",
+  },
+  iconGradient: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 22,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 12,
   },
   planDuration: {
-    fontSize: 18,
+    fontSize: 13,
     fontWeight: "700",
     color: "#1e293b",
+    marginBottom: 4,
+    letterSpacing: 0.2,
+    textAlign: "center",
+  },
+  priceWrapper: {
+    flexDirection: "row",
+    alignItems: "flex-start",
     marginBottom: 8,
   },
+  currencySymbol: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#8b5cf6",
+    marginTop: 1,
+    marginRight: 1,
+  },
   price: {
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: "800",
     color: "#8b5cf6",
-    marginBottom: 12,
     letterSpacing: -0.5,
+  },
+  featuresContainer: {
+    width: "100%",
+    backgroundColor: "#f8fafc",
+    borderRadius: 10,
+    padding: 8,
+    marginBottom: 10,
+    gap: 6,
   },
   planFeature: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
     gap: 6,
   },
+  featureIconWrapper: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "#ffffff",
+    justifyContent: "center",
+    alignItems: "center",
+  },
   planFeatureText: {
-    fontSize: 14,
-    color: "#64748b",
+    fontSize: 9,
+    color: "#475569",
     fontWeight: "600",
+    flex: 1,
   },
   details: {
     fontSize: 16,
@@ -684,34 +955,41 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#d1fae5",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    gap: 4,
+    borderWidth: 1.5,
+    borderColor: "#10b981",
   },
   purchasedText: {
     color: "#10b981",
-    fontSize: 15,
+    fontSize: 10,
     fontWeight: "700",
+    letterSpacing: 0.2,
   },
   subscribeButton: {
     width: "100%",
-    borderRadius: 24,
+    borderRadius: 12,
     overflow: "hidden",
-    marginTop: 8,
+    shadowColor: "#8b5cf6",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
   },
   subscribeGradient: {
-    paddingVertical: 14,
-    paddingHorizontal: 24,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    gap: 8,
+    gap: 4,
   },
   subscribeText: {
-    color: "#fff",
-    fontSize: 16,
+    color: "#ffffff",
+    fontSize: 11,
     fontWeight: "700",
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
 });

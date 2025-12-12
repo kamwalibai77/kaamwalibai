@@ -1,7 +1,6 @@
-import React from "react";
-import { View, TouchableOpacity, StyleSheet } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { StyleSheet, TouchableOpacity } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function FloatingAddButton({
   onPress,
@@ -11,7 +10,7 @@ export default function FloatingAddButton({
   const insets = useSafeAreaInsets();
   return (
     <TouchableOpacity
-      style={[styles.fab, { bottom: 16 + Math.max(0, insets.bottom) }]}
+      style={[styles.fab, { bottom: 80 + Math.max(0, insets.bottom) }]}
       onPress={() => {
         console.log("FloatingAddButton pressed (platform)");
         try {

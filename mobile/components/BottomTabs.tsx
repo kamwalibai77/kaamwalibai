@@ -121,7 +121,7 @@ export default function BottomTabs() {
           >
             <Ionicons
               name={pathname === "Home" ? "home" : "home-outline"}
-              size={24}
+              size={20}
               color={pathname === "Home" ? "#ffffff" : "#94a3b8"}
             />
           </View>
@@ -153,7 +153,7 @@ export default function BottomTabs() {
               name={
                 pathname === "Chat" ? "message-text" : "message-text-outline"
               }
-              size={24}
+              size={20}
               color={pathname === "Chat" ? "#ffffff" : "#94a3b8"}
             />
             {unreadCount > 0 && (
@@ -184,8 +184,8 @@ export default function BottomTabs() {
             ]}
           >
             <Ionicons
-              name={pathname === "Subscription" ? "star" : "star-outline"}
-              size={24}
+              name={pathname === "Subscription" ? "diamond" : "diamond-outline"}
+              size={20}
               color={pathname === "Subscription" ? "#ffffff" : "#94a3b8"}
             />
           </View>
@@ -217,7 +217,7 @@ export default function BottomTabs() {
             >
               <FontAwesome5
                 name="briefcase"
-                size={22}
+                size={18}
                 color={pathname === "MyServices" ? "#ffffff" : "#94a3b8"}
               />
             </View>
@@ -245,7 +245,7 @@ export default function BottomTabs() {
           >
             <Ionicons
               name={pathname === "Profile" ? "person" : "person-outline"}
-              size={24}
+              size={20}
               color={pathname === "Profile" ? "#ffffff" : "#94a3b8"}
             />
           </View>
@@ -293,12 +293,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   iconWrapper: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 1,
+    marginBottom: 0,
     backgroundColor: "transparent",
     position: "relative",
   },
@@ -311,10 +311,10 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   tabText: {
-    fontSize: 11,
+    fontSize: 10,
     color: "#94a3b8",
     fontWeight: "600",
-    marginTop: 1,
+    marginTop: 0,
   },
   tabTextActive: {
     color: "#6366f1",

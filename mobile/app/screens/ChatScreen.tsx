@@ -6,6 +6,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   StyleSheet,
   Text,
@@ -13,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Swipeable } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
 import io from "socket.io-client";
 import Avatar from "../../components/Avatar";
@@ -168,50 +170,88 @@ export default function ChatScreen({ navigation }: Props) {
 
   // Chat list item (uses reusable Avatar)
   const ChatListItem = ({ item }: { item: Chat }) => {
-    return (
-      <TouchableOpacity
-        style={styles.card}
-        activeOpacity={0.7}
-        onPress={() =>
-          navigation.navigate("ChatBox", {
-            userId: item.id,
-            name: item.name,
-            profilePhoto: item.profilePhoto,
-          })
-        }
-      >
-        <View style={styles.chatItemInner}>
-          <Avatar
-            uri={item.profilePhoto}
-            size={58}
-            showUnreadDot={item.unreadCount > 0}
-          />
+    const swipeableRef = useRef<Swipeable>(null);
 
-          <View style={styles.chatInfo}>
-            <View style={styles.chatTop}>
-              <Text style={styles.chatName} numberOfLines={1}>
-                {item.name}
-              </Text>
-              <Text style={styles.chatTime} numberOfLines={1}>
-                {new Date(item.updatedAt).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </Text>
-            </View>
-            <View style={styles.chatBottom}>
-              <Text style={styles.chatLastMessage} numberOfLines={1}>
-                {item.lastMessage || "No messages yet"}
-              </Text>
-              {item.unreadCount > 0 && (
-                <View style={styles.unreadBadge}>
-                  <Text style={styles.unreadText}>{item.unreadCount}</Text>
-                </View>
-              )}
+    const deleteChat = () => {
+      Alert.alert("Delete Chat", `Delete conversation with ${item.name}?`, [
+        {
+          text: "Cancel",
+          style: "cancel",
+          onPress: () => swipeableRef.current?.close(),
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            setChatList((prev) => prev.filter((chat) => chat.id !== item.id));
+          },
+        },
+      ]);
+    };
+
+    const renderRightActions = () => (
+      <TouchableOpacity
+        style={styles.deleteButton}
+        onPress={deleteChat}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="trash-outline" size={24} color="#ffffff" />
+        <Text style={styles.deleteText}>Delete</Text>
+      </TouchableOpacity>
+    );
+
+    return (
+      <Swipeable
+        ref={swipeableRef}
+        renderRightActions={renderRightActions}
+        overshootRight={false}
+        containerStyle={styles.swipeContainer}
+      >
+        <TouchableOpacity
+          style={styles.card}
+          activeOpacity={0.7}
+          onPress={() => {
+            swipeableRef.current?.close();
+            navigation.navigate("ChatBox", {
+              userId: item.id,
+              name: item.name,
+              profilePhoto: item.profilePhoto,
+            });
+          }}
+        >
+          <View style={styles.chatItemInner}>
+            <Avatar
+              uri={item.profilePhoto}
+              size={58}
+              showUnreadDot={item.unreadCount > 0}
+            />
+
+            <View style={styles.chatInfo}>
+              <View style={styles.chatTop}>
+                <Text style={styles.chatName} numberOfLines={1}>
+                  {item.name}
+                </Text>
+                <Text style={styles.chatTime} numberOfLines={1}>
+                  {new Date(item.updatedAt).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </Text>
+              </View>
+              <View style={styles.chatBottom}>
+                <Text style={styles.chatLastMessage} numberOfLines={1}>
+                  {item.lastMessage || "No messages yet"}
+                </Text>
+                {item.unreadCount > 0 && (
+                  <View style={styles.unreadBadge}>
+                    <Text style={styles.unreadText}>{item.unreadCount}</Text>
+                  </View>
+                )}
+              </View>
             </View>
           </View>
-        </View>
-      </TouchableOpacity>
+        </TouchableOpacity>
+      </Swipeable>
     );
   };
 
@@ -303,8 +343,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f8fafc" },
 
   headerGradient: {
-    paddingTop: 12,
-    paddingBottom: 18,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
   },
@@ -312,9 +350,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 12,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 16,
   },
   headerTitle: {
     fontSize: 22,
@@ -402,9 +440,25 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
 
-  card: {
+  swipeContainer: {
     marginHorizontal: 16,
     marginVertical: 4,
+  },
+  deleteButton: {
+    backgroundColor: "#ef4444",
+    justifyContent: "center",
+    alignItems: "center",
+    width: 80,
+    borderRadius: 16,
+    marginLeft: 8,
+  },
+  deleteText: {
+    color: "#ffffff",
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: 4,
+  },
+  card: {
     borderRadius: 16,
     backgroundColor: "#ffffff",
     elevation: 3,

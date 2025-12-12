@@ -1,9 +1,12 @@
+import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
+import { LinearGradient } from "expo-linear-gradient";
 import { useState } from "react";
 import {
   Alert,
+  Dimensions,
   Image,
   ScrollView,
   StyleSheet,
@@ -13,7 +16,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { API_BASE_URL } from "../utills/config";
+
+const { width } = Dimensions.get("window");
 
 export default function KYCVerification(): any {
   const navigation: any = useNavigation();
@@ -232,233 +238,426 @@ export default function KYCVerification(): any {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.heading}>🔐 KYC Verification</Text>
-
-      {/* Aadhaar Section */}
-      <Text style={styles.label}>
-        Aadhaar Number <Text style={styles.mandatory}>*</Text>
-      </Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Enter 12-digit Aadhaar"
-        keyboardType="numeric"
-        maxLength={12}
-        value={aadhaar}
-        onChangeText={(t) => {
-          setAadhaar(t);
-          setTouchedAadhaar(true);
-        }}
-      />
-      {touchedAadhaar && !isAadhaarValid(aadhaar) && (
-        <Text style={styles.errorText}>Aadhaar must be 12 digits.</Text>
-      )}
-      {/* Removed Aadhaar verify button — Aadhaar is accepted as plain text */}
-
-      {/* Aadhaar verification removed — we capture Aadhaar as plain text */}
-
-      {/* PAN Section */}
-      <Text style={styles.label}>
-        PAN Number <Text style={styles.mandatory}>*</Text>
-      </Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Enter PAN Number"
-        autoCapitalize="characters"
-        maxLength={10}
-        value={pan}
-        onChangeText={(t) => {
-          setPan(t.toUpperCase());
-          setTouchedPan(true);
-        }}
-      />
-      {touchedPan && !isPanValid(pan) && (
-        <Text style={styles.errorText}>Enter a valid PAN (ABCDE1234F).</Text>
-      )}
-
-      {/* KYC Images */}
-      <Text style={styles.label}>
-        Aadhaar Front (Photo) <Text style={styles.mandatory}>*</Text>
-      </Text>
-      <TouchableOpacity onPress={() => pickImage(setKycFront)}>
-        {kycFront ? (
-          <Image
-            source={{
-              uri: typeof kycFront === "string" ? kycFront : kycFront?.uri,
-            }}
-            style={styles.preview}
-          />
-        ) : (
-          <View style={styles.placeholderBox}>
-            <Text style={{ color: "#94a3b8" }}>Pick front image</Text>
-          </View>
-        )}
-      </TouchableOpacity>
-      {touchedFront && !kycFront && (
-        <Text style={styles.errorText}>Front image is required.</Text>
-      )}
-
-      <Text style={styles.label}>
-        Aadhaar Back (Photo) <Text style={styles.mandatory}>*</Text>
-      </Text>
-      <TouchableOpacity onPress={() => pickImage(setKycBack)}>
-        {kycBack ? (
-          <Image
-            source={{
-              uri: typeof kycBack === "string" ? kycBack : kycBack?.uri,
-            }}
-            style={styles.preview}
-          />
-        ) : (
-          <View style={styles.placeholderBox}>
-            <Text style={{ color: "#94a3b8" }}>Pick back image</Text>
-          </View>
-        )}
-      </TouchableOpacity>
-      {touchedBack && !kycBack && (
-        <Text style={styles.errorText}>Back image is required.</Text>
-      )}
-
-      {/* Consent */}
-      <View
-        style={{ flexDirection: "row", alignItems: "center", marginTop: 12 }}
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
       >
-        <Switch
-          value={consent}
-          onValueChange={(val) => {
-            setConsent(val);
-            setTouchedConsent(true);
-          }}
-        />
-        <Text style={{ marginLeft: 8, flex: 1 }}>
-          I confirm the Aadhaar images are mine and I consent to storing them
-          for verification purposes. <Text style={styles.mandatory}>*</Text>
-        </Text>
-      </View>
-      {touchedConsent && !consent && (
-        <Text style={styles.errorText}>Consent is required to submit KYC.</Text>
-      )}
+        <View style={styles.container}>
+          {/* Header */}
+          <LinearGradient
+            colors={["#6366f1", "#8b5cf6", "#a855f7"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.headerGradient}
+          >
+            <Ionicons name="shield-checkmark" size={48} color="#ffffff" />
+            <Text style={styles.heading}>KYC Verification</Text>
+            <Text style={styles.subheading}>
+              Complete your verification to unlock all features
+            </Text>
+          </LinearGradient>
 
-      <TouchableOpacity
-        style={[
-          styles.buttonSuccess,
-          !canSubmit ? styles.buttonDisabled : null,
-          submitting ? { opacity: 0.7 } : null,
-        ]}
-        onPress={handleSubmitKYC}
-        disabled={!canSubmit}
-      >
-        <Text style={styles.buttonText}>
-          {submitting ? "Submitting..." : "Submit KYC"}
-        </Text>
-      </TouchableOpacity>
+          {/* Aadhaar Card */}
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Ionicons name="card" size={20} color="#6366f1" />
+              <Text style={styles.cardTitle}>Aadhaar Number</Text>
+              <Text style={styles.mandatory}>*</Text>
+            </View>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter 12-digit Aadhaar"
+              placeholderTextColor="#94a3b8"
+              keyboardType="numeric"
+              maxLength={12}
+              value={aadhaar}
+              onChangeText={(t) => {
+                setAadhaar(t);
+                setTouchedAadhaar(true);
+              }}
+            />
+            {touchedAadhaar && !isAadhaarValid(aadhaar) && (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={14} color="#ef4444" />
+                <Text style={styles.errorText}>Aadhaar must be 12 digits</Text>
+              </View>
+            )}
+          </View>
 
-      {kycStatus !== "" && (
-        <View style={[styles.responseCard, { borderColor: "#4CAF50" }]}>
-          <Text style={[styles.responseText, { color: "#2E7D32" }]}>
-            KYC Status: {kycStatus}
-          </Text>
+          {/* PAN Card */}
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Ionicons name="document-text" size={20} color="#6366f1" />
+              <Text style={styles.cardTitle}>PAN Number</Text>
+              <Text style={styles.mandatory}>*</Text>
+            </View>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter PAN Number (e.g., ABCDE1234F)"
+              placeholderTextColor="#94a3b8"
+              autoCapitalize="characters"
+              maxLength={10}
+              value={pan}
+              onChangeText={(t) => {
+                setPan(t.toUpperCase());
+                setTouchedPan(true);
+              }}
+            />
+            {touchedPan && !isPanValid(pan) && (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={14} color="#ef4444" />
+                <Text style={styles.errorText}>
+                  Enter valid PAN (ABCDE1234F)
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Aadhaar Front Image */}
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Ionicons name="image" size={20} color="#6366f1" />
+              <Text style={styles.cardTitle}>Aadhaar Front Photo</Text>
+              <Text style={styles.mandatory}>*</Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => pickImage(setKycFront)}
+              activeOpacity={0.7}
+            >
+              {kycFront ? (
+                <View style={styles.imageWrapper}>
+                  <Image
+                    source={{
+                      uri:
+                        typeof kycFront === "string" ? kycFront : kycFront?.uri,
+                    }}
+                    style={styles.preview}
+                  />
+                  <LinearGradient
+                    colors={["transparent", "rgba(0,0,0,0.6)"]}
+                    style={styles.imageOverlay}
+                  >
+                    <Ionicons name="create" size={20} color="#ffffff" />
+                    <Text style={styles.changeText}>Change Photo</Text>
+                  </LinearGradient>
+                </View>
+              ) : (
+                <View style={styles.placeholderBox}>
+                  <Ionicons name="cloud-upload" size={40} color="#6366f1" />
+                  <Text style={styles.placeholderText}>
+                    Tap to upload front image
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            {touchedFront && !kycFront && (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={14} color="#ef4444" />
+                <Text style={styles.errorText}>Front image is required</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Aadhaar Back Image */}
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Ionicons name="image" size={20} color="#6366f1" />
+              <Text style={styles.cardTitle}>Aadhaar Back Photo</Text>
+              <Text style={styles.mandatory}>*</Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => pickImage(setKycBack)}
+              activeOpacity={0.7}
+            >
+              {kycBack ? (
+                <View style={styles.imageWrapper}>
+                  <Image
+                    source={{
+                      uri: typeof kycBack === "string" ? kycBack : kycBack?.uri,
+                    }}
+                    style={styles.preview}
+                  />
+                  <LinearGradient
+                    colors={["transparent", "rgba(0,0,0,0.6)"]}
+                    style={styles.imageOverlay}
+                  >
+                    <Ionicons name="create" size={20} color="#ffffff" />
+                    <Text style={styles.changeText}>Change Photo</Text>
+                  </LinearGradient>
+                </View>
+              ) : (
+                <View style={styles.placeholderBox}>
+                  <Ionicons name="cloud-upload" size={40} color="#6366f1" />
+                  <Text style={styles.placeholderText}>
+                    Tap to upload back image
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            {touchedBack && !kycBack && (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={14} color="#ef4444" />
+                <Text style={styles.errorText}>Back image is required</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Consent Card */}
+          <View style={styles.consentCard}>
+            <View style={styles.consentRow}>
+              <Switch
+                value={consent}
+                onValueChange={(val) => {
+                  setConsent(val);
+                  setTouchedConsent(true);
+                }}
+                trackColor={{ false: "#cbd5e1", true: "#a5b4fc" }}
+                thumbColor={consent ? "#6366f1" : "#f1f5f9"}
+              />
+              <Text style={styles.consentText}>
+                I confirm the Aadhaar images are mine and I consent to storing
+                them for verification purposes.
+                <Text style={styles.mandatory}> *</Text>
+              </Text>
+            </View>
+            {touchedConsent && !consent && (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={14} color="#ef4444" />
+                <Text style={styles.errorText}>
+                  Consent is required to submit KYC
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Submit Button */}
+          <TouchableOpacity
+            onPress={handleSubmitKYC}
+            disabled={!canSubmit}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={
+                canSubmit
+                  ? ["#10b981", "#059669", "#047857"]
+                  : ["#cbd5e1", "#94a3b8"]
+              }
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.submitButton}
+            >
+              {submitting ? (
+                <Text style={styles.buttonText}>Submitting...</Text>
+              ) : (
+                <>
+                  <Ionicons name="checkmark-circle" size={20} color="#ffffff" />
+                  <Text style={styles.buttonText}>Submit KYC</Text>
+                </>
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
+
+          {/* Status Card */}
+          {kycStatus !== "" && (
+            <LinearGradient
+              colors={["#d1fae5", "#a7f3d0", "#6ee7b7"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.statusCard}
+            >
+              <Ionicons name="checkmark-circle" size={24} color="#047857" />
+              <Text style={styles.statusText}>KYC Status: {kycStatus}</Text>
+            </LinearGradient>
+          )}
+
+          <View style={{ height: 20 }} />
         </View>
-      )}
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    padding: 20,
+  safeArea: {
+    flex: 1,
     backgroundColor: "#f8fafc",
   },
-  heading: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 25,
-    textAlign: "center",
-    color: "#1e293b",
+  scrollView: {
+    flex: 1,
   },
-  label: {
-    marginTop: 15,
-    marginBottom: 6,
-    fontWeight: "600",
+  container: {
+    flex: 1,
+    paddingHorizontal: 16,
+    backgroundColor: "#f8fafc",
+  },
+  headerGradient: {
+    borderRadius: 20,
+    padding: 24,
+    alignItems: "center",
+    marginTop: 16,
+    marginBottom: 20,
+    shadowColor: "#6366f1",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  heading: {
+    fontSize: 26,
+    fontWeight: "700",
+    color: "#ffffff",
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  subheading: {
+    fontSize: 13,
+    color: "#e0e7ff",
+    textAlign: "center",
+    fontWeight: "500",
+  },
+  card: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  cardTitle: {
     fontSize: 16,
-    color: "#334155",
+    fontWeight: "600",
+    color: "#1e293b",
+    marginLeft: 8,
+    flex: 1,
   },
   input: {
     borderWidth: 1,
-    padding: 14,
-    marginBottom: 15,
-    borderRadius: 10,
-    borderColor: "#cbd5e1",
-    backgroundColor: "#ffffff",
-    fontSize: 15,
-    elevation: 1,
-  },
-  buttonPrimary: {
-    backgroundColor: "#2563eb",
-    paddingVertical: 14,
-    borderRadius: 10,
-    marginBottom: 20,
-    alignItems: "center",
-    elevation: 3,
-  },
-  buttonSuccess: {
-    backgroundColor: "#22c55e",
-    paddingVertical: 14,
-    borderRadius: 10,
-    marginTop: 5,
-    marginBottom: 20,
-    alignItems: "center",
-    elevation: 3,
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  responseCard: {
-    marginTop: 10,
-    padding: 15,
-    borderWidth: 1,
+    borderColor: "#e2e8f0",
     borderRadius: 12,
-    backgroundColor: "#f1f5f9",
-    borderColor: "#94a3b8",
-  },
-  responseText: {
+    padding: 14,
     fontSize: 15,
-    fontWeight: "500",
     color: "#1e293b",
-    marginBottom: 4,
+    backgroundColor: "#f8fafc",
+  },
+  imageWrapper: {
+    position: "relative",
+    borderRadius: 12,
+    overflow: "hidden",
   },
   preview: {
     width: "100%",
-    height: 180,
-    borderRadius: 10,
-    marginBottom: 12,
-    backgroundColor: "#eef2ff",
+    height: 200,
+    borderRadius: 12,
+  },
+  imageOverlay: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+  },
+  changeText: {
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: "600",
+    marginLeft: 6,
   },
   placeholderBox: {
-    width: "100%",
-    height: 140,
-    borderRadius: 10,
-    borderWidth: 1,
+    height: 160,
+    borderRadius: 12,
+    borderWidth: 2,
     borderColor: "#e2e8f0",
+    borderStyle: "dashed",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 12,
     backgroundColor: "#fafafa",
+  },
+  placeholderText: {
+    color: "#64748b",
+    fontSize: 14,
+    fontWeight: "500",
+    marginTop: 8,
+  },
+  consentCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  consentRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  consentText: {
+    flex: 1,
+    marginLeft: 12,
+    fontSize: 14,
+    color: "#475569",
+    lineHeight: 20,
+    fontWeight: "500",
+  },
+  submitButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 16,
+    borderRadius: 14,
+    marginBottom: 16,
+    shadowColor: "#10b981",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  buttonText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "700",
+    marginLeft: 8,
+  },
+  statusCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    borderRadius: 14,
+    marginBottom: 16,
+  },
+  statusText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#047857",
+    marginLeft: 10,
+  },
+  errorContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+  },
+  errorText: {
+    color: "#ef4444",
+    fontSize: 13,
+    fontWeight: "500",
+    marginLeft: 4,
   },
   mandatory: {
     color: "#ef4444",
     fontWeight: "700",
-  },
-  errorText: {
-    color: "#ef4444",
-    marginTop: 6,
-    marginBottom: 6,
-    fontSize: 13,
-  },
-  buttonDisabled: {
-    backgroundColor: "#9ae6b4",
   },
 });
