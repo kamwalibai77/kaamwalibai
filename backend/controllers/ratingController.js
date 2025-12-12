@@ -8,7 +8,7 @@ export const createRating = async (req, res) => {
 
     // Accept flexible keys from clients: ratedId, rated_id, providerId, provider_id
     // and score or rating.
-    let { ratedId, score, comment } = req.body || {};
+    let { ratedId, score, comment, isAppReview } = req.body || {};
 
     // Fallbacks for common alternative keys
     if (!ratedId)
@@ -21,28 +21,37 @@ export const createRating = async (req, res) => {
     if (!raterId)
       return res.status(400).json({ error: "Missing raterId (auth)" });
 
-    // Helpful debug log to inspect incoming payloads when clients report missing fields
-    if (!ratedId) {
-      console.debug("rating.createRating missing ratedId - incoming:", {
-        body: req.body,
-        params: req.params,
-        query: req.query,
-        user: req.user ? { id: req.user.id, role: req.user.role } : undefined,
-      });
-      return res.status(400).json({ error: "Missing ratedId" });
+    // For app reviews, ratedId can be 0 or null
+    if (!isAppReview) {
+      // Helpful debug log to inspect incoming payloads when clients report missing fields
+      if (!ratedId || ratedId === 0) {
+        console.debug("rating.createRating missing ratedId - incoming:", {
+          body: req.body,
+          params: req.params,
+          query: req.query,
+          user: req.user ? { id: req.user.id, role: req.user.role } : undefined,
+        });
+        return res.status(400).json({ error: "Missing ratedId" });
+      }
     }
 
     if (typeof score === "undefined" || score === null)
       return res.status(400).json({ error: "Missing score" });
 
     // coerce types
-    ratedId = parseInt(ratedId, 10);
+    if (ratedId) ratedId = parseInt(ratedId, 10);
     score = parseInt(score, 10);
 
-    if (Number.isNaN(ratedId) || Number.isNaN(score))
+    if ((!isAppReview && Number.isNaN(ratedId)) || Number.isNaN(score))
       return res.status(400).json({ error: "Invalid ratedId or score" });
 
-    const rating = await Rating.create({ raterId, ratedId, score, comment });
+    // For app reviews, use null or 0 for ratedId
+    const rating = await Rating.create({
+      raterId,
+      ratedId: isAppReview ? null : ratedId,
+      score,
+      comment,
+    });
     return res.json({ success: true, rating });
   } catch (err) {
     console.error(err);

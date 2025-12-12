@@ -153,19 +153,27 @@ export default function ReviewFormScreen({ navigation, route }: any) {
           />
 
           <Text style={styles.label}>Rating:</Text>
-          <View style={styles.starsContainer}>
-            {[1, 2, 3, 4, 5].map((star) => (
-              <TouchableOpacity key={star} onPress={() => setRating(star)}>
-                <Text
-                  style={[
-                    styles.star,
-                    rating >= star ? styles.filledStar : styles.emptyStar,
-                  ]}
+          <View style={styles.starsCard}>
+            <View style={styles.starsContainer}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <TouchableOpacity
+                  key={star}
+                  onPress={() => setRating(star)}
+                  style={styles.starButton}
                 >
-                  ★
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <Ionicons
+                    name={rating >= star ? "star" : "star-outline"}
+                    size={44}
+                    color={rating >= star ? "#fbbf24" : "#cbd5e1"}
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+            {rating > 0 && (
+              <Text style={styles.ratingText}>
+                {rating} {rating === 1 ? "Star" : "Stars"}
+              </Text>
+            )}
           </View>
 
           <TextInput
@@ -285,6 +293,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: "#1e293b",
+    marginBottom: 12,
   },
   input: {
     backgroundColor: "#fff",
@@ -299,6 +308,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
+    marginBottom: 20,
   },
   textArea: {
     height: 120,
@@ -308,27 +318,29 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderWidth: 1.5,
     borderColor: "#e2e8f0",
-    borderRadius: 12,
-    padding: 20,
+    borderRadius: 16,
+    padding: 24,
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    shadowColor: "#8b5cf6",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    marginBottom: 20,
   },
   starsContainer: {
     flexDirection: "row",
     justifyContent: "center",
-    gap: 8,
+    gap: 12,
   },
   starButton: {
-    padding: 4,
+    padding: 8,
+    borderRadius: 8,
   },
   ratingText: {
-    marginTop: 12,
-    fontSize: 16,
-    fontWeight: "600",
+    marginTop: 16,
+    fontSize: 17,
+    fontWeight: "700",
     color: "#8b5cf6",
   },
   button: {

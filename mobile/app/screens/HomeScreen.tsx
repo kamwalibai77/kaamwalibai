@@ -1487,7 +1487,7 @@ const styles = StyleSheet.create({
 
   providerImage: {
     width: "100%",
-    aspectRatio: 1.2,
+    aspectRatio: 1.5,
     borderRadius: 0,
   },
   providerName: {

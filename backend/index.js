@@ -68,7 +68,8 @@ app.use((req, res, next) => {
   next();
 });
 app.use("/api/webhook", webhookRoutes); // must be before express.json
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
 // REST API Routes
 app.use("/api/auth", authRoutes);

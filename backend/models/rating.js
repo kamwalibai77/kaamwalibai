@@ -1,7 +1,7 @@
 export default (sequelize, DataTypes) => {
   const Rating = sequelize.define("Rating", {
     raterId: { type: DataTypes.INTEGER, allowNull: false },
-    ratedId: { type: DataTypes.INTEGER, allowNull: false },
+    ratedId: { type: DataTypes.INTEGER, allowNull: true },
     score: { type: DataTypes.INTEGER, allowNull: false },
     comment: { type: DataTypes.TEXT, allowNull: true },
   });

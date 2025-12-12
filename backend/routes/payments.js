@@ -239,8 +239,14 @@ router.post("/consume", authMiddleware, async (req, res) => {
       order: [["start_date", "DESC"]],
     });
 
+    // If no active subscription, allow viewing but don't track consumption
+    // This allows free users to browse without requiring a subscription
     if (!sub) {
-      return res.status(403).json({ error: "No active subscription" });
+      return res.json({
+        remaining: 0,
+        message: "No active subscription - viewing allowed without tracking",
+        requiresSubscription: true,
+      });
     }
 
     // If numberOfContacts is null -> unlimited

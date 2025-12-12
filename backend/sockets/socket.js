@@ -71,7 +71,7 @@ export function initSocket(server) {
         // Send to receiver
         io.to(rid).emit("receiveMessage", data);
 
-        // Also emit to sender (echo)
+        // Echo back to sender for confirmation (frontend has duplicate prevention)
         io.to(sid).emit("receiveMessage", data);
       } catch (err) {
         console.error("sendMessage handler error:", err);

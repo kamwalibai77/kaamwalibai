@@ -167,37 +167,79 @@ export default function ChatBoxScreen() {
 
   useEffect(() => {
     if (!userId) {
-      try {
-        navigation.dispatch(StackActions.replace("Chat"));
-      } catch {
-        navigation.goBack();
-      }
+      console.error("❌ No userId in route params, redirecting to Chat");
+      Alert.alert(
+        "Error",
+        "Unable to open chat. Please try again.",
+        [
+          {
+            text: "OK",
+            onPress: () => {
+              try {
+                navigation.dispatch(StackActions.replace("Chat"));
+              } catch {
+                navigation.goBack();
+              }
+            },
+          },
+        ]
+      );
+    } else {
+      console.log("✅ ChatBox opened for userId:", userId);
     }
   }, [userId, navigation]);
 
   useEffect(() => {
     const fetchUser = async () => {
-      const storedId = await AsyncStorage.getItem("userId");
-      const storedToken = await AsyncStorage.getItem("token");
-      setMyId(storedId);
-      setToken(storedToken);
+      try {
+        const storedId = await AsyncStorage.getItem("userId");
+        const storedToken = await AsyncStorage.getItem("token");
+        console.log("👤 Fetched user from storage - ID:", storedId, "Token:", storedToken ? "exists" : "missing");
+        
+        if (!storedId || !storedToken) {
+          console.error("❌ No user found in storage, redirecting to login");
+          Alert.alert(
+            "Session Expired",
+            "Please login again to continue",
+            [
+              {
+                text: "OK",
+                onPress: () => navigation.navigate("Login" as never),
+              },
+            ]
+          );
+          return;
+        }
+        
+        setMyId(storedId);
+        setToken(storedToken);
+      } catch (error) {
+        console.error("❌ Error fetching user from storage:", error);
+        Alert.alert("Error", "Unable to load user session. Please login again.");
+      }
     };
     fetchUser();
   }, []);
 
   useEffect(() => {
     if (!myId) return;
+    console.log("🔌 Initializing socket connection for user:", myId);
     const socket = io(SOCKET_URL, { transports: ["websocket"] });
     socketRef.current = socket;
 
     socket.on("connect", () => {
-      console.log("Connected:", socket.id);
+      console.log("✅ Socket connected:", socket.id, "User:", myId);
       socket.emit("register", myId);
     });
 
     socket.on("receiveMessage", (msg: Message) => {
+      console.log("📨 Received message:", msg);
       setMessages((prev) => {
-        if (prev.find((m) => m.id === msg.id)) return prev;
+        if (prev.find((m) => m.id === msg.id)) {
+          console.log("⚠️ Duplicate message detected, skipping:", msg.id);
+          return prev;
+        }
+        console.log("✅ Adding message to state");
         return [...prev, msg];
       });
     });
@@ -280,6 +322,7 @@ export default function ChatBoxScreen() {
 
     const fetchMessages = async () => {
       try {
+        console.log("📥 Fetching messages between", myId, "and", userId);
         await axios.put(
           `${SOCKET_URL}/api/chat/read/${userId}`,
           {},
@@ -290,7 +333,11 @@ export default function ChatBoxScreen() {
         const res = await axios.get(`${SOCKET_URL}/api/chat/${userId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        if (res.data.success) setMessages(res.data.messages);
+        console.log("📥 Fetched messages response:", res.data);
+        if (res.data.success) {
+          console.log("📥 Setting", res.data.messages.length, "messages");
+          setMessages(res.data.messages);
+        }
       } catch (err) {
         console.error("Error fetching messages:", err);
       }
@@ -423,14 +470,16 @@ export default function ChatBoxScreen() {
         read: false,
         liked: false,
       };
+      console.log("📤 Sending message:", newMessage);
       socketRef.current?.emit("sendMessage", newMessage);
       setMessages((prev) => [...prev, newMessage]);
       setInput("");
 
       try {
-        await axios.post(`${SOCKET_URL}/api/chat/send`, newMessage, {
+        const saveRes = await axios.post(`${SOCKET_URL}/api/chat/send`, newMessage, {
           headers: { Authorization: `Bearer ${token}` },
         });
+        console.log("💾 Message saved to DB:", saveRes.data);
       } catch (err) {
         console.error("Error saving message:", err);
       }
@@ -621,6 +670,19 @@ export default function ChatBoxScreen() {
             keyExtractor={(item) => item.id.toString()}
             renderItem={renderMessage}
             contentContainerStyle={styles.chatContainer}
+            ListEmptyComponent={
+              <View style={{ padding: 20, alignItems: 'center' }}>
+                <Text style={{ color: '#64748b', fontSize: 14 }}>
+                  No messages yet. Start chatting!
+                </Text>
+                <Text style={{ color: '#94a3b8', fontSize: 12, marginTop: 8 }}>
+                  Debug: Messages count: {messages.length}
+                </Text>
+                <Text style={{ color: '#94a3b8', fontSize: 12 }}>
+                  MyId: {myId} | UserId: {userId}
+                </Text>
+              </View>
+            }
             onContentSizeChange={() =>
               flatListRef.current?.scrollToEnd({ animated: true })
             }
