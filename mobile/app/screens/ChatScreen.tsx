@@ -172,7 +172,7 @@ export default function ChatScreen({ navigation }: Props) {
   const ChatListItem = ({ item }: { item: Chat }) => {
     const swipeableRef = useRef<Swipeable>(null);
 
-    const deleteChat = () => {
+    const deleteChat = async () => {
       Alert.alert("Delete Chat", `Delete conversation with ${item.name}?`, [
         {
           text: "Cancel",
@@ -182,8 +182,22 @@ export default function ChatScreen({ navigation }: Props) {
         {
           text: "Delete",
           style: "destructive",
-          onPress: () => {
-            setChatList((prev) => prev.filter((chat) => chat.id !== item.id));
+          onPress: async () => {
+            try {
+              // Call backend API to delete the conversation
+              await axios.delete(
+                `${SOCKET_URL}/api/chat/conversation/${item.id}`,
+                {
+                  headers: { Authorization: `Bearer ${token}` },
+                }
+              );
+
+              // Remove from local state
+              setChatList((prev) => prev.filter((chat) => chat.id !== item.id));
+            } catch (error) {
+              console.error("Failed to delete chat:", error);
+              Alert.alert("Error", "Failed to delete chat. Please try again.");
+            }
           },
         },
       ]);

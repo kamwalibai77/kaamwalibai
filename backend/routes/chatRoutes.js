@@ -208,4 +208,27 @@ router.delete("/:messageId", authMiddleware, async (req, res) => {
   }
 });
 
+// ✅ Delete entire chat/conversation with another user
+router.delete("/conversation/:userId", authMiddleware, async (req, res) => {
+  try {
+    const currentUserId = req.user.id;
+    const otherUserId = req.params.userId;
+
+    // Delete all messages between these two users
+    await Message.destroy({
+      where: {
+        [Sequelize.Op.or]: [
+          { senderId: currentUserId, receiverId: otherUserId },
+          { senderId: otherUserId, receiverId: currentUserId },
+        ],
+      },
+    });
+
+    res.json({ success: true, message: "Chat deleted successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
 export default router;

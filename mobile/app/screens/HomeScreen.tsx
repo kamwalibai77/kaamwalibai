@@ -539,19 +539,19 @@ export default function HomeScreen({ navigation }: Props) {
           <Text style={styles.ratingText}>4.5</Text>
         </View>
         <View style={styles.serviceBadge}>
-          <MaterialCommunityIcons name="broom" size={9} color="#8b5cf6" />
+          <MaterialCommunityIcons name="broom" size={8} color="#8b5cf6" />
           <Text style={styles.providerService} numberOfLines={1}>
             {item.serviceTypes.map((st: any) => st.name).join(", ")}
           </Text>
         </View>
         <View style={styles.locationRow}>
-          <Ionicons name="location-outline" size={9} color="#94a3b8" />
+          <Ionicons name="location-outline" size={8} color="#94a3b8" />
           <Text style={styles.providerArea} numberOfLines={1}>
             {item.address}
           </Text>
         </View>
         <View style={styles.providerPriceRow}>
-          <Ionicons name="cash-outline" size={11} color="#8b5cf6" />
+          <Ionicons name="cash-outline" size={10} color="#8b5cf6" />
           <Text style={styles.providerPrice}>₹{item.amount}</Text>
           <Text style={styles.providerRateType}>/{item.rateType}</Text>
         </View>
@@ -1349,6 +1349,7 @@ const styles = StyleSheet.create({
   },
   providerImageContainer: {
     width: "100%",
+    height: 120,
     backgroundColor: "#f8fafc",
     position: "relative",
   },
@@ -1379,13 +1380,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   providerInfo: {
-    padding: 6,
+    padding: 4,
     backgroundColor: "#ffffff",
   },
   ratingRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 3,
+    marginBottom: 2,
     gap: 1,
   },
   ratingText: {
@@ -1403,7 +1404,7 @@ const styles = StyleSheet.create({
   locationRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: 2,
     gap: 2,
   },
 
@@ -1485,7 +1486,7 @@ const styles = StyleSheet.create({
 
   providerImage: {
     width: "100%",
-    aspectRatio: 1.5,
+    height: 120,
     borderRadius: 0,
   },
   providerName: {
@@ -1509,8 +1510,8 @@ const styles = StyleSheet.create({
   providerPriceRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 2,
-    paddingTop: 4,
+    marginTop: 1,
+    paddingTop: 3,
     borderTopWidth: 1,
     borderTopColor: "#e2e8f0",
     gap: 2,
