@@ -68,8 +68,10 @@ export default function ChatBoxScreen() {
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [profileUser, setProfileUser] = useState<any | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const socketRef = useRef<any>(null);
   const flatListRef = useRef<FlatList>(null);
+  const processedMessageIds = useRef<Set<string>>(new Set());
 
   const params = route.params;
   const userId = params?.userId;
@@ -168,22 +170,18 @@ export default function ChatBoxScreen() {
   useEffect(() => {
     if (!userId) {
       console.error("❌ No userId in route params, redirecting to Chat");
-      Alert.alert(
-        "Error",
-        "Unable to open chat. Please try again.",
-        [
-          {
-            text: "OK",
-            onPress: () => {
-              try {
-                navigation.dispatch(StackActions.replace("Chat"));
-              } catch {
-                navigation.goBack();
-              }
-            },
+      Alert.alert("Error", "Unable to open chat. Please try again.", [
+        {
+          text: "OK",
+          onPress: () => {
+            try {
+              navigation.dispatch(StackActions.replace("Chat"));
+            } catch {
+              navigation.goBack();
+            }
           },
-        ]
-      );
+        },
+      ]);
     } else {
       console.log("✅ ChatBox opened for userId:", userId);
     }
@@ -194,28 +192,32 @@ export default function ChatBoxScreen() {
       try {
         const storedId = await AsyncStorage.getItem("userId");
         const storedToken = await AsyncStorage.getItem("token");
-        console.log("👤 Fetched user from storage - ID:", storedId, "Token:", storedToken ? "exists" : "missing");
-        
+        console.log(
+          "👤 Fetched user from storage - ID:",
+          storedId,
+          "Token:",
+          storedToken ? "exists" : "missing"
+        );
+
         if (!storedId || !storedToken) {
           console.error("❌ No user found in storage, redirecting to login");
-          Alert.alert(
-            "Session Expired",
-            "Please login again to continue",
-            [
-              {
-                text: "OK",
-                onPress: () => navigation.navigate("Login" as never),
-              },
-            ]
-          );
+          Alert.alert("Session Expired", "Please login again to continue", [
+            {
+              text: "OK",
+              onPress: () => navigation.navigate("Login" as never),
+            },
+          ]);
           return;
         }
-        
+
         setMyId(storedId);
         setToken(storedToken);
       } catch (error) {
         console.error("❌ Error fetching user from storage:", error);
-        Alert.alert("Error", "Unable to load user session. Please login again.");
+        Alert.alert(
+          "Error",
+          "Unable to load user session. Please login again."
+        );
       }
     };
     fetchUser();
@@ -223,8 +225,19 @@ export default function ChatBoxScreen() {
 
   useEffect(() => {
     if (!myId) return;
+
+    // Disconnect any existing socket before creating a new one
+    if (socketRef.current) {
+      console.log("🔌 Disconnecting existing socket");
+      socketRef.current.disconnect();
+      socketRef.current = null;
+    }
+
     console.log("🔌 Initializing socket connection for user:", myId);
-    const socket = io(SOCKET_URL, { transports: ["websocket"] });
+    const socket = io(SOCKET_URL, {
+      transports: ["websocket"],
+      forceNew: true, // Force new connection to prevent duplicate listeners
+    });
     socketRef.current = socket;
 
     socket.on("connect", () => {
@@ -234,14 +247,25 @@ export default function ChatBoxScreen() {
 
     socket.on("receiveMessage", (msg: Message) => {
       console.log("📨 Received message:", msg);
-      setMessages((prev) => {
-        if (prev.find((m) => m.id === msg.id)) {
-          console.log("⚠️ Duplicate message detected, skipping:", msg.id);
-          return prev;
-        }
-        console.log("✅ Adding message to state");
-        return [...prev, msg];
-      });
+
+      // Create a unique key for this message
+      const messageKey = `${msg.senderId}-${msg.receiverId}-${msg.message}-${msg.createdAt}`;
+
+      // Check if we've already processed this message
+      if (
+        processedMessageIds.current.has(messageKey) ||
+        processedMessageIds.current.has(msg.id)
+      ) {
+        console.log("⚠️ Duplicate message detected, skipping:", msg.id);
+        return;
+      }
+
+      // Mark this message as processed
+      processedMessageIds.current.add(messageKey);
+      processedMessageIds.current.add(msg.id);
+
+      console.log("✅ Adding new message to state");
+      setMessages((prev) => [...prev, msg]);
     });
 
     // If server notifies that a message was blocked, show user feedback
@@ -436,12 +460,14 @@ export default function ChatBoxScreen() {
   };
 
   const sendMessage = async () => {
-    if (!input.trim() || !token || !myId) return;
+    if (!input.trim() || !token || !myId || isSending) return;
 
     if (containsRestrictedWords(input)) {
       Alert.alert("⚠️ Warning", "Your message contains inappropriate words.");
       return;
     }
+
+    setIsSending(true);
 
     if (editingMessage) {
       try {
@@ -459,6 +485,8 @@ export default function ChatBoxScreen() {
         }
       } catch (err) {
         console.error("Error editing message:", err);
+      } finally {
+        setIsSending(false);
       }
     } else {
       const newMessage: Message = {
@@ -471,18 +499,17 @@ export default function ChatBoxScreen() {
         liked: false,
       };
       console.log("📤 Sending message:", newMessage);
-      socketRef.current?.emit("sendMessage", newMessage);
+
+      // Add message to local state immediately (optimistic update)
       setMessages((prev) => [...prev, newMessage]);
+
+      // Clear input immediately to prevent re-sending
       setInput("");
 
-      try {
-        const saveRes = await axios.post(`${SOCKET_URL}/api/chat/send`, newMessage, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        console.log("💾 Message saved to DB:", saveRes.data);
-      } catch (err) {
-        console.error("Error saving message:", err);
-      }
+      socketRef.current?.emit("sendMessage", newMessage);
+
+      // rely on socket to persist and emit the saved message; stop sending POST to avoid duplicate emits
+      setIsSending(false);
     }
   };
 
@@ -578,6 +605,33 @@ export default function ChatBoxScreen() {
                 <Text style={styles.headerStatus}>Active now</Text>
               </View>
               <TouchableOpacity
+                style={styles.callButton}
+                onPress={async () => {
+                  try {
+                    const token = await AsyncStorage.getItem("token");
+                    const headers = token
+                      ? { Authorization: `Bearer ${token}` }
+                      : undefined;
+                    const res = await api.get(`/users/${userId}`, { headers });
+                    const phone =
+                      res?.data?.user?.phoneNumber || res?.data?.phoneNumber;
+                    if (phone) {
+                      Linking.openURL(`tel:${phone}`);
+                    } else {
+                      Alert.alert(
+                        "No phone number",
+                        "This user's phone number is not available."
+                      );
+                    }
+                  } catch (e) {
+                    console.warn("Failed to get phone number", e);
+                    Alert.alert("Error", "Unable to get phone number");
+                  }
+                }}
+              >
+                <Ionicons name="call" size={22} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity
                 style={styles.menuButton}
                 onPress={() => setActionModalVisible(true)}
               >
@@ -671,14 +725,14 @@ export default function ChatBoxScreen() {
             renderItem={renderMessage}
             contentContainerStyle={styles.chatContainer}
             ListEmptyComponent={
-              <View style={{ padding: 20, alignItems: 'center' }}>
-                <Text style={{ color: '#64748b', fontSize: 14 }}>
+              <View style={{ padding: 20, alignItems: "center" }}>
+                <Text style={{ color: "#64748b", fontSize: 14 }}>
                   No messages yet. Start chatting!
                 </Text>
-                <Text style={{ color: '#94a3b8', fontSize: 12, marginTop: 8 }}>
+                <Text style={{ color: "#94a3b8", fontSize: 12, marginTop: 8 }}>
                   Debug: Messages count: {messages.length}
                 </Text>
-                <Text style={{ color: '#94a3b8', fontSize: 12 }}>
+                <Text style={{ color: "#94a3b8", fontSize: 12 }}>
                   MyId: {myId} | UserId: {userId}
                 </Text>
               </View>
@@ -707,8 +761,13 @@ export default function ChatBoxScreen() {
                 returnKeyType="send"
                 onSubmitEditing={sendMessage}
                 multiline
+                editable={!isSending}
               />
-              <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
+              <TouchableOpacity
+                style={[styles.sendButton, isSending && { opacity: 0.5 }]}
+                onPress={sendMessage}
+                disabled={isSending}
+              >
                 <Ionicons
                   name={editingMessage ? "checkmark" : "send"}
                   size={20}
@@ -863,6 +922,15 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 2,
     fontWeight: "500",
+  },
+  callButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 8,
   },
   menuButton: {
     width: 36,

@@ -1,7 +1,6 @@
 import express from "express";
 import { authMiddleware } from "../middleware/auth.js";
 import db from "../models/index.js";
-import { ioServer } from "../sockets/socket.js";
 
 const router = express.Router();
 const Message = db.Message;
@@ -42,23 +41,10 @@ router.post("/send", authMiddleware, async (req, res) => {
     }
 
     const newMessage = await Message.create({ senderId, receiverId, message });
-    // Emit real-time notification to receiver only, with senderName
-    try {
-      if (ioServer) {
-        // Fetch sender name for notification
-        let senderName = null;
-        try {
-          const sender = await User.findByPk(senderId);
-          senderName = sender?.name || String(senderId);
-        } catch {}
-        ioServer.to(String(receiverId)).emit("receiveMessage", {
-          ...newMessage.toJSON(),
-          senderName,
-        });
-      }
-    } catch (e) {
-      console.warn("chat send: failed to emit socket message", e);
-    }
+
+    // Socket handler now emits messages; REST endpoint is fallback/legacy only
+    // Remove emit here to prevent duplicates when client uses socket
+
     res.json({ success: true, message: newMessage });
   } catch (err) {
     console.error(err);

@@ -21,6 +21,15 @@ export function initSocket(server) {
     // Register user
     socket.on("register", (userId) => {
       const uid = String(userId);
+
+      // Leave all previous rooms to prevent duplicates
+      const rooms = Array.from(socket.rooms);
+      rooms.forEach((room) => {
+        if (room !== socket.id) {
+          socket.leave(room);
+        }
+      });
+
       onlineUsers[uid] = socket.id;
       socket.join(uid);
       console.log("✅ User registered:", uid, "socketId:", socket.id);
@@ -68,11 +77,24 @@ export function initSocket(server) {
           // proceed with sending if DB check fails (fail-open)
         }
 
-        // Send to receiver
-        io.to(rid).emit("receiveMessage", data);
+        // Persist message in DB so we emit an authoritative payload
+        try {
+          const db = await import("../models/index.js");
+          const Message = db.default.Message;
+          const saved = await Message.create({
+            senderId: senderId,
+            receiverId: receiverId,
+            message: data.message,
+          });
 
-        // Echo back to sender for confirmation (frontend has duplicate prevention)
-        io.to(sid).emit("receiveMessage", data);
+          const payload = saved.toJSON();
+          // Emit to receiver only - sender shows message locally
+          io.to(rid).emit("receiveMessage", payload);
+        } catch (e) {
+          console.error("Error saving message in socket handler:", e);
+          // Fallback - emit to receiver only
+          io.to(rid).emit("receiveMessage", data);
+        }
       } catch (err) {
         console.error("sendMessage handler error:", err);
       }
