@@ -54,9 +54,6 @@
     },
     "extra": {
       "router": {},
-      "eas": {
-        "projectId": "d800cc13-e1a9-4ff7-8dfb-a7318b60e726"
-      },
       "apiUrl": "https://kaamwalibai.onrender.com",
       "smsProviderKey": "a2411f6e-a794-11f0-b922-0200cd936042"
     }
