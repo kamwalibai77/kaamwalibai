@@ -5,6 +5,8 @@ import {
   assignComplaint,
   blockAbusiveUser,
   deleteTeamMember,
+  // Profile
+  getAdminProfile,
   // Complaints
   getAllComplaints,
   getAllProviders,
@@ -21,6 +23,7 @@ import {
   // Team Management
   getTeamMembers,
   rejectKYC,
+  updateAdminProfile,
   updateComplaintStatus,
   updateRatingStatus,
   updateTeamMember,
@@ -94,5 +97,10 @@ router.get("/providers", requireRole(["superadmin"]), getAllProviders);
 
 // ==================== 7. AUDIT LOGS ====================
 router.get("/audit-logs", requireRole(["superadmin"]), getAuditLogs);
+
+// ==================== 8. PROFILE ====================
+// Profile should be accessible to any authenticated admin user
+router.get("/profile", getAdminProfile);
+router.put("/profile", updateAdminProfile);
 
 export default router;

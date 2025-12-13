@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Dashboard.css";
 
-const API_BASE_URL = "http://192.168.1.3:5000/api";
+const API_BASE_URL = "http://172.20.10.11:5000/api";
 
 export default function SuperAdminDashboard() {
   const navigate = useNavigate();
@@ -24,11 +24,25 @@ export default function SuperAdminDashboard() {
   const [selectedProvider, setSelectedProvider] = useState(null);
   const [showKYCModal, setShowKYCModal] = useState(false);
 
+  // Profile states
+  const [adminProfile, setAdminProfile] = useState(null);
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    name: "",
+    phoneNumber: "",
+  });
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+
   useEffect(() => {
     const token = localStorage.getItem("adminToken");
     if (!token) {
       navigate("/");
       return;
+    }
+
+    // Load profile on mount
+    if (!adminProfile) {
+      loadProfile();
     }
 
     if (activeTab === "dashboard") loadDashboard();
@@ -39,6 +53,7 @@ export default function SuperAdminDashboard() {
     else if (activeTab === "users") loadUsers();
     else if (activeTab === "providers") loadProviders();
     else if (activeTab === "audit") loadAuditLogs();
+    else if (activeTab === "profile") loadProfile();
   }, [activeTab, navigate]);
 
   const getAuthHeaders = () => ({
@@ -245,6 +260,37 @@ export default function SuperAdminDashboard() {
     }
   };
 
+  const loadProfile = async () => {
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/admin/profile`,
+        getAuthHeaders()
+      );
+      setAdminProfile(response.data);
+      setProfileForm({
+        name: response.data.name || "",
+        phoneNumber: response.data.phoneNumber || "",
+      });
+    } catch (err) {
+      console.error("Failed to load profile:", err);
+    }
+  };
+
+  const updateProfile = async () => {
+    try {
+      await axios.put(
+        `${API_BASE_URL}/admin/profile`,
+        profileForm,
+        getAuthHeaders()
+      );
+      alert("Profile updated successfully!");
+      setEditingProfile(false);
+      loadProfile();
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to update profile");
+    }
+  };
+
   return (
     <div className="dashboard-container">
       {/* Sidebar */}
@@ -303,6 +349,12 @@ export default function SuperAdminDashboard() {
           >
             📜 Audit Logs
           </button>
+          <button
+            className={activeTab === "profile" ? "active" : ""}
+            onClick={() => setActiveTab("profile")}
+          >
+            👤 Profile
+          </button>
         </nav>
 
         <button className="logout-btn" onClick={handleLogout}>
@@ -312,6 +364,102 @@ export default function SuperAdminDashboard() {
 
       {/* Main Content */}
       <div className="dashboard-main">
+        {/* Header with Profile */}
+        <div className="dashboard-header">
+          <div className="header-title">
+            <h1>{activeTab.charAt(0).toUpperCase() + activeTab.slice(1).replace(/([A-Z])/g, ' $1')}</h1>
+            <p>Manage your system efficiently</p>
+          </div>
+          
+          {adminProfile && (
+            <div className="header-profile">
+              <div 
+                className="profile-trigger"
+                onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+              >
+                <div className="profile-info-header">
+                  <span className="profile-name">{adminProfile.name || 'Admin'}</span>
+                  <span className="profile-role">SuperAdmin</span>
+                </div>
+                <div className="profile-avatar-header">
+                  {adminProfile.name?.charAt(0) || 'A'}
+                </div>
+                <svg className={`dropdown-arrow ${showProfileDropdown ? 'open' : ''}`} width="12" height="8" viewBox="0 0 12 8" fill="none">
+                  <path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+
+              {showProfileDropdown && (
+                <>
+                  <div className="dropdown-backdrop" onClick={() => setShowProfileDropdown(false)}></div>
+                  <div className="profile-dropdown">
+                    <div className="dropdown-header">
+                      <div className="dropdown-avatar">
+                        {adminProfile.name?.charAt(0) || 'A'}
+                      </div>
+                      <div className="dropdown-info">
+                        <h4>{adminProfile.name || 'Admin User'}</h4>
+                        <p>{adminProfile.phoneNumber}</p>
+                        <span className="dropdown-role-badge">SuperAdmin</span>
+                      </div>
+                    </div>
+                    
+                    <div className="dropdown-divider"></div>
+                    
+                    <div className="dropdown-menu">
+                      <button 
+                        className="dropdown-item"
+                        onClick={() => {
+                          setActiveTab('profile');
+                          setShowProfileDropdown(false);
+                        }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                          <path d="M8 8C9.933 8 11.5 6.433 11.5 4.5C11.5 2.567 9.933 1 8 1C6.067 1 4.5 2.567 4.5 4.5C4.5 6.433 6.067 8 8 8Z" stroke="currentColor" strokeWidth="1.5"/>
+                          <path d="M13.5 15C13.5 12.515 11.0899 10.5 8 10.5C4.91015 10.5 2.5 12.515 2.5 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                        </svg>
+                        <span>My Profile</span>
+                      </button>
+                      <button 
+                        className="dropdown-item"
+                        onClick={() => {
+                          setActiveTab('dashboard');
+                          setShowProfileDropdown(false);
+                        }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                          <rect x="2" y="2" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.5"/>
+                          <rect x="9" y="2" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.5"/>
+                          <rect x="2" y="9" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.5"/>
+                          <rect x="9" y="9" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.5"/>
+                        </svg>
+                        <span>Dashboard</span>
+                      </button>
+                    </div>
+                    
+                    <div className="dropdown-divider"></div>
+                    
+                    <button 
+                      className="dropdown-item logout-item"
+                      onClick={() => {
+                        handleLogout();
+                        setShowProfileDropdown(false);
+                      }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M6 14H3.33333C2.59695 14 2 13.403 2 12.6667V3.33333C2 2.59695 2.59695 2 3.33333 2H6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                        <path d="M10.6667 11.3333L14 8L10.6667 4.66667" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M14 8H6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                      </svg>
+                      <span>Logout</span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
         {loading && <div className="loading-overlay">Loading...</div>}
 
         {/* DASHBOARD TAB */}
@@ -321,36 +469,98 @@ export default function SuperAdminDashboard() {
 
             <div className="metrics-grid">
               <div className="metric-card">
-                <h3>{metrics.totalProviders}</h3>
-                <p>Total Providers</p>
+                <div className="metric-info">
+                  <h3>{metrics.totalProviders}</h3>
+                  <p>Total Providers</p>
+                </div>
+                <div className="metric-bar">
+                  <div className="bar-fill" style={{ width: "70%" }}></div>
+                </div>
               </div>
               <div className="metric-card">
-                <h3>{metrics.totalCustomers}</h3>
-                <p>Total Customers</p>
+                <div className="metric-info">
+                  <h3>{metrics.totalCustomers}</h3>
+                  <p>Total Customers</p>
+                </div>
+                <div className="metric-bar">
+                  <div className="bar-fill" style={{ width: "85%" }}></div>
+                </div>
               </div>
               <div className="metric-card green">
-                <h3>{metrics.verifiedProviders}</h3>
-                <p>Verified Providers</p>
+                <div className="metric-info">
+                  <h3>{metrics.verifiedProviders}</h3>
+                  <p>Verified Providers</p>
+                </div>
+                <div className="metric-bar">
+                  <div
+                    className="bar-fill green"
+                    style={{
+                      width: `${
+                        (metrics.verifiedProviders / metrics.totalProviders) *
+                        100
+                      }%`,
+                    }}
+                  ></div>
+                </div>
               </div>
               <div className="metric-card orange">
-                <h3>{metrics.kycPending}</h3>
-                <p>KYC Pending</p>
+                <div className="metric-info">
+                  <h3>{metrics.kycPending}</h3>
+                  <p>KYC Pending</p>
+                </div>
+                <div className="metric-bar">
+                  <div
+                    className="bar-fill orange"
+                    style={{
+                      width: `${
+                        (metrics.kycPending / metrics.totalProviders) * 100
+                      }%`,
+                    }}
+                  ></div>
+                </div>
               </div>
               <div className="metric-card red">
-                <h3>{metrics.kycRejected}</h3>
-                <p>KYC Rejected</p>
+                <div className="metric-info">
+                  <h3>{metrics.kycRejected}</h3>
+                  <p>KYC Rejected</p>
+                </div>
+                <div className="metric-bar">
+                  <div
+                    className="bar-fill red"
+                    style={{
+                      width: `${
+                        (metrics.kycRejected / metrics.totalProviders) * 100
+                      }%`,
+                    }}
+                  ></div>
+                </div>
               </div>
               <div className="metric-card blue">
-                <h3>{metrics.dailyRegistrations}</h3>
-                <p>Daily Registrations</p>
+                <div className="metric-info">
+                  <h3>{metrics.dailyRegistrations}</h3>
+                  <p>Daily Registrations</p>
+                </div>
+                <div className="metric-bar">
+                  <div className="bar-fill blue" style={{ width: "60%" }}></div>
+                </div>
               </div>
               <div className="metric-card blue">
-                <h3>{metrics.weeklyRegistrations}</h3>
-                <p>Weekly Registrations</p>
+                <div className="metric-info">
+                  <h3>{metrics.weeklyRegistrations}</h3>
+                  <p>Weekly Registrations</p>
+                </div>
+                <div className="metric-bar">
+                  <div className="bar-fill blue" style={{ width: "75%" }}></div>
+                </div>
               </div>
               <div className="metric-card blue">
-                <h3>{metrics.monthlyRegistrations}</h3>
-                <p>Monthly Registrations</p>
+                <div className="metric-info">
+                  <h3>{metrics.monthlyRegistrations}</h3>
+                  <p>Monthly Registrations</p>
+                </div>
+                <div className="metric-bar">
+                  <div className="bar-fill blue" style={{ width: "90%" }}></div>
+                </div>
               </div>
             </div>
 
@@ -869,6 +1079,104 @@ export default function SuperAdminDashboard() {
                   <div className="kyc-rejected-badge">✗ KYC Rejected</div>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PROFILE TAB */}
+      {activeTab === "profile" && adminProfile && (
+        <div className="dashboard-content">
+          <h1>My Profile</h1>
+
+          <div className="profile-container">
+            <div className="profile-header">
+              <div className="profile-avatar">
+                <span>{adminProfile.name?.charAt(0) || "A"}</span>
+              </div>
+              <div className="profile-header-info">
+                <h2>{adminProfile.name || "Admin User"}</h2>
+                <span className="role-badge superadmin">SuperAdmin</span>
+              </div>
+            </div>
+
+            <div className="profile-body">
+              {!editingProfile ? (
+                <>
+                  <div className="profile-info-grid">
+                    <div className="profile-info-item">
+                      <label>Name</label>
+                      <p>{adminProfile.name || "N/A"}</p>
+                    </div>
+                    <div className="profile-info-item">
+                      <label>Phone Number</label>
+                      <p>{adminProfile.phoneNumber || "N/A"}</p>
+                    </div>
+                    <div className="profile-info-item">
+                      <label>Role</label>
+                      <p>SuperAdmin</p>
+                    </div>
+                  </div>
+                  <div className="profile-actions">
+                    <button
+                      className="btn-primary"
+                      onClick={() => setEditingProfile(true)}
+                    >
+                      ✏️ Edit Profile
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="profile-form">
+                    <div className="form-group">
+                      <label>Name</label>
+                      <input
+                        type="text"
+                        value={profileForm.name}
+                        onChange={(e) =>
+                          setProfileForm({
+                            ...profileForm,
+                            name: e.target.value,
+                          })
+                        }
+                        placeholder="Enter name"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Phone Number</label>
+                      <input
+                        type="text"
+                        value={profileForm.phoneNumber}
+                        onChange={(e) =>
+                          setProfileForm({
+                            ...profileForm,
+                            phoneNumber: e.target.value,
+                          })
+                        }
+                        placeholder="Enter phone number"
+                      />
+                    </div>
+                  </div>
+                  <div className="profile-actions">
+                    <button className="btn-primary" onClick={updateProfile}>
+                      💾 Save Changes
+                    </button>
+                    <button
+                      className="btn-secondary"
+                      onClick={() => {
+                        setEditingProfile(false);
+                        setProfileForm({
+                          name: adminProfile.name || "",
+                          phoneNumber: adminProfile.phoneNumber || "",
+                        });
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>

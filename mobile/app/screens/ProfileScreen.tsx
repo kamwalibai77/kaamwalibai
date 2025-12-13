@@ -115,34 +115,25 @@ export default function ProfileScreen({ navigation }: Props): any {
                 }}
               />
               {user.role === "ServiceProvider" && (
-                <View
-                  style={[
-                    styles.kycBadge,
-                    user.kycStatus === "verified" && styles.kycBadgeVerified,
-                    user.kycStatus === "pending" &&
-                      user.kycSubmittedAt &&
-                      styles.kycBadgeSubmitted,
-                    user.kycStatus === "pending" &&
-                      !user.kycSubmittedAt &&
-                      styles.kycBadgeUnverified,
-                  ]}
-                >
+                <View style={styles.kycBadgeWrapper}>
                   <Ionicons
                     name={
                       user.kycStatus === "verified"
                         ? "checkmark-circle"
+                        : user.kycStatus === "pending" && user.kycSubmittedAt
+                        ? "time"
                         : "alert-circle"
                     }
-                    size={24}
-                    color="#fff"
+                    size={32}
+                    color={
+                      user.kycStatus === "verified"
+                        ? "#3b82f6"
+                        : user.kycStatus === "pending" && user.kycSubmittedAt
+                        ? "#10b981"
+                        : "#9ca3af"
+                    }
+                    style={styles.kycBadge}
                   />
-                  <Text style={styles.kycBadgeText}>
-                    {user.kycStatus === "verified"
-                      ? "Verified"
-                      : user.kycSubmittedAt
-                      ? "In Review"
-                      : "Unverified"}
-                  </Text>
                 </View>
               )}
             </View>
@@ -501,33 +492,20 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
 
-  // KYC Badge Styles
-  kycBadge: {
+  // KYC Badge Styles - Instagram-style verified badge
+  kycBadgeWrapper: {
     position: "absolute",
-    bottom: 0,
-    right: 0,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "#fff",
-    gap: 4,
+    bottom: 4,
+    right: 4,
   },
-  kycBadgeVerified: {
-    backgroundColor: "#3b82f6", // Blue for verified
-  },
-  kycBadgeSubmitted: {
-    backgroundColor: "#10b981", // Green for in review
-  },
-  kycBadgeUnverified: {
-    backgroundColor: "#9ca3af", // Grey for unverified
-  },
-  kycBadgeText: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: "#fff",
+  kycBadge: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
   },
 
   // Legacy styles removed

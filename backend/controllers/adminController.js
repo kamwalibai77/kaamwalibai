@@ -701,3 +701,67 @@ export const getAuditLogs = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch audit logs" });
   }
 };
+// ==================== 8. ADMIN PROFILE ====================
+export const getAdminProfile = async (req, res) => {
+  try {
+    console.log("Get admin profile - User ID:", req.user?.id);
+    console.log("Get admin profile - User object:", req.user);
+    
+    const userId = req.user.id; // From auth middleware
+
+    const admin = await User.findByPk(userId, {
+      attributes: ["id", "name", "phoneNumber", "role", "createdAt"],
+    });
+
+    console.log("Found admin:", admin?.toJSON());
+
+    if (!admin) {
+      return res.status(404).json({ error: "Admin not found" });
+    }
+
+    res.json(admin);
+  } catch (error) {
+    console.error("Get admin profile error:", error);
+    console.error("Error stack:", error.stack);
+    res.status(500).json({ error: "Failed to fetch profile", details: error.message });
+  }
+};
+
+export const updateAdminProfile = async (req, res) => {
+  try {
+    const userId = req.user.id; // From auth middleware
+    const { name, phoneNumber } = req.body;
+
+    const admin = await User.findByPk(userId);
+
+    if (!admin) {
+      return res.status(404).json({ error: "Admin not found" });
+    }
+
+    // Update allowed fields
+    if (name !== undefined) admin.name = name;
+    if (phoneNumber !== undefined) admin.phoneNumber = phoneNumber;
+
+    await admin.save();
+
+    // Create audit log
+    await createAuditLog(userId, "PROFILE_UPDATE", "Updated own profile", {
+      name,
+      phoneNumber,
+    });
+
+    res.json({
+      ok: true,
+      message: "Profile updated successfully",
+      admin: {
+        id: admin.id,
+        name: admin.name,
+        phoneNumber: admin.phoneNumber,
+        role: admin.role,
+      },
+    });
+  } catch (error) {
+    console.error("Update admin profile error:", error);
+    res.status(500).json({ error: "Failed to update profile" });
+  }
+};

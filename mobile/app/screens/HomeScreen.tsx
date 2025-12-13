@@ -14,6 +14,7 @@ import {
   Linking,
   Modal,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -76,6 +77,7 @@ export default function HomeScreen({ navigation }: Props) {
 
   const [notifications, setNotifications] = useState<any[]>([]);
   const [notifModalVisible, setNotifModalVisible] = useState(false);
+  const [userName, setUserName] = useState<string>("");
   const socketRef = React.useRef<any>(null);
 
   const [locationQuery, setLocationQuery] = useState("");
@@ -223,6 +225,10 @@ export default function HomeScreen({ navigation }: Props) {
             });
             if (me && me.data && me.data.user) {
               const u = me.data.user;
+              // Set user name for header
+              if (u.name) {
+                setUserName(u.name);
+              }
               // prefer profile latitude/longitude when available
               if (u.latitude && u.longitude) {
                 coords = { lat: Number(u.latitude), lng: Number(u.longitude) };
@@ -502,6 +508,13 @@ export default function HomeScreen({ navigation }: Props) {
     setSuggestions([]);
   };
 
+  const getProfileSource = (profilePhoto: string | null | undefined) => {
+    if (profilePhoto && profilePhoto.trim() !== "") {
+      return { uri: profilePhoto };
+    }
+    return PlaceholderImg;
+  };
+
   const renderProvider = ({ item }: { item: any }) => {
     // Determine KYC badge status
     const provider = item.provider;
@@ -579,6 +592,23 @@ export default function HomeScreen({ navigation }: Props) {
     </TouchableOpacity>
     );
   };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" />
+      <View style={{ flex: 1 }}>
+        {/* Header with Notification Bell */}
+        <LinearGradient
+          colors={["#6366f1", "#8b5cf6"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.headerGradient}
+        >
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>कामवाली बाई</Text>
+            <TouchableOpacity onPress={() => setNotifModalVisible(true)}>
+              <View style={{ position: "relative" }}>
+                <Ionicons
                   name="notifications-outline"
                   size={28}
                   color="#ffffff"
@@ -1228,6 +1258,41 @@ const styles = StyleSheet.create({
     textShadowColor: "rgba(0, 0, 0, 0.3)",
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
+  },
+  headerContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    width: "100%",
+  },
+  greeting: {
+    fontSize: 14,
+    color: "rgba(255, 255, 255, 0.9)",
+    fontWeight: "500",
+  },
+  userName: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#ffffff",
+    marginTop: 2,
+  },
+  badge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    backgroundColor: "#ef4444",
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#ffffff",
+  },
+  badgeText: {
+    color: "#ffffff",
+    fontSize: 10,
+    fontWeight: "700",
   },
 
   searchContainer: {
