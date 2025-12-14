@@ -105,6 +105,20 @@ const startServer = async () => {
     await db.sequelize.sync();
     console.log("✅ Database synced");
 
+    // Run seeders after sync to ensure required seed data exists (service types, plans, faqs)
+    try {
+      // Use sequelize-cli to run seeders so we reuse existing seeder files
+      const { execSync } = await import("child_process");
+      console.log("→ Running seeders...");
+      execSync("npx sequelize-cli db:seed:all --env production", {
+        stdio: "inherit",
+        cwd: process.cwd(),
+      });
+      console.log("✅ Seeders executed");
+    } catch (e) {
+      console.error("[seeders] error:", e && e.stack ? e.stack : e);
+    }
+
     // Start server and bind to 0.0.0.0 so it's reachable on the LAN IP
     server.listen(PORT, "0.0.0.0", () => {
       const host = process.env.HOST || "0.0.0.0";
