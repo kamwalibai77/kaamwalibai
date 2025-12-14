@@ -1,6 +1,6 @@
 export default {
   async up(queryInterface, Sequelize) {
-    return queryInterface.bulkInsert("ServiceTypes", [
+    const items = [
       {
         name: "Cooking",
         icon: "https://cdn.shopify.com/s/files/1/1186/5476/files/LIFESTYLE_2000x2000_48e752d7-2561-4472-831d-f164a3ea7405_1024x1024.jpg?v=1565717897",
@@ -77,7 +77,16 @@ export default {
         name: "Mechanic",
         icon: "https://th.bing.com/th/id/R.4eae69983e0e789682ad445396345e8a?rik=WGN7I2JIsmSiBA&riu=http%3a%2f%2fgwrench.com%2fwp-content%2fuploads%2f2020%2f12%2fVistaCarMechanic.jpeg&ehk=fIr1oWPGfbODcKpiWJgz8WWM32dxHrVmdanyD2ifQEM%3d&risl=&pid=ImgRaw&r=0",
       },
-    ]);
+    ];
+
+    // attach timestamps required by tables with `createdAt`/`updatedAt` NOT NULL
+    const now = new Date();
+    items.forEach((it) => {
+      it.createdAt = now;
+      it.updatedAt = now;
+    });
+
+    return queryInterface.bulkInsert("ServiceTypes", items);
   },
 
   async down(queryInterface, Sequelize) {
