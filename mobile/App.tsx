@@ -1,6 +1,8 @@
 // App.tsx
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { enableScreens } from "react-native-screens";
+import { LanguageProvider } from "./app/contexts/LanguageContext";
+import "./app/i18n/i18n.config";
 import AppNavigator from "./app/navigation/AppNavigator";
 import { ModalHostProvider } from "./components/ModalHost";
 
@@ -16,9 +18,11 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <IconRegistry icons={EvaIconsPack} />
       <ApplicationProvider {...eva} theme={eva.light}>
-        <ModalHostProvider>
-          <AppNavigator />
-        </ModalHostProvider>
+        <LanguageProvider>
+          <ModalHostProvider>
+            <AppNavigator />
+          </ModalHostProvider>
+        </LanguageProvider>
       </ApplicationProvider>
     </GestureHandlerRootView>
   );

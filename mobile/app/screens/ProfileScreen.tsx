@@ -5,12 +5,15 @@ import { useFocusEffect } from "@react-navigation/native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { LinearGradient } from "expo-linear-gradient";
 import { useCallback, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Image,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -21,16 +24,37 @@ const PlaceholderImg = require("../../assets/images/default.png");
 
 type Props = NativeStackScreenProps<RootStackParamList, "Profile">;
 
+type LanguageOption = {
+  code: string;
+  name: string;
+  nativeName: string;
+  icon: string;
+};
+
+const languages: LanguageOption[] = [
+  { code: "en", name: "English", nativeName: "English", icon: "🇬🇧" },
+  { code: "hi", name: "Hindi", nativeName: "हिंदी", icon: "🇮🇳" },
+  { code: "mr", name: "Marathi", nativeName: "मराठी", icon: "🇮🇳" },
+];
+
 export default function ProfileScreen({ navigation }: Props): any {
+  const { t, i18n } = useTranslation();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
 
   const fetchUser = useCallback(async () => {
     try {
       setLoading(true);
       const userId = await AsyncStorage.getItem("userId");
       if (!userId) return;
+
+      // Load saved language preference
+      const savedLanguageCode = await AsyncStorage.getItem("appLanguageCode");
+      if (savedLanguageCode) {
+        i18n.changeLanguage(savedLanguageCode);
+      }
 
       // First, try to load cached user data for immediate display
       const cachedUserData = await AsyncStorage.getItem("userData");
@@ -95,6 +119,22 @@ export default function ProfileScreen({ navigation }: Props): any {
     navigation.replace("Login");
   };
 
+  const handleLanguageSelect = async (languageCode: string) => {
+    await i18n.changeLanguage(languageCode);
+    await AsyncStorage.setItem("appLanguageCode", languageCode);
+
+    // Also store the language name for backward compatibility
+    const langName =
+      languageCode === "hi"
+        ? "Hindi"
+        : languageCode === "mr"
+        ? "Marathi"
+        : "English";
+    await AsyncStorage.setItem("appLanguage", langName);
+
+    setShowLanguageModal(false);
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       {/* Modern Gradient Header */}
@@ -103,8 +143,16 @@ export default function ProfileScreen({ navigation }: Props): any {
         style={styles.headerGradient}
       >
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>My Profile</Text>
+          <Text style={styles.headerTitle}>{t("myProfile")}</Text>
           <View style={styles.headerIcons}>
+            <TouchableOpacity onPress={() => setShowLanguageModal(true)}>
+              <Ionicons
+                name="language"
+                size={22}
+                color="#ffffff"
+                style={{ marginRight: 16 }}
+              />
+            </TouchableOpacity>
             <Ionicons
               name="settings-outline"
               size={22}
@@ -183,7 +231,7 @@ export default function ProfileScreen({ navigation }: Props): any {
             <View style={styles.locationContainer}>
               <Ionicons name="location" size={14} color="#64748b" />
               <Text style={styles.userLocation}>
-                {user.address || "Add Location"}
+                {user.address || t("addLocation")}
               </Text>
             </View>
           </View>
@@ -192,7 +240,7 @@ export default function ProfileScreen({ navigation }: Props): any {
           <View style={styles.infoCard}>
             <View style={styles.sectionHeader}>
               <Ionicons name="information-circle" size={20} color="#8b5cf6" />
-              <Text style={styles.sectionTitle}>Personal Details</Text>
+              <Text style={styles.sectionTitle}>{t("personalDetails")}</Text>
             </View>
 
             <View style={styles.infoRow}>
@@ -200,9 +248,9 @@ export default function ProfileScreen({ navigation }: Props): any {
                 <Ionicons name="call" size={18} color="#8b5cf6" />
               </View>
               <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Phone Number</Text>
+                <Text style={styles.infoLabel}>{t("phoneNumber")}</Text>
                 <Text style={styles.infoText}>
-                  {user.phoneNumber || "Not provided"}
+                  {user.phoneNumber || t("notProvided")}
                 </Text>
               </View>
             </View>
@@ -212,9 +260,9 @@ export default function ProfileScreen({ navigation }: Props): any {
                 <Ionicons name="home" size={18} color="#8b5cf6" />
               </View>
               <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Address</Text>
+                <Text style={styles.infoLabel}>{t("address")}</Text>
                 <Text style={styles.infoText}>
-                  {user.address || "Not provided"}
+                  {user.address || t("notProvided")}
                 </Text>
               </View>
             </View>
@@ -224,9 +272,9 @@ export default function ProfileScreen({ navigation }: Props): any {
                 <Ionicons name="person" size={18} color="#8b5cf6" />
               </View>
               <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Gender & Age</Text>
+                <Text style={styles.infoLabel}>{t("gender")}</Text>
                 <Text style={styles.infoText}>
-                  {user.gender || "NA"}, {user.age || "NA"} years
+                  {user.gender || "NA"}, {user.age || "NA"} {t("years")}
                 </Text>
               </View>
             </View>
@@ -236,7 +284,7 @@ export default function ProfileScreen({ navigation }: Props): any {
           <View style={styles.actionsContainer}>
             <View style={styles.sectionHeader}>
               <Ionicons name="settings" size={20} color="#8b5cf6" />
-              <Text style={styles.sectionTitle}>Quick Actions</Text>
+              <Text style={styles.sectionTitle}>{t("quickActions")}</Text>
             </View>
 
             <View
@@ -247,9 +295,9 @@ export default function ProfileScreen({ navigation }: Props): any {
                 <Ionicons name="pencil" size={20} color="#8b5cf6" />
               </View>
               <View style={styles.actionContent}>
-                <Text style={styles.actionTitle}>Edit Profile</Text>
+                <Text style={styles.actionTitle}>{t("editProfile")}</Text>
                 <Text style={styles.actionDescription}>
-                  Update your personal details
+                  {t("updatePersonalDetails")}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
@@ -264,9 +312,9 @@ export default function ProfileScreen({ navigation }: Props): any {
                   <Ionicons name="document-text" size={20} color="#8b5cf6" />
                 </View>
                 <View style={styles.actionContent}>
-                  <Text style={styles.actionTitle}>Complete KYC</Text>
+                  <Text style={styles.actionTitle}>{t("completeKYC")}</Text>
                   <Text style={styles.actionDescription}>
-                    Verify your account
+                    {t("verifyAccount")}
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
@@ -281,8 +329,10 @@ export default function ProfileScreen({ navigation }: Props): any {
                 <Ionicons name="cog" size={20} color="#8b5cf6" />
               </View>
               <View style={styles.actionContent}>
-                <Text style={styles.actionTitle}>Settings</Text>
-                <Text style={styles.actionDescription}>App preferences</Text>
+                <Text style={styles.actionTitle}>{t("settings")}</Text>
+                <Text style={styles.actionDescription}>
+                  {t("appPreferences")}
+                </Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
             </View>
@@ -298,10 +348,10 @@ export default function ProfileScreen({ navigation }: Props): any {
               </View>
               <View style={styles.actionContent}>
                 <Text style={[styles.actionTitle, { color: "#ef4444" }]}>
-                  Logout
+                  {t("logout")}
                 </Text>
                 <Text style={styles.actionDescription}>
-                  Sign out from your account
+                  {t("signOutAccount")}
                 </Text>
               </View>
             </View>
@@ -309,6 +359,65 @@ export default function ProfileScreen({ navigation }: Props): any {
         </ScrollView>
         <BottomTab />
       </View>
+
+      {/* Language Selection Modal */}
+      <Modal
+        visible={showLanguageModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowLanguageModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowLanguageModal(false)}
+        >
+          <View style={styles.languageModal}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{t("selectLanguage")}</Text>
+              <TouchableOpacity onPress={() => setShowLanguageModal(false)}>
+                <Ionicons name="close" size={24} color="#64748b" />
+              </TouchableOpacity>
+            </View>
+
+            {languages.map((lang) => (
+              <TouchableOpacity
+                key={lang.code}
+                style={[
+                  styles.languageOption,
+                  i18n.language === lang.code && styles.selectedLanguageOption,
+                ]}
+                onPress={() => handleLanguageSelect(lang.code)}
+              >
+                <View style={styles.languageContent}>
+                  <View style={styles.languageInfo}>
+                    <Text style={styles.languageIcon}>{lang.icon}</Text>
+                    <View>
+                      <Text
+                        style={[
+                          styles.languageText,
+                          i18n.language === lang.code &&
+                            styles.selectedLanguageText,
+                        ]}
+                      >
+                        {lang.nativeName}
+                      </Text>
+                      <Text style={styles.languageSubtext}>{lang.name}</Text>
+                    </View>
+                  </View>
+                  {i18n.language === lang.code && (
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={24}
+                      color="#8b5cf6"
+                    />
+                  )}
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -341,6 +450,77 @@ const styles = StyleSheet.create({
   headerIcons: {
     flexDirection: "row",
     alignItems: "center",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  languageModal: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    width: "100%",
+    maxWidth: 400,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e2e8f0",
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#1e293b",
+  },
+  languageOption: {
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: "#f8fafc",
+    marginBottom: 10,
+  },
+  selectedLanguageOption: {
+    backgroundColor: "#ede9fe",
+    borderWidth: 1,
+    borderColor: "#8b5cf6",
+  },
+  languageContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  languageInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  languageIcon: {
+    fontSize: 32,
+  },
+  languageText: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#475569",
+  },
+  languageSubtext: {
+    fontSize: 12,
+    color: "#94a3b8",
+    marginTop: 2,
+  },
+  selectedLanguageText: {
+    color: "#8b5cf6",
+    fontWeight: "700",
   },
 
   scrollContainer: {

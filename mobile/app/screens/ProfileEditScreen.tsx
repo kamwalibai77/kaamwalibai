@@ -7,6 +7,7 @@ import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -27,6 +28,7 @@ import { API_BASE_URL } from "../utills/config";
 type Props = NativeStackScreenProps<RootStackParamList, "EditProfile">;
 
 export default function ProfileEditScreen({ navigation, route }: Props): any {
+  const { t } = useTranslation();
   const [id, setId] = useState<string>("");
   const [name, setName] = useState<string>("");
   const [role, setRole] = useState<string>("");
@@ -51,9 +53,9 @@ export default function ProfileEditScreen({ navigation, route }: Props): any {
   const lastQueryRef = useRef<string>("");
 
   const genderItems = [
-    { label: "Male", value: "male" },
-    { label: "Female", value: "female" },
-    { label: "Other", value: "other" },
+    { label: t("male"), value: "male" },
+    { label: t("female"), value: "female" },
+    { label: t("other"), value: "other" },
   ];
 
   const ageItems = Array.from({ length: 83 }, (_, i) => ({
@@ -287,7 +289,10 @@ export default function ProfileEditScreen({ navigation, route }: Props): any {
         // Store complete user data including profilePhoto
         if (data.user) {
           const userDataString = JSON.stringify(data.user);
-          console.log("Storing userData in AsyncStorage:", userDataString.substring(0, 200));
+          console.log(
+            "Storing userData in AsyncStorage:",
+            userDataString.substring(0, 200)
+          );
           await AsyncStorage.setItem("userData", userDataString);
           console.log("userData stored successfully");
         }
@@ -300,7 +305,7 @@ export default function ProfileEditScreen({ navigation, route }: Props): any {
             text: "OK",
             onPress: async () => {
               // Small delay to ensure all AsyncStorage operations complete
-              await new Promise(resolve => setTimeout(resolve, 100));
+              await new Promise((resolve) => setTimeout(resolve, 100));
               console.log("Navigating to Profile screen...");
               navigation.replace("Profile");
             },
@@ -509,7 +514,7 @@ export default function ProfileEditScreen({ navigation, route }: Props): any {
           >
             <Ionicons name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Edit Profile</Text>
+          <Text style={styles.headerTitle}>{t("editProfile")}</Text>
           <View style={{ width: 24 }} />
         </LinearGradient>
 
@@ -548,10 +553,10 @@ export default function ProfileEditScreen({ navigation, route }: Props): any {
             <View style={styles.inputGroup}>
               <View style={styles.labelContainer}>
                 <Ionicons name="person-outline" size={18} color="#8b5cf6" />
-                <Text style={styles.label}>Name</Text>
+                <Text style={styles.label}>{t("name")}</Text>
               </View>
               <TextInput
-                placeholder="Enter your name"
+                placeholder={t("enterYourName")}
                 value={name}
                 onChangeText={setName}
                 style={styles.input}
@@ -562,7 +567,7 @@ export default function ProfileEditScreen({ navigation, route }: Props): any {
             <View style={styles.inputGroup}>
               <View style={styles.labelContainer}>
                 <Ionicons name="location-outline" size={18} color="#8b5cf6" />
-                <Text style={styles.label}>Address</Text>
+                <Text style={styles.label}>{t("address")}</Text>
               </View>
               <View style={styles.searchRow}>
                 <Ionicons
@@ -574,7 +579,7 @@ export default function ProfileEditScreen({ navigation, route }: Props): any {
                 <TextInput
                   style={styles.inputNoBorder}
                   value={query}
-                  placeholder="Search city, area or locality"
+                  placeholder={t("searchCityArea")}
                   placeholderTextColor="#94a3b8"
                   onChangeText={fetchSuggestions}
                 />
@@ -633,10 +638,10 @@ export default function ProfileEditScreen({ navigation, route }: Props): any {
             <View style={styles.inputGroup}>
               <View style={styles.labelContainer}>
                 <Ionicons name="call-outline" size={18} color="#8b5cf6" />
-                <Text style={styles.label}>Mobile Number</Text>
+                <Text style={styles.label}>{t("mobileNumber")}</Text>
               </View>
               <TextInput
-                placeholder="Enter mobile number"
+                placeholder={t("enterMobileNumber")}
                 value={phoneNumber}
                 onChangeText={(text) => {
                   let clean = text.replace(/\D/g, "");
@@ -655,7 +660,7 @@ export default function ProfileEditScreen({ navigation, route }: Props): any {
             <View style={styles.inputGroup}>
               <View style={styles.labelContainer}>
                 <Ionicons name="briefcase-outline" size={18} color="#8b5cf6" />
-                <Text style={styles.label}>Role</Text>
+                <Text style={styles.label}>{t("role")}</Text>
               </View>
               {/* // If route asks for role and this is a NEW user (no id yet), show a selector.
                   // Previously this depended on `!role` which could accidentally hide the selector. */}
@@ -682,7 +687,7 @@ export default function ProfileEditScreen({ navigation, route }: Props): any {
                             : styles.roleText
                         }
                       >
-                        User
+                        {t("user")}
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -705,7 +710,7 @@ export default function ProfileEditScreen({ navigation, route }: Props): any {
                             : styles.roleText
                         }
                       >
-                        Service Provider
+                        {t("serviceProvider")}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -713,12 +718,12 @@ export default function ProfileEditScreen({ navigation, route }: Props): any {
               ) : (
                 // Role should be non-editable once set (existing users). Show a friendly label.
                 <TextInput
-                  placeholder="Role"
+                  placeholder={t("role")}
                   value={
                     role
                       ? role.toLowerCase().includes("provider")
-                        ? "Service Provider"
-                        : "User"
+                        ? t("serviceProvider")
+                        : t("user")
                       : ""
                   }
                   editable={false}
@@ -735,7 +740,7 @@ export default function ProfileEditScreen({ navigation, route }: Props): any {
                   size={18}
                   color="#8b5cf6"
                 />
-                <Text style={styles.label}>Gender</Text>
+                <Text style={styles.label}>{t("gender")}</Text>
               </View>
               <View
                 style={[
@@ -749,7 +754,7 @@ export default function ProfileEditScreen({ navigation, route }: Props): any {
                   value={gender}
                   setValue={setGender}
                   items={genderItems}
-                  placeholder="Select Gender"
+                  placeholder={t("selectGender")}
                   style={styles.dropdownStyle}
                   textStyle={styles.dropdownText}
                   dropDownContainerStyle={styles.dropDownContainer}
@@ -762,7 +767,7 @@ export default function ProfileEditScreen({ navigation, route }: Props): any {
             <View style={styles.inputGroup}>
               <View style={styles.labelContainer}>
                 <Ionicons name="calendar-outline" size={18} color="#8b5cf6" />
-                <Text style={styles.label}>Age</Text>
+                <Text style={styles.label}>{t("age")}</Text>
               </View>
               <View
                 style={[
@@ -776,7 +781,7 @@ export default function ProfileEditScreen({ navigation, route }: Props): any {
                   value={age}
                   setValue={setAge}
                   items={ageItems}
-                  placeholder="Select Age"
+                  placeholder={t("selectAge")}
                   style={styles.dropdownStyle}
                   textStyle={styles.dropdownText}
                   dropDownContainerStyle={[
@@ -785,7 +790,7 @@ export default function ProfileEditScreen({ navigation, route }: Props): any {
                   ]}
                   listMode="MODAL"
                   modalProps={{ animationType: "slide" }}
-                  modalTitle="Select Age"
+                  modalTitle={t("selectAge")}
                   modalContentContainerStyle={{ margin: 12 }}
                   flatListProps={{ initialNumToRender: 20 }}
                 />
@@ -801,7 +806,7 @@ export default function ProfileEditScreen({ navigation, route }: Props): any {
               end={{ x: 1, y: 0 }}
               style={styles.saveButtonGradient}
             >
-              <Text style={styles.saveButtonText}>Save Changes</Text>
+              <Text style={styles.saveButtonText}>{t("saveChanges")}</Text>
               <Ionicons name="checkmark-circle" size={20} color="#fff" />
             </LinearGradient>
           </TouchableOpacity>

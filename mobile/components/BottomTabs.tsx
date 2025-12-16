@@ -12,11 +12,13 @@ import {
 } from "@react-navigation/native";
 import axios from "axios";
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import io from "socket.io-client";
 import { SOCKET_URL } from "../app/utills/config";
 
 export default function BottomTabs() {
+  const { t } = useTranslation();
   const navigation =
     useNavigation<NavigationProp<Record<string, object | undefined>>>();
   const route = useRoute();
@@ -131,7 +133,7 @@ export default function BottomTabs() {
               pathname === "Home" && styles.tabTextActive,
             ]}
           >
-            Home
+            {t("home")}
           </Text>
         </TouchableOpacity>
 
@@ -168,7 +170,7 @@ export default function BottomTabs() {
               pathname === "Chat" && styles.tabTextActive,
             ]}
           >
-            Chat
+            {t("chat")}
           </Text>
         </TouchableOpacity>
 
@@ -195,7 +197,7 @@ export default function BottomTabs() {
               pathname === "Subscription" && styles.tabTextActive,
             ]}
           >
-            Plans
+            {t("plans")}
           </Text>
         </TouchableOpacity>
 
@@ -227,7 +229,7 @@ export default function BottomTabs() {
                 pathname === "MyServices" && styles.tabTextActive,
               ]}
             >
-              Services
+              {t("myServices")}
             </Text>
           </TouchableOpacity>
         )}
@@ -255,7 +257,7 @@ export default function BottomTabs() {
               pathname === "Profile" && styles.tabTextActive,
             ]}
           >
-            Profile
+            {t("myProfile")}
           </Text>
         </TouchableOpacity>
       </View>

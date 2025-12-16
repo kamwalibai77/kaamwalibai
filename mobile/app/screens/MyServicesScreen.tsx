@@ -218,16 +218,18 @@ export default function MyserviceScreen({ navigation }: Props) {
           animationType="slide"
           transparent={false}
           onRequestClose={() => setModalOpen(false)}
+          statusBarTranslucent={false}
         >
           <SafeAreaView
-            style={{ flex: 1, backgroundColor: "#f8fafc" }}
-            edges={["top"]}
+            style={{ flex: 1, backgroundColor: "#fff" }}
+            edges={["top", "bottom"]}
           >
             <View style={styles.modalHeader}>
               <TouchableOpacity
                 onPress={() => setModalOpen(false)}
                 style={styles.modalBackButton}
                 activeOpacity={0.7}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
                 <Ionicons name="close" size={28} color="#1e293b" />
               </TouchableOpacity>
@@ -237,7 +239,10 @@ export default function MyserviceScreen({ navigation }: Props) {
               <View style={{ width: 44 }} />
             </View>
 
-            <ScrollView contentContainerStyle={{ padding: 16 }}>
+            <ScrollView
+              style={{ flex: 1, backgroundColor: "#f8fafc" }}
+              contentContainerStyle={{ padding: 16 }}
+            >
               <ErrorBoundary>
                 <AddService
                   serviceData={editingService}

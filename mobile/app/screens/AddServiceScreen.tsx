@@ -3,6 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -18,17 +19,11 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { translations } from "../i18n/translations";
 import serviceprovidersApi from "../services/serviceProviders";
 import serviceTypesApi from "../services/serviceTypes";
 
 const { width } = Dimensions.get("window");
-
-const RATE_OPTIONS = [
-  { label: "Per Hour", value: "hourly" },
-  { label: "Per Day", value: "daily" },
-  { label: "Per Week", value: "weekly" },
-  { label: "Per Month", value: "monthly" },
-];
 
 export default function AddServiceScreen({
   serviceData,
@@ -37,6 +32,26 @@ export default function AddServiceScreen({
   serviceData: any;
   afterSubmit: () => void;
 }) {
+  const { t } = useTranslation();
+
+  // Helper function to translate service type names
+  const translateServiceType = (name: string): string => {
+    const normalized = name.toLowerCase().replace(/\s+/g, "");
+    // Check if translation key exists
+    const translationKey = normalized as keyof typeof translations.en;
+    if (t(translationKey) !== translationKey) {
+      return t(translationKey);
+    }
+    // Return original name if no translation found
+    return name;
+  };
+
+  const RATE_OPTIONS = [
+    { label: t("perHour"), value: "hourly" },
+    { label: t("perDay"), value: "daily" },
+    { label: t("perWeek"), value: "weekly" },
+    { label: t("perMonth"), value: "monthly" },
+  ];
   React.useEffect(() => {
     console.debug("AddServiceScreen: mounted");
     return () => {
@@ -56,10 +71,10 @@ export default function AddServiceScreen({
   const [cost, setCost] = useState("");
   const [contactNumber, setContactNumber] = useState("");
   const [availabilityItems] = useState([
-    { label: "Morning (6am-10am)", value: "morning" },
-    { label: "Afternoon (12pm-4pm)", value: "afternoon" },
-    { label: "Evening (5pm-9pm)", value: "evening" },
-    { label: "Night (9pm-12am)", value: "night" },
+    { label: t("morning"), value: "morning" },
+    { label: t("afternoon"), value: "afternoon" },
+    { label: t("evening"), value: "evening" },
+    { label: t("night"), value: "night" },
   ]);
   const [selectedAvailability, setSelectedAvailability] = useState<string[]>(
     []
@@ -75,7 +90,13 @@ export default function AddServiceScreen({
         setLoading(true);
         const response = await serviceTypesApi.getAll();
         const data = await response.data;
-        setServiceItems(data.map((s: any) => ({ label: s.name, value: s.id })));
+        setServiceItems(
+          data.map((s: any) => ({
+            label: translateServiceType(s.name),
+            value: s.id,
+            originalName: s.name,
+          }))
+        );
       } catch (err) {
         console.log(err);
       } finally {
@@ -189,12 +210,10 @@ export default function AddServiceScreen({
           >
             <Ionicons name="briefcase" size={32} color="#ffffff" />
             <Text style={styles.heading}>
-              {serviceData ? "Update Service" : "Post New Service"}
+              {serviceData ? t("updateService") : t("postService")}
             </Text>
             <Text style={styles.subheading}>
-              {serviceData
-                ? "Edit your service details"
-                : "Share your expertise with clients"}
+              {serviceData ? t("editService") : t("createService")}
             </Text>
           </LinearGradient>
 
@@ -202,11 +221,11 @@ export default function AddServiceScreen({
           <View style={styles.card}>
             <View style={styles.labelRow}>
               <Ionicons name="list" size={18} color="#6366f1" />
-              <Text style={styles.sectionLabel}>Service Type</Text>
+              <Text style={styles.sectionLabel}>{t("serviceType")}</Text>
               {selectedServices.length > 0 && (
                 <View style={styles.selectedBadge}>
                   <Text style={styles.selectedBadgeText}>
-                    {selectedServices.length} selected
+                    {selectedServices.length} {t("selected")}
                   </Text>
                 </View>
               )}
@@ -313,7 +332,7 @@ export default function AddServiceScreen({
           <View style={styles.card}>
             <View style={styles.labelRow}>
               <Ionicons name="time" size={18} color="#6366f1" />
-              <Text style={styles.sectionLabel}>Rate Type</Text>
+              <Text style={styles.sectionLabel}>{t("selectRateType")}</Text>
               {selectedRate && (
                 <View style={styles.selectedBadge}>
                   <Text style={styles.selectedBadgeText}>
@@ -376,11 +395,11 @@ export default function AddServiceScreen({
           <View style={styles.card}>
             <View style={styles.labelRow}>
               <Ionicons name="cash" size={18} color="#6366f1" />
-              <Text style={styles.sectionLabel}>Cost (INR)</Text>
+              <Text style={styles.sectionLabel}>{t("rateAmount")} (INR)</Text>
             </View>
             <TextInput
               style={styles.input}
-              placeholder="Enter your rate"
+              placeholder={t("enterCost")}
               placeholderTextColor="#94a3b8"
               keyboardType="numeric"
               value={cost}
@@ -401,11 +420,11 @@ export default function AddServiceScreen({
           <View style={styles.card}>
             <View style={styles.labelRow}>
               <Ionicons name="call" size={18} color="#6366f1" />
-              <Text style={styles.sectionLabel}>Contact Number</Text>
+              <Text style={styles.sectionLabel}>{t("contactInfo")}</Text>
             </View>
             <TextInput
               style={styles.input}
-              placeholder="Enter 10-digit phone number"
+              placeholder={t("enterContact")}
               placeholderTextColor="#94a3b8"
               keyboardType="phone-pad"
               value={contactNumber}
@@ -427,12 +446,12 @@ export default function AddServiceScreen({
           <View style={styles.card}>
             <View style={styles.labelRow}>
               <Ionicons name="calendar" size={18} color="#6366f1" />
-              <Text style={styles.sectionLabel}>Availability Slots</Text>
-              <Text style={styles.optionalText}>(Optional)</Text>
+              <Text style={styles.sectionLabel}>{t("availabilitySlots")}</Text>
+              <Text style={styles.optionalText}>({t("optional")})</Text>
               {selectedAvailability.length > 0 && (
                 <View style={styles.selectedBadge}>
                   <Text style={styles.selectedBadgeText}>
-                    {selectedAvailability.length} selected
+                    {selectedAvailability.length} {t("selected")}
                   </Text>
                 </View>
               )}
@@ -563,7 +582,7 @@ export default function AddServiceScreen({
                     color="#ffffff"
                   />
                   <Text style={styles.buttonText}>
-                    {serviceData ? "Update Service" : "Post Service"}
+                    {serviceData ? t("updateServiceBtn") : t("postServiceBtn")}
                   </Text>
                 </>
               )}

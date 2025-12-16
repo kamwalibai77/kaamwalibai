@@ -5,6 +5,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
 import React, { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -21,8 +22,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context"; // ✅ SafeArea
+import { SafeAreaView } from "react-native-safe-area-context";
 import io from "socket.io-client";
+import { translations } from "../i18n/translations";
 import api from "../services/api";
 import providersApi from "../services/serviceProviders";
 import serviceTypesApi from "../services/serviceTypes";
@@ -36,6 +38,20 @@ import { RootStackParamList } from "../navigation/AppNavigator";
 type Props = NativeStackScreenProps<RootStackParamList, "Home">;
 
 export default function HomeScreen({ navigation }: Props) {
+  const { t, i18n } = useTranslation();
+
+  // Helper function to translate service type names
+  const translateServiceType = (name: string): string => {
+    const normalized = name.toLowerCase().replace(/\s+/g, "");
+    // Check if translation key exists
+    const translationKey = normalized as keyof typeof translations.en;
+    if (t(translationKey) !== translationKey) {
+      return t(translationKey);
+    }
+    // Return original name if no translation found
+    return name;
+  };
+
   const [selectedArea, setSelectedArea] = useState("Trimurti Nagar");
   const [userLat, setUserLat] = useState<number | null>(null);
   const [userLng, setUserLng] = useState<number | null>(null);
@@ -747,7 +763,7 @@ export default function HomeScreen({ navigation }: Props) {
                     }}
                     style={styles.clearButton}
                   >
-                    <Text style={styles.clearButtonText}>Clear</Text>
+                    <Text style={styles.clearButtonText}>{t("clear")}</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -794,7 +810,7 @@ export default function HomeScreen({ navigation }: Props) {
                         </View>
                       )}
                       <Text style={styles.serviceName} numberOfLines={1}>
-                        {item.name}
+                        {translateServiceType(item.name)}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -804,11 +820,13 @@ export default function HomeScreen({ navigation }: Props) {
               {/* Advertisement Banner with Carousel - Moved below services */}
               <View style={styles.offerSection}>
                 <View style={styles.offerHeader}>
-                  <Text style={styles.offerHeaderText}>🎉 Special Offers</Text>
+                  <Text style={styles.offerHeaderText}>
+                    {t("specialOffers")}
+                  </Text>
                   <TouchableOpacity
                     onPress={() => navigation.navigate("Subscription")}
                   >
-                    <Text style={styles.viewAllText}>View All →</Text>
+                    <Text style={styles.viewAllText}>{t("viewAll")} →</Text>
                   </TouchableOpacity>
                 </View>
                 <ScrollView
@@ -865,7 +883,7 @@ export default function HomeScreen({ navigation }: Props) {
                 }}
               >
                 <Text style={[styles.sectionTitle, { margin: 0 }]}>
-                  Nearby Providers
+                  {t("nearbyProviders")}
                 </Text>
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
                   <TouchableOpacity
@@ -882,7 +900,7 @@ export default function HomeScreen({ navigation }: Props) {
                         selectedGenderFilter === "all" && { color: "#ffffff" },
                       ]}
                     >
-                      All
+                      {t("all")}
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -899,7 +917,7 @@ export default function HomeScreen({ navigation }: Props) {
                         selectedGenderFilter === "male" && { color: "#ffffff" },
                       ]}
                     >
-                      Male
+                      {t("male")}
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -918,7 +936,7 @@ export default function HomeScreen({ navigation }: Props) {
                         },
                       ]}
                     >
-                      Female
+                      {t("female")}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -933,7 +951,7 @@ export default function HomeScreen({ navigation }: Props) {
                 style={styles.loadMoreBtn}
                 onPress={() => setPage((prev) => prev + 1)}
               >
-                <Text style={styles.loadMoreText}>Load More</Text>
+                <Text style={styles.loadMoreText}>{t("loadMore")}</Text>
               </TouchableOpacity>
             ) : null
           }

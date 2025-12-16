@@ -552,7 +552,10 @@ export const completeSignupBase64 = async (req, res) => {
 
     // Convert to plain object to ensure profilePhoto is included
     const userResponse = newUser.toJSON();
-    console.log("[completeSignupBase64] Returning user data with profilePhoto:", userResponse.profilePhoto);
+    console.log(
+      "[completeSignupBase64] Returning user data with profilePhoto:",
+      userResponse.profilePhoto
+    );
 
     return res.json({ ok: true, token: authToken, user: userResponse });
   } catch (err) {
@@ -654,7 +657,10 @@ export const completeSignupSimple = async (req, res) => {
 
     // Convert to plain object
     const userResponse = newUser.toJSON();
-    console.log("[completeSignupSimple] Returning user data:", userResponse.profilePhoto);
+    console.log(
+      "[completeSignupSimple] Returning user data:",
+      userResponse.profilePhoto
+    );
 
     return res.json({ ok: true, token: authToken, user: userResponse });
   } catch (err) {
