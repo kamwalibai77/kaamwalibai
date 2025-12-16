@@ -266,8 +266,12 @@ export default function ProfileEditScreen({ navigation, route }: Props): any {
 
         if (!data?.ok) {
           Alert.alert("Error", data?.error || "Signup failed");
+          setLoading(false);
           return;
         }
+
+        console.log("Signup response user data:", data.user);
+        console.log("Profile photo URL:", data.user?.profilePhoto);
 
         if (data.token) await AsyncStorage.setItem("token", data.token);
         if (data.user?.id)
@@ -280,9 +284,28 @@ export default function ProfileEditScreen({ navigation, route }: Props): any {
               : "user"
           );
         }
+        // Store complete user data including profilePhoto
+        if (data.user) {
+          const userDataString = JSON.stringify(data.user);
+          console.log("Storing userData in AsyncStorage:", userDataString.substring(0, 200));
+          await AsyncStorage.setItem("userData", userDataString);
+          console.log("userData stored successfully");
+        }
 
-        Alert.alert("Success", "Signup completed!");
-        navigation.navigate("Profile");
+        setLoading(false);
+
+        // Navigate after alert is dismissed
+        Alert.alert("Success", "Signup completed!", [
+          {
+            text: "OK",
+            onPress: async () => {
+              // Small delay to ensure all AsyncStorage operations complete
+              await new Promise(resolve => setTimeout(resolve, 100));
+              console.log("Navigating to Profile screen...");
+              navigation.replace("Profile");
+            },
+          },
+        ]);
         return;
       }
 

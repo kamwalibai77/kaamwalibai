@@ -1,9 +1,10 @@
 // screens/ProfileScreen.tsx
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect } from "@react-navigation/native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { LinearGradient } from "expo-linear-gradient";
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -25,23 +26,53 @@ export default function ProfileScreen({ navigation }: Props): any {
   const [loading, setLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const userId = await AsyncStorage.getItem("userId");
-        if (!userId) return;
+  const fetchUser = useCallback(async () => {
+    try {
+      setLoading(true);
+      const userId = await AsyncStorage.getItem("userId");
+      if (!userId) return;
 
-        const response = await fetch(`${API_BASE_URL}/users/${userId}`);
-        const data = await response.json();
-        setUser(data);
-      } catch (err) {
-        console.log(err);
-      } finally {
-        setLoading(false);
+      // First, try to load cached user data for immediate display
+      const cachedUserData = await AsyncStorage.getItem("userData");
+      if (cachedUserData) {
+        const parsedUser = JSON.parse(cachedUserData);
+        console.log("Loaded cached user data:", parsedUser);
+        setUser(parsedUser);
+        setImageError(false);
       }
-    };
-    fetchUser();
+
+      // Add cache-busting timestamp to prevent stale data
+      const timestamp = new Date().getTime();
+      const response = await fetch(
+        `${API_BASE_URL}/users/${userId}?_t=${timestamp}`,
+        {
+          headers: {
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            Pragma: "no-cache",
+            Expires: "0",
+          },
+        }
+      );
+      const data = await response.json();
+      console.log("Fresh user data from API:", data);
+      setUser(data);
+      setImageError(false); // Reset image error state on new fetch
+
+      // Update cache with fresh data
+      await AsyncStorage.setItem("userData", JSON.stringify(data));
+    } catch (err) {
+      console.log(err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  // Refetch user data whenever screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchUser();
+    }, [fetchUser])
+  );
 
   if (loading) {
     return (
@@ -97,7 +128,10 @@ export default function ProfileScreen({ navigation }: Props): any {
                   !imageError &&
                   user.profilePhoto &&
                   user.profilePhoto.startsWith("http")
-                    ? { uri: user.profilePhoto }
+                    ? {
+                        uri: `${user.profilePhoto}?t=${new Date().getTime()}`,
+                        cache: "reload",
+                      }
                     : PlaceholderImg
                 }
                 style={styles.profileImage}

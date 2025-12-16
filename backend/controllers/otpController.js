@@ -366,6 +366,9 @@ export const completeSignup = async (req, res) => {
       }
     }
 
+    // Reload user from database to ensure we have latest data including profilePhoto
+    await newUser.reload();
+
     // Issue permanent JWT
     const authToken = jwt.sign(
       {
@@ -378,7 +381,14 @@ export const completeSignup = async (req, res) => {
       { expiresIn: "30d" }
     );
 
-    return res.json({ ok: true, token: authToken, user: newUser });
+    // Convert to plain object to ensure profilePhoto is included
+    const userResponse = newUser.toJSON();
+    console.log(
+      "Returning user data with profilePhoto:",
+      userResponse.profilePhoto
+    );
+
+    return res.json({ ok: true, token: authToken, user: userResponse });
   } catch (err) {
     console.error("completeSignup error:", err && err.stack ? err.stack : err);
     return res.status(500).json({ error: "Failed to complete signup" });
@@ -526,6 +536,9 @@ export const completeSignupBase64 = async (req, res) => {
       }
     }
 
+    // Reload user from database to ensure we have latest data including profilePhoto
+    await newUser.reload();
+
     const authToken = jwt.sign(
       {
         id: newUser.id,
@@ -537,7 +550,11 @@ export const completeSignupBase64 = async (req, res) => {
       { expiresIn: "30d" }
     );
 
-    return res.json({ ok: true, token: authToken, user: newUser });
+    // Convert to plain object to ensure profilePhoto is included
+    const userResponse = newUser.toJSON();
+    console.log("[completeSignupBase64] Returning user data with profilePhoto:", userResponse.profilePhoto);
+
+    return res.json({ ok: true, token: authToken, user: userResponse });
   } catch (err) {
     console.error(
       "completeSignupBase64 error:",
@@ -621,6 +638,9 @@ export const completeSignupSimple = async (req, res) => {
       return res.status(500).json({ error: "Failed to create user", details });
     }
 
+    // Reload user from database to ensure we have latest data
+    await newUser.reload();
+
     const authToken = jwt.sign(
       {
         id: newUser.id,
@@ -632,7 +652,11 @@ export const completeSignupSimple = async (req, res) => {
       { expiresIn: "30d" }
     );
 
-    return res.json({ ok: true, token: authToken, user: newUser });
+    // Convert to plain object
+    const userResponse = newUser.toJSON();
+    console.log("[completeSignupSimple] Returning user data:", userResponse.profilePhoto);
+
+    return res.json({ ok: true, token: authToken, user: userResponse });
   } catch (err) {
     console.error(
       "completeSignupSimple error:",
