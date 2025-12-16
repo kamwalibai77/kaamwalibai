@@ -520,11 +520,11 @@ export default function HomeScreen({ navigation }: Props) {
     const provider = item.provider;
     const kycStatus = provider.kycStatus;
     const kycSubmittedAt = provider.kycSubmittedAt;
-    
+
     let badgeStyle = styles.kycBadgeUnverified;
     let badgeText = "Unverified";
     let badgeIcon = "alert-circle";
-    
+
     if (kycStatus === "verified") {
       badgeStyle = styles.kycBadgeVerified;
       badgeText = "Verified";
@@ -534,7 +534,7 @@ export default function HomeScreen({ navigation }: Props) {
       badgeText = "In Review";
       badgeIcon = "time-outline";
     }
-    
+
     return (
       <TouchableOpacity
         style={styles.providerCard}
@@ -556,40 +556,40 @@ export default function HomeScreen({ navigation }: Props) {
             </View>
           </LinearGradient>
         </View>
-      <View style={styles.providerInfo}>
-        <Text style={styles.providerName} numberOfLines={1}>
-          {item.provider.name}
-        </Text>
-        <View style={styles.ratingRow}>
-          {[1, 2, 3, 4, 5].map((star) => (
-            <Ionicons
-              key={star}
-              name={star <= 4 ? "star" : "star-outline"}
-              size={9}
-              color="#fbbf24"
-            />
-          ))}
-          <Text style={styles.ratingText}>4.5</Text>
-        </View>
-        <View style={styles.serviceBadge}>
-          <MaterialCommunityIcons name="broom" size={8} color="#8b5cf6" />
-          <Text style={styles.providerService} numberOfLines={1}>
-            {item.serviceTypes.map((st: any) => st.name).join(", ")}
+        <View style={styles.providerInfo}>
+          <Text style={styles.providerName} numberOfLines={1}>
+            {item.provider.name}
           </Text>
+          <View style={styles.ratingRow}>
+            {[1, 2, 3, 4, 5].map((star) => (
+              <Ionicons
+                key={star}
+                name={star <= 4 ? "star" : "star-outline"}
+                size={9}
+                color="#fbbf24"
+              />
+            ))}
+            <Text style={styles.ratingText}>4.5</Text>
+          </View>
+          <View style={styles.serviceBadge}>
+            <MaterialCommunityIcons name="broom" size={8} color="#8b5cf6" />
+            <Text style={styles.providerService} numberOfLines={1}>
+              {item.serviceTypes.map((st: any) => st.name).join(", ")}
+            </Text>
+          </View>
+          <View style={styles.locationRow}>
+            <Ionicons name="location-outline" size={8} color="#94a3b8" />
+            <Text style={styles.providerArea} numberOfLines={1}>
+              {item.address}
+            </Text>
+          </View>
+          <View style={styles.providerPriceRow}>
+            <Ionicons name="cash-outline" size={10} color="#8b5cf6" />
+            <Text style={styles.providerPrice}>₹{item.amount}</Text>
+            <Text style={styles.providerRateType}>/{item.rateType}</Text>
+          </View>
         </View>
-        <View style={styles.locationRow}>
-          <Ionicons name="location-outline" size={8} color="#94a3b8" />
-          <Text style={styles.providerArea} numberOfLines={1}>
-            {item.address}
-          </Text>
-        </View>
-        <View style={styles.providerPriceRow}>
-          <Ionicons name="cash-outline" size={10} color="#8b5cf6" />
-          <Text style={styles.providerPrice}>₹{item.amount}</Text>
-          <Text style={styles.providerRateType}>/{item.rateType}</Text>
-        </View>
-      </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
     );
   };
 
@@ -1004,7 +1004,8 @@ export default function HomeScreen({ navigation }: Props) {
                         name={
                           selectedProvider.provider.kycStatus === "verified"
                             ? "checkmark-circle"
-                            : selectedProvider.provider.kycStatus === "pending" &&
+                            : selectedProvider.provider.kycStatus ===
+                                "pending" &&
                               selectedProvider.provider.kycSubmittedAt
                             ? "time-outline"
                             : "alert-circle"

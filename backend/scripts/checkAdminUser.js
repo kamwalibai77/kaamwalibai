@@ -16,7 +16,9 @@ async function checkAdminUser() {
 
     if (adminUsers.length === 0) {
       console.log("No admin users found with common phone numbers.");
-      console.log("Searching for any users with 'admin' in name or superadmin role...\n");
+      console.log(
+        "Searching for any users with 'admin' in name or superadmin role...\n"
+      );
 
       const allAdmins = await User.findAll({
         where: {
@@ -31,7 +33,14 @@ async function checkAdminUser() {
 
         const someUsers = await User.findAll({
           limit: 5,
-          attributes: ["id", "name", "phoneNumber", "email", "role", "createdAt"],
+          attributes: [
+            "id",
+            "name",
+            "phoneNumber",
+            "email",
+            "role",
+            "createdAt",
+          ],
         });
 
         console.table(someUsers.map((u) => u.toJSON()));

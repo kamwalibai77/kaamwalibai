@@ -706,7 +706,7 @@ export const getAdminProfile = async (req, res) => {
   try {
     console.log("Get admin profile - User ID:", req.user?.id);
     console.log("Get admin profile - User object:", req.user);
-    
+
     const userId = req.user.id; // From auth middleware
 
     const admin = await User.findByPk(userId, {
@@ -723,7 +723,9 @@ export const getAdminProfile = async (req, res) => {
   } catch (error) {
     console.error("Get admin profile error:", error);
     console.error("Error stack:", error.stack);
-    res.status(500).json({ error: "Failed to fetch profile", details: error.message });
+    res
+      .status(500)
+      .json({ error: "Failed to fetch profile", details: error.message });
   }
 };
 

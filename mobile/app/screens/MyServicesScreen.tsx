@@ -219,18 +219,22 @@ export default function MyserviceScreen({ navigation }: Props) {
           transparent={false}
           onRequestClose={() => setModalOpen(false)}
         >
-          <SafeAreaView style={{ flex: 1, backgroundColor: "#f8fafc" }}>
+          <SafeAreaView
+            style={{ flex: 1, backgroundColor: "#f8fafc" }}
+            edges={["top"]}
+          >
             <View style={styles.modalHeader}>
               <TouchableOpacity
                 onPress={() => setModalOpen(false)}
                 style={styles.modalBackButton}
+                activeOpacity={0.7}
               >
                 <Ionicons name="close" size={28} color="#1e293b" />
               </TouchableOpacity>
               <Text style={styles.modalTitle}>
                 {editingService ? "Edit Service" : "Add Service"}
               </Text>
-              <View style={{ width: 40 }} />
+              <View style={{ width: 44 }} />
             </View>
 
             <ScrollView contentContainerStyle={{ padding: 16 }}>
@@ -452,17 +456,20 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 16,
     backgroundColor: "#fff",
     borderBottomWidth: 1,
     borderBottomColor: "#e2e8f0",
+    zIndex: 10000,
+    elevation: 10,
   },
   modalBackButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "#f1f5f9",
   },
   modalTitle: {
     fontSize: 18,

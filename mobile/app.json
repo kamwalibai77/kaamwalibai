@@ -57,8 +57,9 @@
       "apiUrl": "https://kaamwalibai.onrender.com",
       "smsProviderKey": "a2411f6e-a794-11f0-b922-0200cd936042",
       "eas": {
-        "projectId": "939cf92c-f2bc-4e69-9442-72b75e480d8c"
+        "projectId": "dfe61dd9-ea80-41be-8dff-720ad4f197cd"
       }
-    }
+    },
+    "owner": "mohit_pote01"
   }
 }
