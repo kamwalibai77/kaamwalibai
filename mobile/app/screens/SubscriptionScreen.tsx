@@ -3,6 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 import * as WebBrowser from "expo-web-browser";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Alert,
   Dimensions,
@@ -21,6 +22,7 @@ import payments from "../services/payments";
 const { width } = Dimensions.get("window");
 
 export default function SubscriptionScreen({ navigation }: any) {
+  const { t } = useTranslation();
   const [selectedRole, setSelectedRole] = useState<"user" | "provider">("user");
   const [purchasedPlan, setPurchasedPlan] = useState<string | null>(null);
   const [role, setRole] = useState<string | null>(null);
@@ -217,8 +219,8 @@ export default function SubscriptionScreen({ navigation }: any) {
           if (match)
             setPurchasedPlan(match.duration || match.name || String(match.id));
           Alert.alert(
-            "Subscription activated",
-            "Your subscription is now active."
+            t("subscriptionActivated"),
+            t("yourSubscriptionIsActive")
           );
           return;
         }
@@ -227,10 +229,7 @@ export default function SubscriptionScreen({ navigation }: any) {
       }
     }
 
-    Alert.alert(
-      "Payment submitted",
-      "We are processing your payment. If it doesn't appear shortly, please contact support."
-    );
+    Alert.alert(t("paymentSubmitted"), t("processingPayment"));
   };
 
   return (
@@ -241,7 +240,7 @@ export default function SubscriptionScreen({ navigation }: any) {
         style={styles.headerGradient}
       >
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Plans & Pricing</Text>
+          <Text style={styles.headerTitle}>{t("plansAndPricing")}</Text>
           <View style={styles.headerIcons}>
             <TouchableOpacity style={styles.headerIconBtn}>
               <Ionicons name="diamond-outline" size={22} color="#ffffff" />
@@ -273,7 +272,7 @@ export default function SubscriptionScreen({ navigation }: any) {
                     selectedRole === "user" && styles.toggleTextActive,
                   ]}
                 >
-                  User Plans
+                  {t("userPlans")}
                 </Text>
               </TouchableOpacity>
 
@@ -295,7 +294,7 @@ export default function SubscriptionScreen({ navigation }: any) {
                     selectedRole === "provider" && styles.toggleTextActive,
                   ]}
                 >
-                  Provider Plans
+                  {t("providerPlans")}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -321,12 +320,12 @@ export default function SubscriptionScreen({ navigation }: any) {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.currentSubTitle}>
-                      Active Subscription
+                      {t("activeSubscription")}
                     </Text>
                     <Text style={styles.currentSubPlan}>
                       {subscriptionDetails.plan?.name ||
                         subscriptionDetails.plan?.duration ||
-                        "Premium Plan"}
+                        t("premiumPlan")}
                     </Text>
                   </View>
                 </View>
@@ -339,7 +338,7 @@ export default function SubscriptionScreen({ navigation }: any) {
                       <Ionicons name="people" size={20} color="#10b981" />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.detailLabel}>Contacts</Text>
+                      <Text style={styles.detailLabel}>{t("contacts")}</Text>
                       <Text style={styles.detailValue}>
                         {subscriptionDetails.remainingContacts != null
                           ? subscriptionDetails.remainingContacts
@@ -352,7 +351,7 @@ export default function SubscriptionScreen({ navigation }: any) {
                       <Ionicons name="time" size={20} color="#10b981" />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.detailLabel}>Days Left</Text>
+                      <Text style={styles.detailLabel}>{t("daysLeft")}</Text>
                       <Text style={styles.detailValue}>
                         {subscriptionDetails.remainingDays != null
                           ? subscriptionDetails.remainingDays
@@ -369,7 +368,7 @@ export default function SubscriptionScreen({ navigation }: any) {
                 <View style={styles.emptyIconWrapper}>
                   <Ionicons name="reload-circle" size={64} color="#cbd5e1" />
                 </View>
-                <Text style={styles.emptyText}>Loading plans...</Text>
+                <Text style={styles.emptyText}>{t("loadingPlans")}</Text>
               </View>
             ) : plansError ? (
               <View style={styles.emptyContainer}>
@@ -402,7 +401,7 @@ export default function SubscriptionScreen({ navigation }: any) {
                   }}
                 >
                   <Ionicons name="refresh" size={18} color="#fff" />
-                  <Text style={styles.retryButtonText}>Retry</Text>
+                  <Text style={styles.retryButtonText}>{t("retry")}</Text>
                 </TouchableOpacity>
               </View>
             ) : (
@@ -432,7 +431,7 @@ export default function SubscriptionScreen({ navigation }: any) {
                             >
                               <Ionicons name="star" size={14} color="#fff" />
                               <Text style={styles.popularBadgeText}>
-                                MOST POPULAR
+                                {t("mostPopular")}
                               </Text>
                             </LinearGradient>
                           </View>
@@ -511,7 +510,7 @@ export default function SubscriptionScreen({ navigation }: any) {
                                     />
                                   </View>
                                   <Text style={styles.planFeatureText}>
-                                    {plan.contacts ?? 0} Service Contacts
+                                    {plan.contacts ?? 0} {t("serviceContacts")}
                                   </Text>
                                 </View>
                               )}
@@ -525,7 +524,7 @@ export default function SubscriptionScreen({ navigation }: any) {
                                   />
                                 </View>
                                 <Text style={styles.planFeatureText}>
-                                  Premium Support
+                                  {t("premiumSupport")}
                                 </Text>
                               </View>
 
@@ -538,7 +537,7 @@ export default function SubscriptionScreen({ navigation }: any) {
                                   />
                                 </View>
                                 <Text style={styles.planFeatureText}>
-                                  Instant Access
+                                  {t("instantAccess")}
                                 </Text>
                               </View>
                             </View>
@@ -552,7 +551,7 @@ export default function SubscriptionScreen({ navigation }: any) {
                                   color="#10b981"
                                 />
                                 <Text style={styles.purchasedText}>
-                                  Active Plan
+                                  {t("activePlan")}
                                 </Text>
                               </View>
                             ) : (
@@ -571,7 +570,7 @@ export default function SubscriptionScreen({ navigation }: any) {
                                   style={styles.subscribeGradient}
                                 >
                                   <Text style={styles.subscribeText}>
-                                    Subscribe Now
+                                    {t("subscribeNow")}
                                   </Text>
                                   <Ionicons
                                     name="arrow-forward-circle"

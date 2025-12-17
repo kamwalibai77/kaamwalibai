@@ -4,6 +4,7 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import axios from "axios";
 import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -34,6 +35,7 @@ interface Chat {
 type Props = NativeStackScreenProps<RootStackParamList, "Chat">;
 
 export default function ChatScreen({ navigation }: Props) {
+  const { t } = useTranslation();
   const [chatList, setChatList] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState<string | null>(null);
@@ -300,12 +302,7 @@ export default function ChatScreen({ navigation }: Props) {
         style={styles.headerGradient}
       >
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Messages</Text>
-          <View style={styles.headerIcons}>
-            <TouchableOpacity style={styles.headerIconBtn}>
-              <Ionicons name="search-outline" size={22} color="#ffffff" />
-            </TouchableOpacity>
-          </View>
+          <Text style={styles.headerTitle}>{t("messages")}</Text>
         </View>
       </LinearGradient>
 
@@ -314,7 +311,7 @@ export default function ChatScreen({ navigation }: Props) {
           <View style={styles.searchWrapper}>
             <Ionicons name="search" size={18} color="#8b5cf6" />
             <TextInput
-              placeholder="Search conversations..."
+              placeholder={t("searchConversations")}
               value={searchQuery}
               onChangeText={setSearchQuery}
               style={styles.searchInput}
@@ -332,9 +329,9 @@ export default function ChatScreen({ navigation }: Props) {
             <View style={styles.emptyIconWrapper}>
               <Ionicons name="chatbubbles-outline" size={64} color="#cbd5e1" />
             </View>
-            <Text style={styles.emptyTitle}>No conversations yet</Text>
+            <Text style={styles.emptyTitle}>{t("noConversationsYet")}</Text>
             <Text style={styles.emptyText}>
-              Start chatting with service providers
+              {t("startChattingWithProviders")}
             </Text>
           </View>
         ) : (

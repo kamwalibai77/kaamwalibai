@@ -1,8 +1,8 @@
+import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useRef, useState } from "react";
-import { Ionicons } from "@expo/vector-icons";
 import {
   ActivityIndicator,
   Alert,
@@ -269,7 +269,9 @@ export default function LoginScreen({ navigation }: Props): any {
                 <Text style={styles.appName}>MyKaamwalibai</Text>
                 <View style={styles.taglineContainer}>
                   <Ionicons name="star" size={12} color="#fbbf24" />
-                  <Text style={styles.tagline}>Your trusted home service partner</Text>
+                  <Text style={styles.tagline}>
+                    Your trusted home service partner
+                  </Text>
                   <Ionicons name="star" size={12} color="#fbbf24" />
                 </View>
               </View>
@@ -278,10 +280,10 @@ export default function LoginScreen({ navigation }: Props): any {
               <View style={styles.welcomeSection}>
                 <View style={styles.welcomeTitleRow}>
                   <View style={styles.welcomeIconWrapper}>
-                    <Ionicons 
-                      name={step === "phone" ? "call" : "shield-checkmark"} 
-                      size={20} 
-                      color="#667eea" 
+                    <Ionicons
+                      name={step === "phone" ? "call" : "shield-checkmark"}
+                      size={20}
+                      color="#667eea"
                     />
                   </View>
                   <Text style={styles.welcomeTitle}>
@@ -300,7 +302,8 @@ export default function LoginScreen({ navigation }: Props): any {
                   {/* Phone Input with Enhanced Design */}
                   <View style={styles.inputWrapper}>
                     <Text style={styles.inputLabel}>
-                      <Ionicons name="call-outline" size={14} color="#64748b" /> Mobile Number
+                      <Ionicons name="call-outline" size={14} color="#64748b" />{" "}
+                      Mobile Number
                     </Text>
                     <View
                       style={[
@@ -326,12 +329,20 @@ export default function LoginScreen({ navigation }: Props): any {
                         onBlur={() => setFocusedInput(null)}
                       />
                       {phone.length === 10 && !phoneError && (
-                        <Ionicons name="checkmark-circle" size={22} color="#10b981" />
+                        <Ionicons
+                          name="checkmark-circle"
+                          size={22}
+                          color="#10b981"
+                        />
                       )}
                     </View>
                     {phoneError ? (
                       <View style={styles.errorContainer}>
-                        <Ionicons name="alert-circle" size={14} color="#ef4444" />
+                        <Ionicons
+                          name="alert-circle"
+                          size={14}
+                          color="#ef4444"
+                        />
                         <Text style={styles.errorText}>{phoneError}</Text>
                       </View>
                     ) : null}
@@ -341,7 +352,8 @@ export default function LoginScreen({ navigation }: Props): any {
                   <TouchableOpacity
                     style={[
                       styles.primaryButtonWrapper,
-                      (loading || phone.length !== 10) && styles.buttonDisabledWrapper,
+                      (loading || phone.length !== 10) &&
+                        styles.buttonDisabledWrapper,
                     ]}
                     onPress={sendOtp}
                     disabled={loading || phone.length !== 10}
@@ -362,7 +374,11 @@ export default function LoginScreen({ navigation }: Props): any {
                       ) : (
                         <>
                           <Text style={styles.primaryButtonText}>Send OTP</Text>
-                          <Ionicons name="arrow-forward" size={20} color="#fff" />
+                          <Ionicons
+                            name="arrow-forward"
+                            size={20}
+                            color="#fff"
+                          />
                         </>
                       )}
                     </LinearGradient>
@@ -370,7 +386,11 @@ export default function LoginScreen({ navigation }: Props): any {
 
                   {/* Info Card */}
                   <View style={styles.infoCard}>
-                    <Ionicons name="information-circle" size={18} color="#667eea" />
+                    <Ionicons
+                      name="information-circle"
+                      size={18}
+                      color="#667eea"
+                    />
                     <Text style={styles.infoText}>
                       We'll send you a 6-digit verification code
                     </Text>
@@ -381,7 +401,12 @@ export default function LoginScreen({ navigation }: Props): any {
                   {/* OTP Input with Enhanced Design */}
                   <View style={styles.otpWrapper}>
                     <Text style={styles.inputLabel}>
-                      <Ionicons name="lock-closed-outline" size={14} color="#64748b" /> Enter Verification Code
+                      <Ionicons
+                        name="lock-closed-outline"
+                        size={14}
+                        color="#64748b"
+                      />{" "}
+                      Enter Verification Code
                     </Text>
                     <View style={styles.otpContainer}>
                       {otp.map((digit, index) => (
@@ -409,7 +434,11 @@ export default function LoginScreen({ navigation }: Props): any {
                           />
                           {digit && (
                             <View style={styles.otpCheckmark}>
-                              <Ionicons name="checkmark" size={12} color="#10b981" />
+                              <Ionicons
+                                name="checkmark"
+                                size={12}
+                                color="#10b981"
+                              />
                             </View>
                           )}
                         </Animated.View>
@@ -421,7 +450,8 @@ export default function LoginScreen({ navigation }: Props): any {
                   <TouchableOpacity
                     style={[
                       styles.primaryButtonWrapper,
-                      (loading || otp.join("").length !== 6) && styles.buttonDisabledWrapper,
+                      (loading || otp.join("").length !== 6) &&
+                        styles.buttonDisabledWrapper,
                     ]}
                     onPress={verify}
                     disabled={loading || otp.join("").length !== 6}
@@ -441,8 +471,14 @@ export default function LoginScreen({ navigation }: Props): any {
                         <ActivityIndicator color="#fff" />
                       ) : (
                         <>
-                          <Ionicons name="checkmark-circle" size={20} color="#fff" />
-                          <Text style={styles.primaryButtonText}>Verify & Continue</Text>
+                          <Ionicons
+                            name="checkmark-circle"
+                            size={20}
+                            color="#fff"
+                          />
+                          <Text style={styles.primaryButtonText}>
+                            Verify & Continue
+                          </Text>
                         </>
                       )}
                     </LinearGradient>
@@ -452,7 +488,8 @@ export default function LoginScreen({ navigation }: Props): any {
                   {needsRole && (
                     <View style={styles.roleSection}>
                       <Text style={styles.roleTitle}>
-                        <Ionicons name="people" size={16} color="#64748b" /> Select Account Type
+                        <Ionicons name="people" size={16} color="#64748b" />{" "}
+                        Select Account Type
                       </Text>
                       <View style={styles.roleOptions}>
                         <TouchableOpacity
@@ -484,7 +521,11 @@ export default function LoginScreen({ navigation }: Props): any {
                             </Text>
                             {role === "user" && (
                               <View style={styles.roleCheck}>
-                                <Ionicons name="checkmark-circle" size={18} color="#fff" />
+                                <Ionicons
+                                  name="checkmark-circle"
+                                  size={18}
+                                  color="#fff"
+                                />
                               </View>
                             )}
                           </LinearGradient>
@@ -518,7 +559,11 @@ export default function LoginScreen({ navigation }: Props): any {
                             </Text>
                             {role === "provider" && (
                               <View style={styles.roleCheck}>
-                                <Ionicons name="checkmark-circle" size={18} color="#fff" />
+                                <Ionicons
+                                  name="checkmark-circle"
+                                  size={18}
+                                  color="#fff"
+                                />
                               </View>
                             )}
                           </LinearGradient>
@@ -529,23 +574,27 @@ export default function LoginScreen({ navigation }: Props): any {
 
                   {/* Action Links with Enhanced Style */}
                   <View style={styles.actions}>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       onPress={() => setStep("phone")}
                       style={styles.actionButton}
                     >
-                      <Ionicons name="arrow-back-circle" size={16} color="#667eea" />
+                      <Ionicons
+                        name="arrow-back-circle"
+                        size={16}
+                        color="#667eea"
+                      />
                       <Text style={styles.linkText}>Change Number</Text>
                     </TouchableOpacity>
                     <View style={styles.actionDivider} />
-                    <TouchableOpacity 
-                      onPress={sendOtp} 
+                    <TouchableOpacity
+                      onPress={sendOtp}
                       disabled={cooldown > 0}
                       style={styles.actionButton}
                     >
-                      <Ionicons 
-                        name="refresh-circle" 
-                        size={16} 
-                        color={cooldown > 0 ? "#94a3b8" : "#667eea"} 
+                      <Ionicons
+                        name="refresh-circle"
+                        size={16}
+                        color={cooldown > 0 ? "#94a3b8" : "#667eea"}
                       />
                       <Text
                         style={[

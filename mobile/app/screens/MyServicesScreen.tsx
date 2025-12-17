@@ -7,6 +7,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -30,6 +31,7 @@ const { width } = Dimensions.get("window");
 type Props = NativeStackScreenProps<RootStackParamList, "MyServices">;
 
 export default function MyserviceScreen({ navigation }: Props) {
+  const { t } = useTranslation();
   const [jobList, setJobList] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -73,18 +75,14 @@ export default function MyserviceScreen({ navigation }: Props) {
       setSelectedServiceId(serviceId);
       setConfirmVisible(true);
     } else {
-      Alert.alert(
-        "Confirm Delete",
-        "Are you sure you want to delete this service?",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Delete",
-            style: "destructive",
-            onPress: () => removeProviderService(serviceId),
-          },
-        ]
-      );
+      Alert.alert(t("confirmDelete"), t("areYouSureDeleteService"), [
+        { text: t("cancel"), style: "cancel" },
+        {
+          text: t("delete"),
+          style: "destructive",
+          onPress: () => removeProviderService(serviceId),
+        },
+      ]);
     }
   };
 
@@ -155,7 +153,7 @@ export default function MyserviceScreen({ navigation }: Props) {
           >
             <Ionicons name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>My Services</Text>
+          <Text style={styles.headerTitle}>{t("myServices")}</Text>
           <View style={styles.headerIcon}>
             <Ionicons name="briefcase" size={24} color="#fff" />
           </View>
@@ -165,7 +163,7 @@ export default function MyserviceScreen({ navigation }: Props) {
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#8b5cf6" />
-              <Text style={styles.loadingText}>Loading services...</Text>
+              <Text style={styles.loadingText}>{t("loadingServices")}</Text>
             </View>
           ) : jobList.length === 0 ? (
             <View style={styles.emptyState}>
@@ -182,10 +180,8 @@ export default function MyserviceScreen({ navigation }: Props) {
               >
                 <Ionicons name="briefcase-outline" size={40} color="#8b5cf6" />
               </View>
-              <Text style={styles.emptyTitle}>No Services Yet</Text>
-              <Text style={styles.emptyText}>
-                Tap the + button below to add your first service
-              </Text>
+              <Text style={styles.emptyTitle}>{t("noServicesYet")}</Text>
+              <Text style={styles.emptyText}>{t("tapToAddFirstService")}</Text>
             </View>
           ) : (
             <FlatList
@@ -234,7 +230,7 @@ export default function MyserviceScreen({ navigation }: Props) {
                 <Ionicons name="close" size={28} color="#1e293b" />
               </TouchableOpacity>
               <Text style={styles.modalTitle}>
-                {editingService ? "Edit Service" : "Add Service"}
+                {editingService ? t("editService") : t("addService")}
               </Text>
               <View style={{ width: 44 }} />
             </View>
@@ -281,17 +277,18 @@ export default function MyserviceScreen({ navigation }: Props) {
                 >
                   <Ionicons name="warning" size={32} color="#ef4444" />
                 </View>
-                <Text style={styles.confirmTitle}>Delete Service?</Text>
+                <Text style={styles.confirmTitle}>{t("deleteService")}</Text>
                 <Text style={styles.confirmText}>
-                  Are you sure you want to delete this service? This action
-                  cannot be undone.
+                  {t("deleteServiceWarning")}
                 </Text>
                 <View style={styles.confirmButtons}>
                   <TouchableOpacity
                     style={[styles.confirmBtn, styles.confirmBtnCancel]}
                     onPress={() => setConfirmVisible(false)}
                   >
-                    <Text style={styles.confirmBtnTextCancel}>Cancel</Text>
+                    <Text style={styles.confirmBtnTextCancel}>
+                      {t("cancel")}
+                    </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.confirmBtn, styles.confirmBtnDelete]}
@@ -301,7 +298,7 @@ export default function MyserviceScreen({ navigation }: Props) {
                       setConfirmVisible(false);
                     }}
                   >
-                    <Text style={styles.confirmBtnText}>Delete</Text>
+                    <Text style={styles.confirmBtnText}>{t("delete")}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
