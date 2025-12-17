@@ -199,7 +199,6 @@ export const translations = {
 
     // FAQ
     faq: "FAQ",
-    frequentlyAskedQuestions: "Frequently Asked Questions",
 
     // Reviews
     reviews: "Reviews",
@@ -207,6 +206,21 @@ export const translations = {
     writeReview: "Write a Review",
     submitReview: "Submit Review",
     yourReview: "Your Review",
+    reviewsRatings: "Reviews & Ratings",
+    shareYourFeedback: "Share your feedback",
+
+    // Settings Screen
+    privacyAndPolicy: "Privacy & Policy",
+    readOurPrivacyPolicy: "Read our privacy policy",
+    learnAboutOurApp: "Learn about our app",
+    frequentlyAskedQuestions: "Frequently asked questions",
+    deleteAccount: "Delete Account",
+    permanentlyRemoveAccount: "Permanently remove your account",
+    deleteAccountConfirm:
+      "Are you sure you want to delete your account? This action cannot be undone.",
+    yesDelete: "Yes, Delete",
+    profileDeletedSuccess: "Profile deleted successfully!",
+    failedToDeleteProfile: "Failed to delete profile",
 
     // Error Messages
     errorOccurred: "An error occurred",
@@ -452,7 +466,6 @@ export const translations = {
 
     // FAQ
     faq: "सामान्य प्रश्न",
-    frequentlyAskedQuestions: "अक्सर पूछे जाने वाले प्रश्न",
 
     // Reviews
     reviews: "समीक्षाएं",
@@ -460,6 +473,21 @@ export const translations = {
     writeReview: "समीक्षा लिखें",
     submitReview: "समीक्षा जमा करें",
     yourReview: "आपकी समीक्षा",
+    reviewsRatings: "समीक्षा और रेटिंग",
+    shareYourFeedback: "अपनी प्रतिक्रिया साझा करें",
+
+    // Settings Screen
+    privacyAndPolicy: "गोपनीयता और नीति",
+    readOurPrivacyPolicy: "हमारी गोपनीयता नीति पढ़ें",
+    learnAboutOurApp: "हमारे एप के बारे में जानें",
+    frequentlyAskedQuestions: "अक्सर पूछे जाने वाले प्रश्न",
+    deleteAccount: "खाता हटाएं",
+    permanentlyRemoveAccount: "अपने खाते को स्थायी रूप से हटा दें",
+    deleteAccountConfirm:
+      "क्या आप वाकई अपना खाता हटाना चाहते हैं? यह कार्यवाही वापस नहीं की जा सकती।",
+    yesDelete: "हाँ, हटाएं",
+    profileDeletedSuccess: "प्रोफ़ाइल सफलतापूर्वक हटा दी गई!",
+    failedToDeleteProfile: "प्रोयाइल हटाने में विफल",
 
     // Error Messages
     errorOccurred: "एक त्रुटि हुई",
@@ -705,7 +733,6 @@ export const translations = {
 
     // FAQ
     faq: "सामान्य प्रश्न",
-    frequentlyAskedQuestions: "वारंवार विचारले जाणारे प्रश्न",
 
     // Reviews
     reviews: "पुनरावलोकने",
@@ -713,6 +740,21 @@ export const translations = {
     writeReview: "पुनरावलोकन लिहा",
     submitReview: "पुनरावलोकन सबमिट करा",
     yourReview: "तुमचे पुनरावलोकन",
+    reviewsRatings: "पुनरावलोकन आणि रेटिंग",
+    shareYourFeedback: "तुमचा फीडबॅक सामायिक करा",
+
+    // Settings Screen
+    privacyAndPolicy: "गोपनीयता आणि धोरण",
+    readOurPrivacyPolicy: "आमचे गोपनीयता धोरण वाचा",
+    learnAboutOurApp: "आमच्या अॅपबद्दल जाणून घ्या",
+    frequentlyAskedQuestions: "वारंवार विचारले जाणारे प्रश्न",
+    deleteAccount: "खाते हटवा",
+    permanentlyRemoveAccount: "तुमचे खाते कायमस्वरूपी काढून टाका",
+    deleteAccountConfirm:
+      "तुम्ही निश्चित आहात की तुम्हाला तुमचे खाते हटवायचे आहे? ही कृती पूर्ववत केली जाऊ शकत नाही.",
+    yesDelete: "होय, हटवा",
+    profileDeletedSuccess: "प्रोफाईल यशस्वीरीत्या हटवले!",
+    failedToDeleteProfile: "प्रोफाईल हटवण्यात अयशस्वी",
 
     // Error Messages
     errorOccurred: "एक त्रुटी आली",

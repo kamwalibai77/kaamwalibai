@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { LinearGradient } from "expo-linear-gradient";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Alert,
   Modal,
@@ -20,15 +21,16 @@ import api from "../services/api";
 type Props = NativeStackScreenProps<RootStackParamList, "Settings">;
 
 export default function SettingsScreen({ navigation }: Props) {
+  const { t } = useTranslation();
   const [confirmVisible, setConfirmVisible] = useState(false);
 
   const deleteAccount = async () => {
     try {
       await api.delete("profile");
-      Alert.alert("Success", "Profile deleted successfully!");
+      Alert.alert(t("success"), t("profileDeletedSuccess"));
     } catch (e) {
       console.error("Profile delete failed:", e);
-      Alert.alert("Error", "Failed to delete profile");
+      Alert.alert(t("error"), t("failedToDeleteProfile"));
     }
   };
 
@@ -36,21 +38,17 @@ export default function SettingsScreen({ navigation }: Props) {
     if (Platform.OS === "web") {
       setConfirmVisible(true);
     } else {
-      Alert.alert(
-        "Delete Account",
-        "Are you sure you want to delete your account? This action cannot be undone.",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Yes, Delete",
-            style: "destructive",
-            onPress: () => {
-              deleteAccount();
-              navigation.replace("Login");
-            },
+      Alert.alert(t("deleteAccount"), t("deleteAccountConfirm"), [
+        { text: t("cancel"), style: "cancel" },
+        {
+          text: t("yesDelete"),
+          style: "destructive",
+          onPress: () => {
+            deleteAccount();
+            navigation.replace("Login");
           },
-        ]
-      );
+        },
+      ]);
     }
   };
 
@@ -70,7 +68,7 @@ export default function SettingsScreen({ navigation }: Props) {
           >
             <Ionicons name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Settings</Text>
+          <Text style={styles.headerTitle}>{t("settings")}</Text>
           <View style={{ width: 24 }} />
         </LinearGradient>
 
@@ -90,8 +88,8 @@ export default function SettingsScreen({ navigation }: Props) {
               <Ionicons name="star" size={22} color="#f59e0b" />
             </View>
             <View style={styles.optionContent}>
-              <Text style={styles.optionText}>Reviews & Ratings</Text>
-              <Text style={styles.optionSubText}>Share your feedback</Text>
+              <Text style={styles.optionText}>{t("reviewsRatings")}</Text>
+              <Text style={styles.optionSubText}>{t("shareYourFeedback")}</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
           </TouchableOpacity>
@@ -109,8 +107,10 @@ export default function SettingsScreen({ navigation }: Props) {
               />
             </View>
             <View style={styles.optionContent}>
-              <Text style={styles.optionText}>Privacy & Policy</Text>
-              <Text style={styles.optionSubText}>Read our privacy policy</Text>
+              <Text style={styles.optionText}>{t("privacyAndPolicy")}</Text>
+              <Text style={styles.optionSubText}>
+                {t("readOurPrivacyPolicy")}
+              </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
           </TouchableOpacity>
@@ -128,8 +128,8 @@ export default function SettingsScreen({ navigation }: Props) {
               />
             </View>
             <View style={styles.optionContent}>
-              <Text style={styles.optionText}>About Us</Text>
-              <Text style={styles.optionSubText}>Learn about our app</Text>
+              <Text style={styles.optionText}>{t("aboutUs")}</Text>
+              <Text style={styles.optionSubText}>{t("learnAboutOurApp")}</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
           </TouchableOpacity>
@@ -143,9 +143,9 @@ export default function SettingsScreen({ navigation }: Props) {
               <Ionicons name="help-circle-outline" size={22} color="#10b981" />
             </View>
             <View style={styles.optionContent}>
-              <Text style={styles.optionText}>FAQ</Text>
+              <Text style={styles.optionText}>{t("faq")}</Text>
               <Text style={styles.optionSubText}>
-                Frequently asked questions
+                {t("frequentlyAskedQuestions")}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
@@ -161,10 +161,10 @@ export default function SettingsScreen({ navigation }: Props) {
             </View>
             <View style={styles.optionContent}>
               <Text style={[styles.optionText, { color: "#ef4444" }]}>
-                Delete Account
+                {t("deleteAccount")}
               </Text>
               <Text style={[styles.optionSubText, { color: "#f87171" }]}>
-                Permanently remove your account
+                {t("permanentlyRemoveAccount")}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#ef4444" />
@@ -188,17 +188,18 @@ export default function SettingsScreen({ navigation }: Props) {
                   >
                     <Ionicons name="warning" size={32} color="#ef4444" />
                   </View>
-                  <Text style={styles.confirmTitle}>Delete Account?</Text>
+                  <Text style={styles.confirmTitle}>{t("deleteAccount")}?</Text>
                   <Text style={styles.confirmText}>
-                    Are you sure you want to delete your account? This action
-                    cannot be undone.
+                    {t("deleteAccountConfirm")}
                   </Text>
                   <View style={styles.confirmButtons}>
                     <TouchableOpacity
                       style={[styles.confirmBtn, styles.confirmBtnCancel]}
                       onPress={() => setConfirmVisible(false)}
                     >
-                      <Text style={styles.confirmBtnTextCancel}>Cancel</Text>
+                      <Text style={styles.confirmBtnTextCancel}>
+                        {t("cancel")}
+                      </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[styles.confirmBtn, styles.confirmBtnDelete]}
@@ -207,7 +208,7 @@ export default function SettingsScreen({ navigation }: Props) {
                         navigation.replace("Login");
                       }}
                     >
-                      <Text style={styles.confirmBtnText}>Delete</Text>
+                      <Text style={styles.confirmBtnText}>{t("delete")}</Text>
                     </TouchableOpacity>
                   </View>
                 </View>

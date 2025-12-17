@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useRef, useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
 import {
   ActivityIndicator,
   Alert,
@@ -222,12 +223,17 @@ export default function LoginScreen({ navigation }: Props): any {
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.container}>
+        {/* Animated Background Gradient */}
         <LinearGradient
-          colors={["#6366f1", "#8b5cf6"]}
+          colors={["#667eea", "#764ba2", "#f093fb"]}
           start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
+          end={{ x: 1, y: 1 }}
           style={styles.gradient}
         />
+
+        {/* Decorative Circles */}
+        <View style={styles.decorativeCircle1} />
+        <View style={styles.decorativeCircle2} />
 
         <KeyboardAvoidingView
           style={styles.keyboardView}
@@ -247,36 +253,55 @@ export default function LoginScreen({ navigation }: Props): any {
                 },
               ]}
             >
-              {/* Logo Section */}
+              {/* Logo Section with Glass Effect */}
               <View style={styles.logoSection}>
-                <View style={styles.logoCircle}>
-                  <Image
-                    source={require("../../assets/images/logo.png")}
-                    style={styles.logo}
-                  />
-                </View>
+                <LinearGradient
+                  colors={["#ffffff", "#f8f9ff"]}
+                  style={styles.logoCircle}
+                >
+                  <View style={styles.logoInner}>
+                    <Image
+                      source={require("../../assets/images/logo.png")}
+                      style={styles.logo}
+                    />
+                  </View>
+                </LinearGradient>
                 <Text style={styles.appName}>MyKaamwalibai</Text>
-                <Text style={styles.tagline}>
-                  Your trusted home service partner
-                </Text>
+                <View style={styles.taglineContainer}>
+                  <Ionicons name="star" size={12} color="#fbbf24" />
+                  <Text style={styles.tagline}>Your trusted home service partner</Text>
+                  <Ionicons name="star" size={12} color="#fbbf24" />
+                </View>
               </View>
 
-              {/* Welcome Text */}
+              {/* Welcome Text with Icon */}
               <View style={styles.welcomeSection}>
-                <Text style={styles.welcomeTitle}>
-                  {step === "phone" ? "Welcome!" : "Verify OTP"}
-                </Text>
+                <View style={styles.welcomeTitleRow}>
+                  <View style={styles.welcomeIconWrapper}>
+                    <Ionicons 
+                      name={step === "phone" ? "call" : "shield-checkmark"} 
+                      size={20} 
+                      color="#667eea" 
+                    />
+                  </View>
+                  <Text style={styles.welcomeTitle}>
+                    {step === "phone" ? "Welcome Back!" : "Verify OTP"}
+                  </Text>
+                </View>
                 <Text style={styles.welcomeSubtitle}>
                   {step === "phone"
-                    ? "Enter your mobile number to continue"
-                    : `Enter the code sent to +${COUNTRY_CODE} ${phone}`}
+                    ? "Enter your mobile number to get started"
+                    : `We've sent a verification code to\n+${COUNTRY_CODE} ${phone}`}
                 </Text>
               </View>
 
               {step === "phone" ? (
                 <>
-                  {/* Phone Input */}
+                  {/* Phone Input with Enhanced Design */}
                   <View style={styles.inputWrapper}>
+                    <Text style={styles.inputLabel}>
+                      <Ionicons name="call-outline" size={14} color="#64748b" /> Mobile Number
+                    </Text>
                     <View
                       style={[
                         styles.phoneContainer,
@@ -284,11 +309,14 @@ export default function LoginScreen({ navigation }: Props): any {
                         phoneError && styles.inputError,
                       ]}
                     >
-                      <Text style={styles.countryCode}>🇮🇳 +{COUNTRY_CODE}</Text>
+                      <View style={styles.countryCodeWrapper}>
+                        <Text style={styles.flag}>🇮🇳</Text>
+                        <Text style={styles.countryCode}>+{COUNTRY_CODE}</Text>
+                      </View>
                       <View style={styles.separator} />
                       <TextInput
                         style={styles.phoneInput}
-                        placeholder="Enter mobile number"
+                        placeholder="Enter 10 digit number"
                         placeholderTextColor="#94a3b8"
                         keyboardType="phone-pad"
                         value={phone}
@@ -297,36 +325,67 @@ export default function LoginScreen({ navigation }: Props): any {
                         onFocus={() => setFocusedInput(0)}
                         onBlur={() => setFocusedInput(null)}
                       />
+                      {phone.length === 10 && !phoneError && (
+                        <Ionicons name="checkmark-circle" size={22} color="#10b981" />
+                      )}
                     </View>
                     {phoneError ? (
-                      <Text style={styles.errorText}>⚠️ {phoneError}</Text>
+                      <View style={styles.errorContainer}>
+                        <Ionicons name="alert-circle" size={14} color="#ef4444" />
+                        <Text style={styles.errorText}>{phoneError}</Text>
+                      </View>
                     ) : null}
                   </View>
 
-                  {/* Send OTP Button */}
+                  {/* Send OTP Button with Gradient */}
                   <TouchableOpacity
                     style={[
-                      styles.primaryButton,
-                      (loading || phone.length !== 10) && styles.buttonDisabled,
+                      styles.primaryButtonWrapper,
+                      (loading || phone.length !== 10) && styles.buttonDisabledWrapper,
                     ]}
                     onPress={sendOtp}
                     disabled={loading || phone.length !== 10}
-                    activeOpacity={0.8}
+                    activeOpacity={0.85}
                   >
-                    {loading ? (
-                      <ActivityIndicator color="#fff" />
-                    ) : (
-                      <Text style={styles.primaryButtonText}>Send OTP</Text>
-                    )}
+                    <LinearGradient
+                      colors={
+                        loading || phone.length !== 10
+                          ? ["#cbd5e1", "#94a3b8"]
+                          : ["#667eea", "#764ba2"]
+                      }
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.primaryButton}
+                    >
+                      {loading ? (
+                        <ActivityIndicator color="#fff" />
+                      ) : (
+                        <>
+                          <Text style={styles.primaryButtonText}>Send OTP</Text>
+                          <Ionicons name="arrow-forward" size={20} color="#fff" />
+                        </>
+                      )}
+                    </LinearGradient>
                   </TouchableOpacity>
+
+                  {/* Info Card */}
+                  <View style={styles.infoCard}>
+                    <Ionicons name="information-circle" size={18} color="#667eea" />
+                    <Text style={styles.infoText}>
+                      We'll send you a 6-digit verification code
+                    </Text>
+                  </View>
                 </>
               ) : (
                 <>
-                  {/* OTP Input */}
+                  {/* OTP Input with Enhanced Design */}
                   <View style={styles.otpWrapper}>
+                    <Text style={styles.inputLabel}>
+                      <Ionicons name="lock-closed-outline" size={14} color="#64748b" /> Enter Verification Code
+                    </Text>
                     <View style={styles.otpContainer}>
                       {otp.map((digit, index) => (
-                        <View
+                        <Animated.View
                           key={index}
                           style={[
                             styles.otpBox,
@@ -348,35 +407,53 @@ export default function LoginScreen({ navigation }: Props): any {
                             onFocus={() => setFocusedInput(index + 1)}
                             onBlur={() => setFocusedInput(null)}
                           />
-                        </View>
+                          {digit && (
+                            <View style={styles.otpCheckmark}>
+                              <Ionicons name="checkmark" size={12} color="#10b981" />
+                            </View>
+                          )}
+                        </Animated.View>
                       ))}
                     </View>
                   </View>
 
-                  {/* Verify Button */}
+                  {/* Verify Button with Gradient */}
                   <TouchableOpacity
                     style={[
-                      styles.primaryButton,
-                      (loading || otp.join("").length !== 6) &&
-                        styles.buttonDisabled,
+                      styles.primaryButtonWrapper,
+                      (loading || otp.join("").length !== 6) && styles.buttonDisabledWrapper,
                     ]}
                     onPress={verify}
                     disabled={loading || otp.join("").length !== 6}
-                    activeOpacity={0.8}
+                    activeOpacity={0.85}
                   >
-                    {loading ? (
-                      <ActivityIndicator color="#fff" />
-                    ) : (
-                      <Text style={styles.primaryButtonText}>
-                        Verify & Continue
-                      </Text>
-                    )}
+                    <LinearGradient
+                      colors={
+                        loading || otp.join("").length !== 6
+                          ? ["#cbd5e1", "#94a3b8"]
+                          : ["#10b981", "#059669"]
+                      }
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.primaryButton}
+                    >
+                      {loading ? (
+                        <ActivityIndicator color="#fff" />
+                      ) : (
+                        <>
+                          <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                          <Text style={styles.primaryButtonText}>Verify & Continue</Text>
+                        </>
+                      )}
+                    </LinearGradient>
                   </TouchableOpacity>
 
-                  {/* Role Selection */}
+                  {/* Role Selection with Enhanced Cards */}
                   {needsRole && (
                     <View style={styles.roleSection}>
-                      <Text style={styles.roleTitle}>Select Account Type</Text>
+                      <Text style={styles.roleTitle}>
+                        <Ionicons name="people" size={16} color="#64748b" /> Select Account Type
+                      </Text>
                       <View style={styles.roleOptions}>
                         <TouchableOpacity
                           style={[
@@ -384,16 +461,33 @@ export default function LoginScreen({ navigation }: Props): any {
                             role === "user" && styles.roleCardActive,
                           ]}
                           onPress={() => setRole("user")}
+                          activeOpacity={0.8}
                         >
-                          <Text style={styles.roleIcon}>👤</Text>
-                          <Text
-                            style={[
-                              styles.roleLabel,
-                              role === "user" && styles.roleLabelActive,
-                            ]}
+                          <LinearGradient
+                            colors={
+                              role === "user"
+                                ? ["#667eea", "#764ba2"]
+                                : ["#f8fafc", "#f1f5f9"]
+                            }
+                            style={styles.roleGradient}
                           >
-                            User
-                          </Text>
+                            <View style={styles.roleIconCircle}>
+                              <Text style={styles.roleIcon}>👤</Text>
+                            </View>
+                            <Text
+                              style={[
+                                styles.roleLabel,
+                                role === "user" && styles.roleLabelActive,
+                              ]}
+                            >
+                              User
+                            </Text>
+                            {role === "user" && (
+                              <View style={styles.roleCheck}>
+                                <Ionicons name="checkmark-circle" size={18} color="#fff" />
+                              </View>
+                            )}
+                          </LinearGradient>
                         </TouchableOpacity>
                         <TouchableOpacity
                           style={[
@@ -401,28 +495,58 @@ export default function LoginScreen({ navigation }: Props): any {
                             role === "provider" && styles.roleCardActive,
                           ]}
                           onPress={() => setRole("provider")}
+                          activeOpacity={0.8}
                         >
-                          <Text style={styles.roleIcon}>🛠️</Text>
-                          <Text
-                            style={[
-                              styles.roleLabel,
-                              role === "provider" && styles.roleLabelActive,
-                            ]}
+                          <LinearGradient
+                            colors={
+                              role === "provider"
+                                ? ["#667eea", "#764ba2"]
+                                : ["#f8fafc", "#f1f5f9"]
+                            }
+                            style={styles.roleGradient}
                           >
-                            Service Provider
-                          </Text>
+                            <View style={styles.roleIconCircle}>
+                              <Text style={styles.roleIcon}>🛠️</Text>
+                            </View>
+                            <Text
+                              style={[
+                                styles.roleLabel,
+                                role === "provider" && styles.roleLabelActive,
+                              ]}
+                            >
+                              Service Provider
+                            </Text>
+                            {role === "provider" && (
+                              <View style={styles.roleCheck}>
+                                <Ionicons name="checkmark-circle" size={18} color="#fff" />
+                              </View>
+                            )}
+                          </LinearGradient>
                         </TouchableOpacity>
                       </View>
                     </View>
                   )}
 
-                  {/* Action Links */}
+                  {/* Action Links with Enhanced Style */}
                   <View style={styles.actions}>
-                    <TouchableOpacity onPress={() => setStep("phone")}>
+                    <TouchableOpacity 
+                      onPress={() => setStep("phone")}
+                      style={styles.actionButton}
+                    >
+                      <Ionicons name="arrow-back-circle" size={16} color="#667eea" />
                       <Text style={styles.linkText}>Change Number</Text>
                     </TouchableOpacity>
-                    <Text style={styles.actionDivider}>•</Text>
-                    <TouchableOpacity onPress={sendOtp} disabled={cooldown > 0}>
+                    <View style={styles.actionDivider} />
+                    <TouchableOpacity 
+                      onPress={sendOtp} 
+                      disabled={cooldown > 0}
+                      style={styles.actionButton}
+                    >
+                      <Ionicons 
+                        name="refresh-circle" 
+                        size={16} 
+                        color={cooldown > 0 ? "#94a3b8" : "#667eea"} 
+                      />
                       <Text
                         style={[
                           styles.linkText,
@@ -436,11 +560,16 @@ export default function LoginScreen({ navigation }: Props): any {
                 </>
               )}
 
-              {/* Footer */}
+              {/* Footer with Better Design */}
               <View style={styles.footer}>
+                <View style={styles.footerDivider} />
+                <View style={styles.secureContainer}>
+                  <Ionicons name="shield-checkmark" size={16} color="#10b981" />
+                  <Text style={styles.secureText}>Secure & Encrypted</Text>
+                </View>
                 <Text style={styles.footerText}>
                   By continuing, you agree to our{" "}
-                  <Text style={styles.footerLink}>Terms</Text> &{" "}
+                  <Text style={styles.footerLink}>Terms of Service</Text> and{" "}
                   <Text style={styles.footerLink}>Privacy Policy</Text>
                 </Text>
               </View>
@@ -459,14 +588,32 @@ export default function LoginScreen({ navigation }: Props): any {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8fafc",
+    backgroundColor: "#0f172a",
   },
   gradient: {
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
-    height: "45%",
+    bottom: 0,
+  },
+  decorativeCircle1: {
+    position: "absolute",
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    top: -100,
+    right: -100,
+  },
+  decorativeCircle2: {
+    position: "absolute",
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: "rgba(255, 255, 255, 0.03)",
+    bottom: -50,
+    left: -50,
   },
   keyboardView: {
     flex: 1,
@@ -476,165 +623,270 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 20,
     paddingTop: 60,
+    paddingBottom: 40,
   },
   card: {
     backgroundColor: "#ffffff",
-    borderRadius: 24,
-    padding: 28,
+    borderRadius: 32,
+    padding: 32,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.15,
+    shadowRadius: 25,
+    elevation: 10,
   },
   logoSection: {
     alignItems: "center",
-    marginBottom: 32,
+    marginBottom: 36,
   },
   logoCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+    shadowColor: "#667eea",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  logoInner: {
     width: 90,
     height: 90,
     borderRadius: 45,
-    backgroundColor: "#f1f5f9",
+    backgroundColor: "#fff",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 16,
   },
   logo: {
-    width: 60,
-    height: 60,
+    width: 65,
+    height: 65,
     resizeMode: "contain",
   },
   appName: {
-    fontSize: 24,
-    fontWeight: "700",
+    fontSize: 28,
+    fontWeight: "800",
     color: "#1e293b",
-    marginBottom: 6,
+    marginBottom: 8,
+    letterSpacing: -0.5,
+  },
+  taglineContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   tagline: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#64748b",
     fontWeight: "500",
   },
   welcomeSection: {
-    marginBottom: 28,
+    marginBottom: 32,
+  },
+  welcomeTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+    gap: 10,
+  },
+  welcomeIconWrapper: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#f0f4ff",
+    justifyContent: "center",
+    alignItems: "center",
   },
   welcomeTitle: {
-    fontSize: 22,
-    fontWeight: "700",
+    fontSize: 24,
+    fontWeight: "800",
     color: "#1e293b",
-    marginBottom: 8,
+    flex: 1,
   },
   welcomeSubtitle: {
     fontSize: 14,
     color: "#64748b",
-    lineHeight: 20,
+    lineHeight: 22,
+    marginLeft: 46,
   },
   inputWrapper: {
     marginBottom: 24,
   },
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#475569",
+    marginBottom: 10,
+    marginLeft: 4,
+  },
   phoneContainer: {
     flexDirection: "row",
     alignItems: "center",
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: "#e2e8f0",
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    borderRadius: 16,
+    paddingHorizontal: 18,
     backgroundColor: "#f8fafc",
-    height: 56,
+    height: 60,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   inputFocused: {
-    borderColor: "#6366f1",
+    borderColor: "#667eea",
     backgroundColor: "#ffffff",
+    shadowColor: "#667eea",
+    shadowOpacity: 0.15,
   },
   inputError: {
     borderColor: "#ef4444",
+    backgroundColor: "#fef2f2",
+  },
+  countryCodeWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  flag: {
+    fontSize: 20,
   },
   countryCode: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#1e293b",
   },
   separator: {
-    width: 1,
-    height: 24,
+    width: 2,
+    height: 28,
     backgroundColor: "#e2e8f0",
-    marginHorizontal: 12,
+    marginHorizontal: 14,
+    borderRadius: 1,
   },
   phoneInput: {
     flex: 1,
     fontSize: 16,
     color: "#1e293b",
-    fontWeight: "500",
+    fontWeight: "600",
+  },
+  errorContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 10,
+    marginLeft: 4,
+    gap: 6,
   },
   errorText: {
     fontSize: 13,
     color: "#ef4444",
-    marginTop: 8,
-    marginLeft: 4,
+    fontWeight: "500",
   },
   otpWrapper: {
-    marginBottom: 24,
+    marginBottom: 28,
   },
   otpContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
+    gap: 8,
   },
   otpBox: {
-    width: 48,
-    height: 56,
-    borderWidth: 1.5,
+    flex: 1,
+    height: 60,
+    borderWidth: 2,
     borderColor: "#e2e8f0",
-    borderRadius: 12,
+    borderRadius: 14,
     backgroundColor: "#f8fafc",
     justifyContent: "center",
     alignItems: "center",
+    position: "relative",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   otpBoxFocused: {
-    borderColor: "#6366f1",
+    borderColor: "#667eea",
     backgroundColor: "#ffffff",
+    borderWidth: 2.5,
+    shadowColor: "#667eea",
+    shadowOpacity: 0.2,
   },
   otpBoxFilled: {
-    borderColor: "#6366f1",
-    backgroundColor: "#f0f4ff",
+    borderColor: "#10b981",
+    backgroundColor: "#f0fdf4",
+    borderWidth: 2,
   },
   otpInput: {
-    fontSize: 20,
-    fontWeight: "700",
+    fontSize: 22,
+    fontWeight: "800",
     color: "#1e293b",
     textAlign: "center",
     width: "100%",
   },
+  otpCheckmark: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    backgroundColor: "#f0fdf4",
+    borderRadius: 10,
+    padding: 2,
+  },
+  primaryButtonWrapper: {
+    marginBottom: 16,
+    borderRadius: 16,
+    overflow: "hidden",
+    shadowColor: "#667eea",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  buttonDisabledWrapper: {
+    shadowOpacity: 0,
+    elevation: 0,
+  },
   primaryButton: {
-    backgroundColor: "#6366f1",
-    borderRadius: 12,
-    height: 56,
+    height: 60,
+    flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#6366f1",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  buttonDisabled: {
-    backgroundColor: "#cbd5e1",
-    shadowOpacity: 0,
+    gap: 10,
   },
   primaryButtonText: {
     fontSize: 16,
     fontWeight: "700",
     color: "#ffffff",
+    letterSpacing: 0.5,
+  },
+  infoCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f0f4ff",
+    padding: 14,
+    borderRadius: 12,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: "#dbeafe",
+  },
+  infoText: {
+    fontSize: 13,
+    color: "#475569",
+    fontWeight: "500",
+    flex: 1,
   },
   roleSection: {
     marginTop: 24,
-    marginBottom: 16,
+    marginBottom: 20,
   },
   roleTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "600",
     color: "#475569",
-    marginBottom: 12,
+    marginBottom: 16,
     textAlign: "center",
   },
   roleOptions: {
@@ -643,62 +895,103 @@ const styles = StyleSheet.create({
   },
   roleCard: {
     flex: 1,
-    borderWidth: 1.5,
-    borderColor: "#e2e8f0",
-    borderRadius: 12,
-    padding: 16,
-    alignItems: "center",
-    backgroundColor: "#f8fafc",
+    borderRadius: 16,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   roleCardActive: {
-    borderColor: "#6366f1",
-    backgroundColor: "#f0f4ff",
+    shadowColor: "#667eea",
+    shadowOpacity: 0.3,
+  },
+  roleGradient: {
+    padding: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+  },
+  roleIconCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 12,
   },
   roleIcon: {
     fontSize: 32,
-    marginBottom: 8,
   },
   roleLabel: {
     fontSize: 14,
-    fontWeight: "600",
-    color: "#64748b",
+    fontWeight: "700",
+    color: "#1e293b",
   },
   roleLabelActive: {
-    color: "#6366f1",
+    color: "#ffffff",
+  },
+  roleCheck: {
+    position: "absolute",
+    top: 10,
+    right: 10,
   },
   actions: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
     marginTop: 20,
-    gap: 12,
+    gap: 16,
+  },
+  actionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   actionDivider: {
-    fontSize: 14,
-    color: "#cbd5e1",
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#cbd5e1",
   },
   linkText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#6366f1",
+    color: "#667eea",
   },
   linkDisabled: {
     color: "#94a3b8",
   },
   footer: {
-    marginTop: 28,
-    paddingTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: "#f1f5f9",
+    marginTop: 32,
+  },
+  footerDivider: {
+    height: 1,
+    backgroundColor: "#f1f5f9",
+    marginBottom: 16,
+  },
+  secureContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginBottom: 12,
+  },
+  secureText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#10b981",
   },
   footerText: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#94a3b8",
     textAlign: "center",
     lineHeight: 18,
   },
   footerLink: {
-    color: "#6366f1",
-    fontWeight: "600",
+    color: "#667eea",
+    fontWeight: "700",
   },
 });
