@@ -249,6 +249,39 @@ router.post("/consume", authMiddleware, async (req, res) => {
       });
     }
 
+    // Check if this user has already contacted this provider before
+    // Only consume a contact if it's the first time viewing this provider
+    let alreadyContacted = false;
+    if (ContactLog) {
+      try {
+        const existingLog = await ContactLog.findOne({
+          where: {
+            user_id: userId,
+            provider_id: String(providerId),
+          },
+        });
+        alreadyContacted = !!existingLog;
+        console.log(
+          `[consume] User ${userId} + Provider ${providerId}: alreadyContacted=${alreadyContacted}`
+        );
+      } catch (e) {
+        console.warn("[consume] failed to check existing ContactLog:", e);
+      }
+    }
+
+    // If already contacted, don't consume another contact - just return current remaining
+    if (alreadyContacted) {
+      console.log(
+        `[consume] Skipping consumption - provider ${providerId} already contacted by user ${userId}`
+      );
+      return res.json({
+        remaining: sub.numberOfContacts,
+        subscription: sub,
+        message: "Provider already contacted - no additional charge",
+        alreadyContacted: true,
+      });
+    }
+
     // If numberOfContacts is null -> unlimited
     if (
       sub.numberOfContacts === null ||

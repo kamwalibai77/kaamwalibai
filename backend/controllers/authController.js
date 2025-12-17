@@ -37,7 +37,7 @@ export default {
           role: newUser.role,
         },
         process.env.JWT_SECRET,
-        { expiresIn: "7d" }
+        { expiresIn: "30d" }
       );
 
       res.status(201).json({
@@ -77,7 +77,7 @@ export default {
           role: user.role,
         },
         process.env.JWT_SECRET,
-        { expiresIn: "7d" }
+        { expiresIn: "30d" }
       );
 
       res.json({

@@ -165,7 +165,7 @@ export default function HomeScreen({ navigation }: Props) {
     reset = false,
     explicitLat?: number | null,
     explicitLng?: number | null,
-    explicitRadius = 10
+    explicitRadius = 10 // Default 10km radius for nearby service providers
   ) => {
     try {
       setLoading(true);
@@ -173,10 +173,10 @@ export default function HomeScreen({ navigation }: Props) {
         page: reset ? 1 : page,
         limit: 6,
         search: searchQuery,
-        area: selectedArea,
+        area: selectedArea || undefined, // Don't send empty string
         lat: explicitLat ?? userLat ?? undefined,
         lng: explicitLng ?? userLng ?? undefined,
-        radius: explicitRadius,
+        radius: explicitRadius, // Search within radius (default 10km)
         serviceTypeIds: selectedServiceTypeIds,
         gender:
           selectedGenderFilter === "all" ? undefined : selectedGenderFilter,
@@ -539,8 +539,23 @@ export default function HomeScreen({ navigation }: Props) {
 
   const handleSelectAddress = (item: any) => {
     setLocationQuery(item.placeName);
-    setSelectedArea(item.placeName);
     setSuggestions([]);
+
+    // If the suggestion has coordinates, update location and fetch providers
+    if (item.lat && item.lng) {
+      const lat = Number(item.lat);
+      const lng = Number(item.lng);
+      setUserLat(lat);
+      setUserLng(lng);
+      // Clear area filter to use only radius-based search
+      setSelectedArea("");
+      // Fetch providers within 10km of the selected location
+      fetchProviders(true, lat, lng, 10);
+    } else {
+      // If no coordinates, use area name for filtering
+      setSelectedArea(item.placeName);
+      fetchProviders(true);
+    }
   };
 
   const getProfileSource = (profilePhoto: string | null | undefined) => {
@@ -628,7 +643,7 @@ export default function HomeScreen({ navigation }: Props) {
           <View style={styles.locationRow}>
             <Ionicons name="location-outline" size={8} color="#94a3b8" />
             <Text style={styles.providerArea} numberOfLines={1}>
-              {item.address}
+              {item.provider?.address || "Location not available"}
             </Text>
           </View>
           <View style={styles.providerPriceRow}>
@@ -753,8 +768,17 @@ export default function HomeScreen({ navigation }: Props) {
                     reverse.country ||
                     "Current Location";
                   setLocationQuery(address);
-                  setSelectedArea(address);
+                  // Clear area filter to use only radius-based search
+                  setSelectedArea("");
                   setSuggestions([]);
+
+                  // Fetch providers within 10km of this new location
+                  await fetchProviders(
+                    true,
+                    loc.coords.latitude,
+                    loc.coords.longitude,
+                    10
+                  );
                 }
               } catch (error) {
                 console.error("Error getting location:", error);
@@ -1051,262 +1075,352 @@ export default function HomeScreen({ navigation }: Props) {
           <Modal
             visible={modalVisible}
             transparent
-            animationType="fade"
+            animationType="slide"
             onRequestClose={() => setModalVisible(false)}
           >
             <View style={styles.modalOverlay}>
               <View style={styles.providerModal}>
-                {/* Profile Image with KYC Badge */}
-                <View style={styles.modalImageWrapper}>
-                  <Image
-                    source={getProfileSource(
-                      selectedProvider.provider.profilePhoto
-                    )}
-                    style={styles.providerModalImage}
-                    defaultSource={PlaceholderImg}
-                    onError={() => {
-                      console.log(
-                        "Modal image failed to load:",
-                        selectedProvider.provider.profilePhoto
-                      );
-                    }}
-                  />
-                  {/* KYC Badge */}
-                  {selectedProvider.provider.role === "ServiceProvider" && (
-                    <View
-                      style={[
-                        styles.modalKycBadge,
-                        selectedProvider.provider.kycStatus === "verified"
-                          ? styles.modalKycBadgeVerified
-                          : selectedProvider.provider.kycStatus === "pending" &&
-                            selectedProvider.provider.kycSubmittedAt
-                          ? styles.modalKycBadgeSubmitted
-                          : styles.modalKycBadgeUnverified,
-                      ]}
-                    >
-                      <Ionicons
-                        name={
-                          selectedProvider.provider.kycStatus === "verified"
-                            ? "checkmark-circle"
-                            : selectedProvider.provider.kycStatus ===
-                                "pending" &&
-                              selectedProvider.provider.kycSubmittedAt
-                            ? "time-outline"
-                            : "alert-circle"
-                        }
-                        size={12}
-                        color="#fff"
-                      />
-                      <Text style={styles.modalKycBadgeText}>
-                        {selectedProvider.provider.kycStatus === "verified"
-                          ? "Verified"
-                          : selectedProvider.provider.kycStatus === "pending" &&
-                            selectedProvider.provider.kycSubmittedAt
-                          ? "In Review"
-                          : "Unverified"}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-                <Text style={styles.providerModalName}>
-                  {selectedProvider.provider.name}
-                </Text>
-                <Text style={styles.providerModalService}>
-                  {selectedProvider.serviceTypes
-                    .map((st: any) => st.name)
-                    .join(", ")}
-                </Text>
-
-                {/* Provider gender and availability + rating */}
-                <View style={{ alignSelf: "stretch", marginBottom: 12 }}>
-                  <Text style={{ color: "#374151", fontWeight: "600" }}>
-                    {selectedProvider.provider.gender
-                      ? `Gender: ${selectedProvider.provider.gender}`
-                      : ""}
-                  </Text>
-
-                  {/* availabilitySlots array if present on service */}
-                  {selectedProvider.availabilitySlots && (
-                    <Text style={{ color: "#6b7280", marginTop: 6 }}>
-                      Available:{" "}
-                      {String(selectedProvider.availabilitySlots).replace(
-                        /,/g,
-                        ", "
-                      )}
-                    </Text>
-                  )}
-
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      marginTop: 8,
-                    }}
-                  >
-                    <Text style={{ fontWeight: "700", marginRight: 8 }}>
-                      Rating:
-                    </Text>
-                    {ratingLoading ? (
-                      <ActivityIndicator size="small" color="#f59e0b" />
-                    ) : (
-                      <Text style={{ color: "#b45309", fontWeight: "700" }}>
-                        {providerAvgRating !== null
-                          ? providerAvgRating.toFixed(1)
-                          : "—"}
-                      </Text>
-                    )}
-                    <TouchableOpacity
-                      style={{
-                        marginLeft: 12,
-                        paddingVertical: 6,
-                        paddingHorizontal: 10,
-                        backgroundColor: "#efefef",
-                        borderRadius: 8,
-                      }}
-                      onPress={async () => {
-                        setModalVisible(false);
-                        const pid =
-                          selectedProvider?.provider?.id ??
-                          selectedProvider?.id;
-                        try {
-                          if (pid)
-                            await AsyncStorage.setItem(
-                              "selectedProviderId",
-                              String(pid)
-                            );
-                        } catch (e) {
-                          console.warn(
-                            "Failed to persist selectedProviderId",
-                            e
-                          );
-                        }
-                        navigation.navigate("ReveiwForm", {
-                          providerId: pid,
-                          providerName: selectedProvider?.provider?.name,
-                          providerPhoto:
-                            selectedProvider?.provider?.profilePhoto,
-                        });
-                      }}
-                    >
-                      <Text style={{ fontWeight: "700", color: "#065f46" }}>
-                        Rate
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                <View style={styles.providerModalActions}>
-                  <TouchableOpacity
-                    style={{ alignItems: "center" }}
-                    disabled={contactLoading}
-                    onPress={async () => {
-                      if (contactLoading) return;
-                      setContactLoading(true);
-                      try {
-                        // ask server to consume one contact before opening phone
-                        const token = await AsyncStorage.getItem("token");
-                        await api.post(
-                          "/payments/consume",
-                          {
-                            provider_id: selectedProvider.provider.id,
-                            action: "call",
-                          },
-                          { headers: { Authorization: `Bearer ${token}` } }
-                        );
-                        const phone = selectedProvider.provider.phoneNumber;
-                        if (phone) Linking.openURL(`tel:${phone}`);
-
-                        // update local remaining count to reflect server-side change
-                        setSubscriptionRemaining((prev) =>
-                          prev !== null ? prev - 1 : null
-                        );
-                      } catch (e) {
-                        console.warn("consume error", e);
-                        Alert.alert(
-                          "Subscription",
-                          (e as any)?.response?.data?.error ||
-                            "Unable to consume contact"
-                        );
-                      } finally {
-                        setContactLoading(false);
-                      }
-                    }}
-                  >
-                    <Ionicons name="call-outline" size={28} color="#4ade80" />
-                    <Text
-                      style={{
-                        marginTop: 5,
-                        color: "#065f46",
-                        fontWeight: "600",
-                      }}
-                    >
-                      {contactLoading ? "Processing..." : "Call"}
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={{ alignItems: "center" }}
-                    disabled={contactLoading}
-                    onPress={async () => {
-                      if (contactLoading) return;
-                      setContactLoading(true);
-                      try {
-                        const token = await AsyncStorage.getItem("token");
-                        await api.post(
-                          "/payments/consume",
-                          {
-                            provider_id: selectedProvider.provider.id,
-                            action: "message",
-                          },
-                          { headers: { Authorization: `Bearer ${token}` } }
-                        );
-                        setModalVisible(false);
-                        navigation.navigate("ChatBox", {
-                          userId: selectedProvider.provider.id,
-                          name: selectedProvider.provider.name,
-                        });
-                        setSubscriptionRemaining((prev) =>
-                          prev !== null ? prev - 1 : null
-                        );
-                      } catch (e) {
-                        console.warn("consume error", e);
-                        Alert.alert(
-                          "Subscription",
-                          (e as any)?.response?.data?.error ||
-                            "Unable to consume contact"
-                        );
-                      } finally {
-                        setContactLoading(false);
-                      }
-                    }}
-                  >
-                    <Ionicons
-                      name="chatbubble-ellipses-outline"
-                      size={28}
-                      color="#3b82f6"
-                    />
-                    <Text
-                      style={{
-                        marginTop: 5,
-                        color: "#1e40af",
-                        fontWeight: "600",
-                      }}
-                    >
-                      {contactLoading ? "Processing..." : "Message"}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
+                {/* Close Button - Top Right */}
                 <TouchableOpacity
-                  style={styles.closeModalButton}
+                  style={styles.modalCloseButton}
                   onPress={() => setModalVisible(false)}
                 >
-                  <Text
-                    style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}
-                  >
-                    Close
-                  </Text>
+                  <Ionicons name="close" size={24} color="#64748b" />
                 </TouchableOpacity>
+
+                <ScrollView
+                  showsVerticalScrollIndicator={false}
+                  bounces={false}
+                >
+                  {/* Gradient Header with Profile */}
+                  <LinearGradient
+                    colors={["#6366f1", "#8b5cf6"]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.modalHeader}
+                  >
+                    <View style={styles.modalImageWrapper}>
+                      <Image
+                        source={getProfileSource(
+                          selectedProvider.provider.profilePhoto
+                        )}
+                        style={styles.providerModalImage}
+                        defaultSource={PlaceholderImg}
+                        onError={() => {
+                          console.log(
+                            "Modal image failed to load:",
+                            selectedProvider.provider.profilePhoto
+                          );
+                        }}
+                      />
+                      {/* KYC Badge */}
+                      {selectedProvider.provider.role === "ServiceProvider" && (
+                        <View
+                          style={[
+                            styles.modalKycBadge,
+                            selectedProvider.provider.kycStatus === "verified"
+                              ? styles.modalKycBadgeVerified
+                              : selectedProvider.provider.kycStatus ===
+                                  "pending" &&
+                                selectedProvider.provider.kycSubmittedAt
+                              ? styles.modalKycBadgeSubmitted
+                              : styles.modalKycBadgeUnverified,
+                          ]}
+                        >
+                          <Ionicons
+                            name={
+                              selectedProvider.provider.kycStatus === "verified"
+                                ? "checkmark-circle"
+                                : selectedProvider.provider.kycStatus ===
+                                    "pending" &&
+                                  selectedProvider.provider.kycSubmittedAt
+                                ? "time-outline"
+                                : "alert-circle"
+                            }
+                            size={14}
+                            color="#fff"
+                          />
+                          <Text style={styles.modalKycBadgeText}>
+                            {selectedProvider.provider.kycStatus === "verified"
+                              ? "Verified"
+                              : selectedProvider.provider.kycStatus ===
+                                  "pending" &&
+                                selectedProvider.provider.kycSubmittedAt
+                              ? "In Review"
+                              : "Unverified"}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  </LinearGradient>
+
+                  {/* Content Section */}
+                  <View style={styles.modalContent}>
+                    {/* Name and Service */}
+                    <Text style={styles.providerModalName}>
+                      {selectedProvider.provider.name}
+                    </Text>
+                    <View style={styles.modalServiceBadge}>
+                      <MaterialCommunityIcons
+                        name="broom"
+                        size={14}
+                        color="#8b5cf6"
+                      />
+                      <Text style={styles.providerModalService}>
+                        {selectedProvider.serviceTypes
+                          .map((st: any) => st.name)
+                          .join(", ")}
+                      </Text>
+                    </View>
+
+                    {/* Details Cards */}
+                    <View style={styles.modalDetailsContainer}>
+                      {/* Location Card */}
+                      {selectedProvider.provider.address && (
+                        <View style={styles.modalDetailCard}>
+                          <View style={styles.modalDetailIcon}>
+                            <Ionicons
+                              name="location"
+                              size={18}
+                              color="#8b5cf6"
+                            />
+                          </View>
+                          <View style={styles.modalDetailText}>
+                            <Text style={styles.modalDetailLabel}>
+                              Location
+                            </Text>
+                            <Text
+                              style={styles.modalDetailValue}
+                              numberOfLines={2}
+                            >
+                              {selectedProvider.provider.address}
+                            </Text>
+                          </View>
+                        </View>
+                      )}
+
+                      {/* Gender & Age Card */}
+                      {selectedProvider.provider.gender && (
+                        <View style={styles.modalDetailCard}>
+                          <View style={styles.modalDetailIcon}>
+                            <Ionicons
+                              name={
+                                selectedProvider.provider.gender === "female"
+                                  ? "woman"
+                                  : "man"
+                              }
+                              size={18}
+                              color="#8b5cf6"
+                            />
+                          </View>
+                          <View style={styles.modalDetailText}>
+                            <Text style={styles.modalDetailLabel}>Gender</Text>
+                            <Text style={styles.modalDetailValue}>
+                              {selectedProvider.provider.gender
+                                .charAt(0)
+                                .toUpperCase() +
+                                selectedProvider.provider.gender.slice(1)}
+                            </Text>
+                          </View>
+                        </View>
+                      )}
+
+                      {/* Availability Card */}
+                      {selectedProvider.availabilitySlots && (
+                        <View style={[styles.modalDetailCard, { flex: 1 }]}>
+                          <View style={styles.modalDetailIcon}>
+                            <Ionicons name="time" size={18} color="#8b5cf6" />
+                          </View>
+                          <View style={styles.modalDetailText}>
+                            <Text style={styles.modalDetailLabel}>
+                              Available
+                            </Text>
+                            <Text
+                              style={styles.modalDetailValue}
+                              numberOfLines={2}
+                            >
+                              {String(
+                                selectedProvider.availabilitySlots
+                              ).replace(/,/g, ", ")}
+                            </Text>
+                          </View>
+                        </View>
+                      )}
+
+                      {/* Rating Card */}
+                      <View style={styles.modalDetailCard}>
+                        <View style={styles.modalDetailIcon}>
+                          <Ionicons name="star" size={18} color="#fbbf24" />
+                        </View>
+                        <View style={styles.modalDetailText}>
+                          <Text style={styles.modalDetailLabel}>Rating</Text>
+                          {ratingLoading ? (
+                            <ActivityIndicator size="small" color="#fbbf24" />
+                          ) : (
+                            <Text style={styles.modalDetailValue}>
+                              {providerAvgRating !== null
+                                ? `${providerAvgRating.toFixed(1)} ⭐`
+                                : "Not rated yet"}
+                            </Text>
+                          )}
+                        </View>
+                        <TouchableOpacity
+                          style={styles.rateButton}
+                          onPress={async () => {
+                            setModalVisible(false);
+                            const pid =
+                              selectedProvider?.provider?.id ??
+                              selectedProvider?.id;
+                            try {
+                              if (pid)
+                                await AsyncStorage.setItem(
+                                  "selectedProviderId",
+                                  String(pid)
+                                );
+                            } catch (e) {
+                              console.warn(
+                                "Failed to persist selectedProviderId",
+                                e
+                              );
+                            }
+                            navigation.navigate("ReveiwForm", {
+                              providerId: pid,
+                              providerName: selectedProvider?.provider?.name,
+                              providerPhoto:
+                                selectedProvider?.provider?.profilePhoto,
+                            });
+                          }}
+                        >
+                          <Ionicons
+                            name="star-outline"
+                            size={14}
+                            color="#8b5cf6"
+                          />
+                          <Text style={styles.rateButtonText}>Rate</Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      {/* Price Card */}
+                      <View style={styles.modalDetailCard}>
+                        <View style={styles.modalDetailIcon}>
+                          <Ionicons name="cash" size={18} color="#10b981" />
+                        </View>
+                        <View style={styles.modalDetailText}>
+                          <Text style={styles.modalDetailLabel}>Price</Text>
+                          <Text style={styles.modalDetailValue}>
+                            ₹{selectedProvider.amount}/
+                            {selectedProvider.rateType}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* Action Buttons */}
+                    <View style={styles.providerModalActions}>
+                      <TouchableOpacity
+                        style={styles.actionButton}
+                        disabled={contactLoading}
+                        onPress={async () => {
+                          if (contactLoading) return;
+                          setContactLoading(true);
+                          try {
+                            // ask server to consume one contact before opening phone
+                            const token = await AsyncStorage.getItem("token");
+                            await api.post(
+                              "/payments/consume",
+                              {
+                                provider_id: selectedProvider.provider.id,
+                                action: "call",
+                              },
+                              { headers: { Authorization: `Bearer ${token}` } }
+                            );
+                            const phone = selectedProvider.provider.phoneNumber;
+                            if (phone) Linking.openURL(`tel:${phone}`);
+
+                            // update local remaining count to reflect server-side change
+                            setSubscriptionRemaining((prev) =>
+                              prev !== null ? prev - 1 : null
+                            );
+                          } catch (e) {
+                            console.warn("consume error", e);
+                            Alert.alert(
+                              "Subscription",
+                              (e as any)?.response?.data?.error ||
+                                "Unable to consume contact"
+                            );
+                          } finally {
+                            setContactLoading(false);
+                          }
+                        }}
+                      >
+                        <LinearGradient
+                          colors={["#10b981", "#059669"]}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={styles.actionButtonGradient}
+                        >
+                          <Ionicons name="call" size={20} color="#fff" />
+                          <Text style={styles.actionButtonText}>
+                            {contactLoading ? "Processing..." : "Call Now"}
+                          </Text>
+                        </LinearGradient>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={styles.actionButton}
+                        disabled={contactLoading}
+                        onPress={async () => {
+                          if (contactLoading) return;
+                          setContactLoading(true);
+                          try {
+                            const token = await AsyncStorage.getItem("token");
+                            await api.post(
+                              "/payments/consume",
+                              {
+                                provider_id: selectedProvider.provider.id,
+                                action: "message",
+                              },
+                              { headers: { Authorization: `Bearer ${token}` } }
+                            );
+                            setModalVisible(false);
+                            navigation.navigate("ChatBox", {
+                              userId: selectedProvider.provider.id,
+                              name: selectedProvider.provider.name,
+                            });
+                            setSubscriptionRemaining((prev) =>
+                              prev !== null ? prev - 1 : null
+                            );
+                          } catch (e) {
+                            console.warn("consume error", e);
+                            Alert.alert(
+                              "Subscription",
+                              (e as any)?.response?.data?.error ||
+                                "Unable to consume contact"
+                            );
+                          } finally {
+                            setContactLoading(false);
+                          }
+                        }}
+                      >
+                        <LinearGradient
+                          colors={["#6366f1", "#8b5cf6"]}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={styles.actionButtonGradient}
+                        >
+                          <Ionicons
+                            name="chatbubble-ellipses"
+                            size={20}
+                            color="#fff"
+                          />
+                          <Text style={styles.actionButtonText}>
+                            {contactLoading ? "Processing..." : "Message"}
+                          </Text>
+                        </LinearGradient>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </ScrollView>
               </View>
             </View>
           </Modal>
@@ -1763,20 +1877,47 @@ const styles = StyleSheet.create({
 
   providerModal: {
     width: "90%",
+    maxHeight: "88%",
     backgroundColor: "#fff",
-    padding: 20,
-    borderRadius: 15,
+    borderRadius: 16,
+    overflow: "hidden",
+  },
+  modalCloseButton: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    zIndex: 10,
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    borderRadius: 18,
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  modalHeader: {
+    paddingTop: 40,
+    paddingBottom: 16,
     alignItems: "center",
   },
-  providerModalImage: { width: 100, height: 100, borderRadius: 50 },
+  providerModalImage: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    borderWidth: 3,
+    borderColor: "#fff",
+  },
   modalImageWrapper: {
     position: "relative",
-    marginBottom: 10,
   },
   modalKycBadge: {
     position: "absolute",
-    bottom: 0,
-    right: 0,
+    bottom: 3,
+    right: 3,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 6,
@@ -1787,33 +1928,125 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   modalKycBadgeVerified: {
-    backgroundColor: "#3b82f6", // Blue
+    backgroundColor: "#3b82f6",
   },
   modalKycBadgeSubmitted: {
-    backgroundColor: "#10b981", // Green
+    backgroundColor: "#10b981",
   },
   modalKycBadgeUnverified: {
-    backgroundColor: "#9ca3af", // Grey
+    backgroundColor: "#9ca3af",
   },
   modalKycBadgeText: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: "700",
     color: "#fff",
   },
-  providerModalName: { fontSize: 18, fontWeight: "700", marginVertical: 5 },
-  providerModalService: { color: "gray", marginBottom: 15 },
+  modalContent: {
+    padding: 16,
+    paddingBottom: 18,
+  },
+  providerModalName: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#1e293b",
+    marginBottom: 6,
+    textAlign: "center",
+  },
+  modalServiceBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f1f5f9",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 16,
+    gap: 5,
+    alignSelf: "center",
+    marginBottom: 14,
+  },
+  providerModalService: {
+    color: "#475569",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  modalDetailsContainer: {
+    gap: 8,
+  },
+  modalDetailCard: {
+    flexDirection: "row",
+    backgroundColor: "#f8fafc",
+    padding: 10,
+    borderRadius: 10,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  modalDetailIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+  modalDetailText: {
+    flex: 1,
+  },
+  modalDetailLabel: {
+    fontSize: 10,
+    color: "#64748b",
+    fontWeight: "600",
+    marginBottom: 1,
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+  },
+  modalDetailValue: {
+    fontSize: 13,
+    color: "#1e293b",
+    fontWeight: "600",
+  },
+  rateButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f1f5f9",
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 7,
+    gap: 3,
+  },
+  rateButtonText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#8b5cf6",
+  },
   providerModalActions: {
     flexDirection: "row",
-    justifyContent: "space-around",
-    width: "100%",
-    marginBottom: 20,
+    gap: 10,
+    marginTop: 14,
   },
-  closeModalButton: {
-    backgroundColor: "#ef4444",
-    padding: 12,
-    borderRadius: 8,
+  actionButton: {
+    flex: 1,
+    borderRadius: 10,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  actionButtonGradient: {
+    flexDirection: "row",
     alignItems: "center",
-    width: "100%",
+    justifyContent: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    gap: 6,
+  },
+  actionButtonText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 14,
   },
 
   suggestionDropdown: {
