@@ -602,9 +602,20 @@ export default function ProfileEditScreen({ navigation, route }: Props): any {
                         const addressParts = [];
                         if (reverse.street) addressParts.push(reverse.street);
                         else if (reverse.name) addressParts.push(reverse.name);
-                        if (reverse.city && !addressParts.includes(reverse.city)) addressParts.push(reverse.city);
-                        if (reverse.region && !addressParts.includes(reverse.region)) addressParts.push(reverse.region);
-                        const address = addressParts.join(", ") || reverse.country || "Current Location";
+                        if (
+                          reverse.city &&
+                          !addressParts.includes(reverse.city)
+                        )
+                          addressParts.push(reverse.city);
+                        if (
+                          reverse.region &&
+                          !addressParts.includes(reverse.region)
+                        )
+                          addressParts.push(reverse.region);
+                        const address =
+                          addressParts.join(", ") ||
+                          reverse.country ||
+                          "Current Location";
                         setQuery(address);
                         setAddress(address);
                         setSuggestions([]);

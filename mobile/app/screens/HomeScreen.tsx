@@ -228,9 +228,12 @@ export default function HomeScreen({ navigation }: Props) {
             const addressParts = [];
             if (r.street) addressParts.push(r.street);
             else if (r.name) addressParts.push(r.name);
-            if (r.city && !addressParts.includes(r.city)) addressParts.push(r.city);
-            if (r.region && !addressParts.includes(r.region)) addressParts.push(r.region);
-            const address = addressParts.join(", ") || r.country || "Current Location";
+            if (r.city && !addressParts.includes(r.city))
+              addressParts.push(r.city);
+            if (r.region && !addressParts.includes(r.region))
+              addressParts.push(r.region);
+            const address =
+              addressParts.join(", ") || r.country || "Current Location";
             setSelectedArea(address);
             setLocationQuery(address);
           }
@@ -392,6 +395,17 @@ export default function HomeScreen({ navigation }: Props) {
   }, [page]);
 
   const openProviderModal = async (provider: any) => {
+    // Prevent self-contact - service provider cannot message/call themselves
+    const myId = await AsyncStorage.getItem("userId");
+    const providerId = String(provider?.provider?.id ?? provider?.id);
+    if (myId && String(myId) === providerId) {
+      Alert.alert(
+        "Cannot contact yourself",
+        "You cannot view or contact your own service listing."
+      );
+      return;
+    }
+
     // If user has a subscription with remaining count and it's zero, block access
     if (
       isSubscribed &&
@@ -730,9 +744,14 @@ export default function HomeScreen({ navigation }: Props) {
                   const addressParts = [];
                   if (reverse.street) addressParts.push(reverse.street);
                   else if (reverse.name) addressParts.push(reverse.name);
-                  if (reverse.city && !addressParts.includes(reverse.city)) addressParts.push(reverse.city);
-                  if (reverse.region && !addressParts.includes(reverse.region)) addressParts.push(reverse.region);
-                  const address = addressParts.join(", ") || reverse.country || "Current Location";
+                  if (reverse.city && !addressParts.includes(reverse.city))
+                    addressParts.push(reverse.city);
+                  if (reverse.region && !addressParts.includes(reverse.region))
+                    addressParts.push(reverse.region);
+                  const address =
+                    addressParts.join(", ") ||
+                    reverse.country ||
+                    "Current Location";
                   setLocationQuery(address);
                   setSelectedArea(address);
                   setSuggestions([]);
