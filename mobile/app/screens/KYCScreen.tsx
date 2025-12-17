@@ -4,7 +4,7 @@ import { useNavigation } from "@react-navigation/native";
 import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   Dimensions,
@@ -28,10 +28,8 @@ export default function KYCVerification(): any {
   const [pan, setPan] = useState("");
   const [kycStatus, setKycStatus] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [kycFront, setKycFront] = useState<string | { uri: string } | null>(
-    null
-  );
-  const [kycBack, setKycBack] = useState<string | { uri: string } | null>(null);
+  const [kycFront, setKycFront] = useState<string | null>(null);
+  const [kycBack, setKycBack] = useState<string | null>(null);
   const [consent, setConsent] = useState(false);
   // touched states for inline validation
   const [touchedAadhaar, setTouchedAadhaar] = useState(false);
@@ -58,6 +56,15 @@ export default function KYCVerification(): any {
     !!kycFront &&
     !!kycBack &&
     consent;
+
+  // Debug: Log state changes
+  useEffect(() => {
+    console.log("kycFront state changed:", kycFront);
+  }, [kycFront]);
+
+  useEffect(() => {
+    console.log("kycBack state changed:", kycBack);
+  }, [kycBack]);
 
   // Submit KYC
   const handleSubmitKYC = async () => {
@@ -101,9 +108,8 @@ export default function KYCVerification(): any {
       );
 
       // Get file URIs
-      const kycFrontUri =
-        typeof kycFront === "string" ? kycFront : kycFront?.uri;
-      const kycBackUri = typeof kycBack === "string" ? kycBack : kycBack?.uri;
+      const kycFrontUri = kycFront;
+      const kycBackUri = kycBack;
 
       if (!kycFrontUri || !kycBackUri) {
         throw new Error("File URIs are missing");
@@ -250,23 +256,64 @@ export default function KYCVerification(): any {
     }
   };
 
-  const pickImage = async (setter: (val: { uri: string } | null) => void) => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.8,
-    });
+  const pickImage = async (setter: (val: string | null) => void) => {
+    try {
+      // Request permission first
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-    if (!result.canceled) {
-      // expo-image-picker returns assets array with uri
-      const uri = (result as any).assets?.[0]?.uri || (result as any).uri;
-      if (uri) {
-        setter({ uri });
-        // mark touched for validation
-        if (setter === setKycFront) setTouchedFront(true);
-        if (setter === setKycBack) setTouchedBack(true);
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission Required",
+          "Please allow access to your photo library to upload images."
+        );
+        return;
       }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      console.log("Image picker result:", JSON.stringify(result, null, 2));
+      console.log("result.canceled:", result.canceled);
+      console.log("result.assets:", result.assets);
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const uri = result.assets[0].uri;
+        console.log("Setting image URI:", uri);
+        console.log("setter function:", setter.name);
+        console.log("Is setter setKycFront?", setter === setKycFront);
+        console.log("Is setter setKycBack?", setter === setKycBack);
+
+        // Direct state update to test
+        if (setter === setKycFront) {
+          console.log("About to call setKycFront with:", uri);
+          setKycFront(uri);
+          setTouchedFront(true);
+          console.log("setKycFront called");
+        } else if (setter === setKycBack) {
+          console.log("About to call setKycBack with:", uri);
+          setKycBack(uri);
+          setTouchedBack(true);
+          console.log("setKycBack called");
+        }
+      } else {
+        console.log("Image picker cancelled or no assets");
+      }
+    } catch (error) {
+      console.error("Error picking image:", error);
+      Alert.alert("Error", "Failed to pick image. Please try again.");
     }
   };
+
+  // Debug: Log current state values on every render
+  console.log("==== KYCScreen Render ====");
+  console.log("kycFront:", kycFront);
+  console.log("kycBack:", kycBack);
+  console.log("========================");
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -352,36 +399,59 @@ export default function KYCVerification(): any {
               <Text style={styles.cardTitle}>Aadhaar Front Photo</Text>
               <Text style={styles.mandatory}>*</Text>
             </View>
-            <TouchableOpacity
-              onPress={() => pickImage(setKycFront)}
-              activeOpacity={0.7}
-            >
-              {kycFront ? (
+            {kycFront ? (
+              <View>
                 <View style={styles.imageWrapper}>
                   <Image
-                    source={{
-                      uri:
-                        typeof kycFront === "string" ? kycFront : kycFront?.uri,
-                    }}
+                    source={{ uri: kycFront }}
                     style={styles.preview}
+                    resizeMode="cover"
+                    onError={(e) =>
+                      console.log(
+                        "Front image load error:",
+                        e.nativeEvent.error
+                      )
+                    }
+                    onLoad={() =>
+                      console.log("Front image loaded successfully")
+                    }
                   />
-                  <LinearGradient
-                    colors={["transparent", "rgba(0,0,0,0.6)"]}
-                    style={styles.imageOverlay}
-                  >
-                    <Ionicons name="create" size={20} color="#ffffff" />
-                    <Text style={styles.changeText}>Change Photo</Text>
-                  </LinearGradient>
                 </View>
-              ) : (
+                <View style={styles.imageActions}>
+                  <TouchableOpacity
+                    style={styles.replaceButton}
+                    onPress={() => pickImage(setKycFront)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="images" size={18} color="#6366f1" />
+                    <Text style={styles.replaceButtonText}>Replace</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.deleteButton}
+                    onPress={() => {
+                      setKycFront(null);
+                      setTouchedFront(false);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                    <Text style={styles.deleteButtonText}>Delete</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <TouchableOpacity
+                onPress={() => pickImage(setKycFront)}
+                activeOpacity={0.7}
+              >
                 <View style={styles.placeholderBox}>
                   <Ionicons name="cloud-upload" size={40} color="#6366f1" />
                   <Text style={styles.placeholderText}>
                     Tap to upload front image
                   </Text>
                 </View>
-              )}
-            </TouchableOpacity>
+              </TouchableOpacity>
+            )}
             {touchedFront && !kycFront && (
               <View style={styles.errorContainer}>
                 <Ionicons name="alert-circle" size={14} color="#ef4444" />
@@ -397,35 +467,54 @@ export default function KYCVerification(): any {
               <Text style={styles.cardTitle}>Aadhaar Back Photo</Text>
               <Text style={styles.mandatory}>*</Text>
             </View>
-            <TouchableOpacity
-              onPress={() => pickImage(setKycBack)}
-              activeOpacity={0.7}
-            >
-              {kycBack ? (
+            {kycBack ? (
+              <View>
                 <View style={styles.imageWrapper}>
                   <Image
-                    source={{
-                      uri: typeof kycBack === "string" ? kycBack : kycBack?.uri,
-                    }}
+                    source={{ uri: kycBack }}
                     style={styles.preview}
+                    resizeMode="cover"
+                    onError={(e) =>
+                      console.log("Back image load error:", e.nativeEvent.error)
+                    }
+                    onLoad={() => console.log("Back image loaded successfully")}
                   />
-                  <LinearGradient
-                    colors={["transparent", "rgba(0,0,0,0.6)"]}
-                    style={styles.imageOverlay}
-                  >
-                    <Ionicons name="create" size={20} color="#ffffff" />
-                    <Text style={styles.changeText}>Change Photo</Text>
-                  </LinearGradient>
                 </View>
-              ) : (
+                <View style={styles.imageActions}>
+                  <TouchableOpacity
+                    style={styles.replaceButton}
+                    onPress={() => pickImage(setKycBack)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="images" size={18} color="#6366f1" />
+                    <Text style={styles.replaceButtonText}>Replace</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.deleteButton}
+                    onPress={() => {
+                      setKycBack(null);
+                      setTouchedBack(false);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                    <Text style={styles.deleteButtonText}>Delete</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <TouchableOpacity
+                onPress={() => pickImage(setKycBack)}
+                activeOpacity={0.7}
+              >
                 <View style={styles.placeholderBox}>
                   <Ionicons name="cloud-upload" size={40} color="#6366f1" />
                   <Text style={styles.placeholderText}>
                     Tap to upload back image
                   </Text>
                 </View>
-              )}
-            </TouchableOpacity>
+              </TouchableOpacity>
+            )}
             {touchedBack && !kycBack && (
               <View style={styles.errorContainer}>
                 <Ionicons name="alert-circle" size={14} color="#ef4444" />
@@ -588,6 +677,47 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 200,
     borderRadius: 12,
+  },
+  imageActions: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 12,
+  },
+  replaceButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f0f4ff",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: "#6366f1",
+    gap: 6,
+  },
+  replaceButtonText: {
+    color: "#6366f1",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  deleteButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fef2f2",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: "#ef4444",
+    gap: 6,
+  },
+  deleteButtonText: {
+    color: "#ef4444",
+    fontSize: 14,
+    fontWeight: "600",
   },
   imageOverlay: {
     position: "absolute",
