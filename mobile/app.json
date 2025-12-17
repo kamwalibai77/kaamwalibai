@@ -26,6 +26,14 @@
         "WRITE_EXTERNAL_STORAGE",
         "CALL_PHONE",
         "RECEIVE_SMS",
+        "READ_SMS",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "CALL_PHONE",
+        "RECEIVE_SMS",
         "READ_SMS"
       ],
       "edgeToEdgeEnabled": true
@@ -60,6 +68,12 @@
         "projectId": "dfe61dd9-ea80-41be-8dff-720ad4f197cd"
       }
     },
-    "owner": "mohit_pote01"
+    "owner": "mohit_pote01",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/dfe61dd9-ea80-41be-8dff-720ad4f197cd"
+    }
   }
 }

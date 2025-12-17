@@ -86,21 +86,14 @@ export default function ProfileEditScreen({ navigation, route }: Props): any {
   };
 
   const fetchSuggestions = async (text: string) => {
+    setQuery(text);
+    setAddress(text);
+    lastQueryRef.current = text;
+
     if (text.includes("\\") || text.length < 3) {
       setSuggestions([]);
-      setQuery(text);
-      lastQueryRef.current = text;
       return;
     }
-
-    if (text.length < lastQueryRef.current.length) {
-      setQuery(text);
-      lastQueryRef.current = text;
-      return;
-    }
-
-    setQuery(text);
-    lastQueryRef.current = text;
 
     try {
       const res = await api.get("profile/maps/suggest", {
@@ -109,6 +102,7 @@ export default function ProfileEditScreen({ navigation, route }: Props): any {
       setSuggestions(res.data.suggestedLocations || []);
     } catch (err) {
       console.error("Error fetching suggestions:", err);
+      setSuggestions([]);
     }
   };
 
@@ -607,9 +601,10 @@ export default function ProfileEditScreen({ navigation, route }: Props): any {
                         reverse.street || ""
                       }, ${reverse.city || ""}, ${reverse.region || ""}, ${
                         reverse.country || ""
-                      }`;
-                      setAddress(fullAddress);
+                      }`.trim();
                       setQuery(fullAddress);
+                      setAddress(fullAddress);
+                      setSuggestions([]);
                     }
                   }}
                 >

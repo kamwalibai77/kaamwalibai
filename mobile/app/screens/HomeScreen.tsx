@@ -503,7 +503,6 @@ export default function HomeScreen({ navigation }: Props) {
   };
 
   const fetchSuggestions = async (text: string) => {
-    setLocationQuery(text);
     if (text.length < 2) {
       setSuggestions([]);
       return;
@@ -683,7 +682,11 @@ export default function HomeScreen({ navigation }: Props) {
             value={locationQuery}
             placeholder="Search city, area or locality"
             placeholderTextColor="#94a3b8"
-            onChangeText={fetchSuggestions}
+            onChangeText={(text) => {
+              setLocationQuery(text);
+              fetchSuggestions(text);
+            }}
+            editable={true}
           />
           {/* 📍 Use Current Location Button */}
           <TouchableOpacity
