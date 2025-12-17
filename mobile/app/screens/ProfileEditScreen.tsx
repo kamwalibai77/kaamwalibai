@@ -580,31 +580,38 @@ export default function ProfileEditScreen({ navigation, route }: Props): any {
                 {/* 📍 Use Current Location Button */}
                 <TouchableOpacity
                   onPress={async () => {
-                    let { status } =
-                      await Location.requestForegroundPermissionsAsync();
-                    if (status !== "granted") {
-                      Alert.alert(
-                        "Permission denied",
-                        "Location access is needed."
-                      );
-                      return;
-                    }
-                    let loc = await Location.getCurrentPositionAsync({});
-                    setLatitude(loc.coords.latitude);
-                    setLongitude(loc.coords.longitude);
+                    try {
+                      let { status } =
+                        await Location.requestForegroundPermissionsAsync();
+                      if (status !== "granted") {
+                        Alert.alert(
+                          "Permission denied",
+                          "Location access is needed."
+                        );
+                        return;
+                      }
+                      let loc = await Location.getCurrentPositionAsync({});
+                      setLatitude(loc.coords.latitude);
+                      setLongitude(loc.coords.longitude);
 
-                    let [reverse] = await Location.reverseGeocodeAsync(
-                      loc.coords
-                    );
-                    if (reverse) {
-                      const fullAddress = `${reverse.name || ""} ${
-                        reverse.street || ""
-                      }, ${reverse.city || ""}, ${reverse.region || ""}, ${
-                        reverse.country || ""
-                      }`.trim();
-                      setQuery(fullAddress);
-                      setAddress(fullAddress);
-                      setSuggestions([]);
+                      let [reverse] = await Location.reverseGeocodeAsync(
+                        loc.coords
+                      );
+                      if (reverse) {
+                        // Full detailed address with street/area, avoiding duplicates
+                        const addressParts = [];
+                        if (reverse.street) addressParts.push(reverse.street);
+                        else if (reverse.name) addressParts.push(reverse.name);
+                        if (reverse.city && !addressParts.includes(reverse.city)) addressParts.push(reverse.city);
+                        if (reverse.region && !addressParts.includes(reverse.region)) addressParts.push(reverse.region);
+                        const address = addressParts.join(", ") || reverse.country || "Current Location";
+                        setQuery(address);
+                        setAddress(address);
+                        setSuggestions([]);
+                      }
+                    } catch (error) {
+                      console.error("Error getting location:", error);
+                      Alert.alert("Error", "Unable to get current location");
                     }
                   }}
                 >

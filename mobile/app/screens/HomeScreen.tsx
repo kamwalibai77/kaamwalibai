@@ -224,9 +224,15 @@ export default function HomeScreen({ navigation }: Props) {
           });
           if (rev && rev.length > 0) {
             const r = rev[0];
-            const pretty =
-              r.name || r.street || r.city || r.region || r.postalCode;
-            if (pretty) setSelectedArea(pretty as string);
+            // Full detailed address with street/area, avoiding duplicates
+            const addressParts = [];
+            if (r.street) addressParts.push(r.street);
+            else if (r.name) addressParts.push(r.name);
+            if (r.city && !addressParts.includes(r.city)) addressParts.push(r.city);
+            if (r.region && !addressParts.includes(r.region)) addressParts.push(r.region);
+            const address = addressParts.join(", ") || r.country || "Current Location";
+            setSelectedArea(address);
+            setLocationQuery(address);
           }
         } catch {}
       }
@@ -525,7 +531,16 @@ export default function HomeScreen({ navigation }: Props) {
 
   const getProfileSource = (profilePhoto: string | null | undefined) => {
     if (profilePhoto && profilePhoto.trim() !== "") {
-      return { uri: profilePhoto };
+      // Ensure HTTPS for iOS compatibility
+      const cleanUrl = profilePhoto.trim();
+      // If it's an HTTP URL, convert to HTTPS for iOS
+      const secureUrl = cleanUrl.startsWith("http://")
+        ? cleanUrl.replace("http://", "https://")
+        : cleanUrl;
+      return {
+        uri: secureUrl,
+        cache: "force-cache", // Better caching for iOS
+      };
     }
     return PlaceholderImg;
   };
@@ -560,6 +575,10 @@ export default function HomeScreen({ navigation }: Props) {
             source={getProfileSource(item.provider.profilePhoto)}
             style={styles.providerImage}
             resizeMode="cover"
+            defaultSource={PlaceholderImg}
+            onError={() => {
+              console.log("Image failed to load:", item.provider.profilePhoto);
+            }}
           />
           <LinearGradient
             colors={["transparent", "rgba(0,0,0,0.6)"]}
@@ -691,25 +710,36 @@ export default function HomeScreen({ navigation }: Props) {
           {/* 📍 Use Current Location Button */}
           <TouchableOpacity
             onPress={async () => {
-              let { status } =
-                await Location.requestForegroundPermissionsAsync();
-              if (status !== "granted") {
-                Alert.alert("Permission denied", "Location access is needed.");
-                return;
-              }
-              let loc = await Location.getCurrentPositionAsync({});
-              setUserLat(loc.coords.latitude);
-              setUserLng(loc.coords.longitude);
+              try {
+                let { status } =
+                  await Location.requestForegroundPermissionsAsync();
+                if (status !== "granted") {
+                  Alert.alert(
+                    "Permission denied",
+                    "Location access is needed."
+                  );
+                  return;
+                }
+                let loc = await Location.getCurrentPositionAsync({});
+                setUserLat(loc.coords.latitude);
+                setUserLng(loc.coords.longitude);
 
-              let [reverse] = await Location.reverseGeocodeAsync(loc.coords);
-              if (reverse) {
-                const fullAddress = `${reverse.name || ""} ${
-                  reverse.street || ""
-                }, ${reverse.city || ""}, ${reverse.region || ""}, ${
-                  reverse.country || ""
-                }`;
-                setLocationQuery(fullAddress);
-                setSelectedArea(fullAddress);
+                let [reverse] = await Location.reverseGeocodeAsync(loc.coords);
+                if (reverse) {
+                  // Full detailed address with street/area, avoiding duplicates
+                  const addressParts = [];
+                  if (reverse.street) addressParts.push(reverse.street);
+                  else if (reverse.name) addressParts.push(reverse.name);
+                  if (reverse.city && !addressParts.includes(reverse.city)) addressParts.push(reverse.city);
+                  if (reverse.region && !addressParts.includes(reverse.region)) addressParts.push(reverse.region);
+                  const address = addressParts.join(", ") || reverse.country || "Current Location";
+                  setLocationQuery(address);
+                  setSelectedArea(address);
+                  setSuggestions([]);
+                }
+              } catch (error) {
+                console.error("Error getting location:", error);
+                Alert.alert("Error", "Unable to get current location");
               }
             }}
           >
@@ -858,6 +888,13 @@ export default function HomeScreen({ navigation }: Props) {
                         source={offer}
                         style={styles.offerImage}
                         resizeMode="cover"
+                        defaultSource={require("../../assets/images/offer.png")}
+                        onError={(error) => {
+                          console.log(
+                            "Offer image failed to load:",
+                            error.nativeEvent.error
+                          );
+                        }}
                       />
                     </TouchableOpacity>
                   ))}
@@ -1007,6 +1044,13 @@ export default function HomeScreen({ navigation }: Props) {
                       selectedProvider.provider.profilePhoto
                     )}
                     style={styles.providerModalImage}
+                    defaultSource={PlaceholderImg}
+                    onError={() => {
+                      console.log(
+                        "Modal image failed to load:",
+                        selectedProvider.provider.profilePhoto
+                      );
+                    }}
                   />
                   {/* KYC Badge */}
                   {selectedProvider.provider.role === "ServiceProvider" && (
