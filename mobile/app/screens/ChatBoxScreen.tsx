@@ -370,6 +370,15 @@ export default function ChatBoxScreen() {
     fetchMessages();
   }, [myId, userId, token]);
 
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    if (messages.length > 0) {
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    }
+  }, [messages]);
+
   // Add header right menu (three dots) for rating/block/report
   useEffect(() => {
     try {
@@ -500,6 +509,11 @@ export default function ChatBoxScreen() {
       };
       console.log("📤 Sending message:", newMessage);
 
+      // Mark this message as already processed to prevent duplicate when server echoes back
+      const messageKey = `${newMessage.senderId}-${newMessage.receiverId}-${newMessage.message}-${newMessage.createdAt}`;
+      processedMessageIds.current.add(messageKey);
+      processedMessageIds.current.add(newMessage.id);
+
       // Add message to local state immediately (optimistic update)
       setMessages((prev) => [...prev, newMessage]);
 
@@ -571,8 +585,8 @@ export default function ChatBoxScreen() {
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView
           style={styles.container}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={hp(1)}
+          behavior={Platform.OS === "ios" ? "padding" : "padding"}
+          keyboardVerticalOffset={Platform.OS === "ios" ? hp(1) : 0}
         >
           <LinearGradient
             colors={["#6366f1", "#8b5cf6", "#c084fc"]}
@@ -753,7 +767,10 @@ export default function ChatBoxScreen() {
           <View
             style={[
               styles.inputContainer,
-              { paddingBottom: Math.max(insets.bottom, 8) },
+              {
+                paddingBottom:
+                  Platform.OS === "ios" ? Math.max(insets.bottom, 8) : 8,
+              },
             ]}
           >
             <View style={styles.inputWrapper}>
@@ -1002,7 +1019,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#f1f5f9",
     paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingTop: 8,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.05,
