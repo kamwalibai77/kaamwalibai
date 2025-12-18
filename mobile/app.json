@@ -19,7 +19,7 @@
     },
     "android": {
       "package": "com.vrdata.kaamwalibai.app",
-      "versionCode": 1,
+      "versionCode": 6,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/logo.png",
         "backgroundColor": "#ffffff"
