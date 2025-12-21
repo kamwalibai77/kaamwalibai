@@ -96,9 +96,7 @@ export default function LoginScreen({ navigation }: Props): any {
         setCooldown(60);
         // ❌ SECURITY: Never display OTP on screen
         // OTP is sent via SMS or can be viewed in backend console logs for testing
-        setSnackbarMsg(
-          `OTP sent to +${COUNTRY_CODE}${phone}`
-        );
+        setSnackbarMsg(`OTP sent to +${COUNTRY_CODE}${phone}`);
         // persist phone locally so EditProfile can read it after redirect
         try {
           await AsyncStorage.setItem("phoneNumber", `+${COUNTRY_CODE}${phone}`);

@@ -154,15 +154,17 @@ export const sendOtp = async (req, res) => {
       expiresInMinutes: OTP_EXPIRY_MIN,
       cooldownSecs,
     };
-    
+
     // ⚠️ SECURITY: Only include OTP in response if DEBUG_OTP=true (for local testing only)
     // NEVER enable this in production - Google Play will reject for insecure authentication
     if (process.env.DEBUG_OTP === "true") {
       responsePayload.otp = otp;
       responsePayload.providerResponse = providerResponse;
-      console.warn("⚠️ DEBUG_OTP is enabled - OTP included in API response. DISABLE IN PRODUCTION!");
+      console.warn(
+        "⚠️ DEBUG_OTP is enabled - OTP included in API response. DISABLE IN PRODUCTION!"
+      );
     }
-    
+
     return res.json(responsePayload);
   } catch (err) {
     console.error("sendOtp error:", err);

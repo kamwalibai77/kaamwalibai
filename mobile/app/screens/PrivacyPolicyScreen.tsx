@@ -105,7 +105,7 @@ export default function PrivacyPolicyScreen({ navigation }: any) {
                 personal data. Information is only shared with:
               </Text>
               <Text style={styles.listItem}>
-                • Verified service providers to fulfill your request
+                • Registered service providers to fulfill your request
               </Text>
               <Text style={styles.listItem}>
                 • Legal authorities, if required by law

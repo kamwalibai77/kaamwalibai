@@ -14,6 +14,7 @@ By using our app, you agree to the collection and use of information in accordan
 ## 2. Information We Collect
 
 ### 2.1 Personal Information
+
 We collect the following personal information:
 
 - **Name**: To create and manage your account
@@ -25,23 +26,28 @@ We collect the following personal information:
 - **Email Address** (if provided): For account management and notifications
 
 ### 2.2 KYC Documents (Service Providers Only)
+
 Service providers must complete KYC verification by providing:
+
 - **Aadhaar Card**: Front and back photos
 - **PAN Card**: For identity verification
 - **Consent**: Explicit consent to store and verify these documents
 
 ### 2.3 Service Information
+
 - Service types offered (for service providers)
 - Service requests and bookings
 - Ratings and reviews
 - Communication between users and service providers
 
 ### 2.4 Payment Information
+
 - Payment information is processed by our third-party payment provider (Razorpay)
 - We do not store credit card or banking details
 - We maintain records of subscription status and transaction history
 
 ### 2.5 Usage Data
+
 - App interactions and features used
 - Service searches and preferences
 - Device information (OS version, device model)
@@ -54,23 +60,28 @@ Service providers must complete KYC verification by providing:
 We use collected information for:
 
 ### 3.1 Service Delivery
+
 - Creating and managing user accounts
 - Authenticating users via OTP
 - Matching users with service providers
 - Processing service requests
 - Facilitating communication between users and service providers
 
-### 3.2 Verification and Safety
-- Verifying identity through KYC process (service providers)
-- Preventing fraud and ensuring platform safety
+### 3.2 Identity Document Review and Safety
+
+- Reviewing identity documents submitted by service providers for fraud prevention
+- Platform moderation to prevent misuse and policy violations
+- Restricting platform access in case of violations
 - Compliance with legal requirements
 
 ### 3.3 Payment Processing
+
 - Managing subscriptions
 - Processing payments through Razorpay
 - Maintaining transaction records
 
 ### 3.4 Improvement and Analytics
+
 - Improving app functionality
 - Understanding user preferences
 - Providing better service matches
@@ -80,21 +91,27 @@ We use collected information for:
 ## 4. Data Sharing and Disclosure
 
 ### 4.1 We DO NOT Sell Your Data
+
 We never sell, rent, or trade your personal information to third parties.
 
 ### 4.2 Service Providers (Business Partners)
+
 We share limited information with:
+
 - **Payment Processors**: Razorpay (for subscription payments)
 - **SMS Gateway**: For OTP delivery (phone numbers only)
 - **Cloud Storage**: Cloudinary (for profile photos and KYC documents)
 
 ### 4.3 Within the Platform
+
 - Your name, photo, and service details are visible to users browsing services
 - Contact information is only shared after trial/subscription
 - Reviews and ratings are publicly visible
 
 ### 4.4 Legal Requirements
+
 We may disclose information if required by:
+
 - Law enforcement or government agencies
 - Court orders or legal processes
 - Protection of our rights or safety of users
@@ -106,16 +123,19 @@ We may disclose information if required by:
 We implement security measures including:
 
 ### 5.1 Encryption
+
 - All data transmitted is encrypted using HTTPS/SSL
 - Database encryption for stored data
 - Secure OTP authentication
 
 ### 5.2 Access Controls
+
 - Admin access is limited and monitored
 - KYC verification is done by authorized personnel only
 - Regular security audits
 
 ### 5.3 Third-Party Security
+
 - We use reputable third-party services (Razorpay, Cloudinary)
 - All partners comply with industry security standards
 
@@ -124,15 +144,18 @@ We implement security measures including:
 ## 6. Data Retention
 
 ### 6.1 Active Accounts
+
 - Data is retained as long as your account is active
 - Service history is maintained for record-keeping
 
 ### 6.2 Deleted Accounts
+
 - Upon account deletion, personal data is removed within 30 days
 - KYC documents may be retained longer for legal compliance
 - Transaction records are retained as required by law
 
 ### 6.3 Legal Requirements
+
 - Some data may be retained to comply with Indian laws
 - Financial records retained as per tax regulations
 
@@ -141,21 +164,25 @@ We implement security measures including:
 ## 7. Your Rights and Choices
 
 ### 7.1 Access and Update
+
 - View and update your profile information anytime
 - Edit your service preferences
 - Update contact information
 
 ### 7.2 Account Deletion
+
 - You can delete your account through: Settings > Delete Account
 - Or email us at: [your-support-email]
 - We will delete your data within 30 days
 
 ### 7.3 Opt-Out Options
+
 - Disable location services (may limit app functionality)
 - Unsubscribe from marketing communications
 - Withdraw KYC consent (will disable service provider account)
 
 ### 7.4 Data Portability
+
 - Request a copy of your data by emailing: [your-support-email]
 - We will provide data in a readable format within 30 days
 
@@ -170,15 +197,18 @@ Our service is NOT intended for users under 18 years of age. We do not knowingly
 ## 9. Third-Party Services
 
 ### 9.1 Razorpay (Payment Processing)
+
 - Handles all payment transactions
 - Subject to Razorpay's Privacy Policy
 - We do not access your payment details
 
 ### 9.2 Cloudinary (Image Storage)
+
 - Stores profile photos and KYC documents
 - Subject to Cloudinary's Privacy Policy
 
 ### 9.3 SMS Gateway
+
 - Delivers OTP messages
 - Only receives phone numbers for SMS delivery
 
@@ -187,6 +217,7 @@ Our service is NOT intended for users under 18 years of age. We do not knowingly
 ## 10. Changes to Privacy Policy
 
 We may update this Privacy Policy periodically. Changes will be:
+
 - Posted in the app with "Last Updated" date
 - Notified to users via in-app notification
 - Effective immediately upon posting
@@ -198,14 +229,18 @@ Continued use after changes indicates acceptance.
 ## 11. Jurisdiction and Compliance
 
 ### 11.1 Indian Laws
+
 This app complies with:
+
 - Information Technology Act, 2000
 - Aadhaar Act, 2016 (for KYC verification)
 - Consumer Protection Act, 2019
 - Applicable data protection regulations
 
 ### 11.2 International Users
+
 If accessing from outside India:
+
 - Your data may be transferred to/stored in India
 - You consent to such transfer
 
@@ -217,7 +252,7 @@ For questions, concerns, or requests regarding this Privacy Policy:
 
 **Email**: [your-support-email]  
 **Phone**: [your-support-phone]  
-**Address**: [your-business-address]  
+**Address**: [your-business-address]
 
 **Data Protection Officer** (if applicable): [DPO-email]
 
@@ -237,6 +272,7 @@ As per Indian IT rules, for any grievances:
 ## 14. Consent
 
 By using My Kaam Wali Bai:
+
 - You consent to collection and use of information as described
 - You confirm you are 18 years or older
 - You agree to KYC verification (if service provider)

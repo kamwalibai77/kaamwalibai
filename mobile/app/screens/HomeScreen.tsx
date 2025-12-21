@@ -560,7 +560,10 @@ export default function HomeScreen({ navigation }: Props) {
     }
   };
 
-  const getProfileSource = (profilePhoto: string | null | undefined, gender?: string | null) => {
+  const getProfileSource = (
+    profilePhoto: string | null | undefined,
+    gender?: string | null
+  ) => {
     if (profilePhoto && profilePhoto.trim() !== "") {
       // Ensure HTTPS for iOS compatibility
       const cleanUrl = profilePhoto.trim();
@@ -587,12 +590,12 @@ export default function HomeScreen({ navigation }: Props) {
     const kycSubmittedAt = provider.kycSubmittedAt;
 
     let badgeStyle = styles.kycBadgeUnverified;
-    let badgeText = "Unverified";
+    let badgeText = "Pending";
     let badgeIcon = "alert-circle";
 
     if (kycStatus === "verified") {
       badgeStyle = styles.kycBadgeVerified;
-      badgeText = "Verified";
+      badgeText = "ID Submitted";
       badgeIcon = "checkmark-circle";
     } else if (kycStatus === "pending" && kycSubmittedAt) {
       badgeStyle = styles.kycBadgeSubmitted;
@@ -607,10 +610,18 @@ export default function HomeScreen({ navigation }: Props) {
       >
         <View style={styles.providerImageContainer}>
           <Image
-            source={getProfileSource(item.provider.profilePhoto, item.provider.gender)}
+            source={getProfileSource(
+              item.provider.profilePhoto,
+              item.provider.gender
+            )}
             style={styles.providerImage}
             resizeMode="cover"
-            defaultSource={item.provider.gender && item.provider.gender.toLowerCase() === "male" ? MaleAvatarImg : PlaceholderImg}
+            defaultSource={
+              item.provider.gender &&
+              item.provider.gender.toLowerCase() === "male"
+                ? MaleAvatarImg
+                : PlaceholderImg
+            }
             onError={() => {
               console.log("Image failed to load:", item.provider.profilePhoto);
             }}
@@ -1112,7 +1123,13 @@ export default function HomeScreen({ navigation }: Props) {
                           selectedProvider.provider.gender
                         )}
                         style={styles.providerModalImage}
-                        defaultSource={selectedProvider.provider.gender && selectedProvider.provider.gender.toLowerCase() === "male" ? MaleAvatarImg : PlaceholderImg}
+                        defaultSource={
+                          selectedProvider.provider.gender &&
+                          selectedProvider.provider.gender.toLowerCase() ===
+                            "male"
+                            ? MaleAvatarImg
+                            : PlaceholderImg
+                        }
                         onError={() => {
                           console.log(
                             "Modal image failed to load:",
@@ -1149,12 +1166,12 @@ export default function HomeScreen({ navigation }: Props) {
                           />
                           <Text style={styles.modalKycBadgeText}>
                             {selectedProvider.provider.kycStatus === "verified"
-                              ? "Verified"
+                              ? "ID Submitted"
                               : selectedProvider.provider.kycStatus ===
                                   "pending" &&
                                 selectedProvider.provider.kycSubmittedAt
                               ? "In Review"
-                              : "Unverified"}
+                              : "Pending"}
                           </Text>
                         </View>
                       )}

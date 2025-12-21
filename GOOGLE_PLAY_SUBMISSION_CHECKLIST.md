@@ -5,15 +5,17 @@
 ### 📱 App Basics
 
 #### 1. App Information
+
 - [ ] **App Name**: My Kaam Wali Bai
 - [ ] **Short Description** (80 chars max):
   ```
   Find trusted maids & household help. Connect with verified service providers.
   ```
 - [ ] **Full Description** (4000 chars max):
+
   ```
   My Kaam Wali Bai connects users with verified household service providers.
-  
+
   FOR USERS:
   • Find trusted maids, cooks, cleaners near you
   • View verified profiles with KYC
@@ -21,14 +23,14 @@
   • Affordable subscription plans
   • Direct communication with service providers
   • Ratings and reviews
-  
+
   FOR SERVICE PROVIDERS:
   • Create professional profile
   • Complete KYC verification
   • List your services (cooking, cleaning, etc.)
   • Get matched with nearby customers
   • Manage bookings and availability
-  
+
   FEATURES:
   ✓ OTP-based secure login
   ✓ Location-based service matching
@@ -36,15 +38,17 @@
   ✓ In-app communication
   ✓ Flexible subscription plans
   ✓ Secure payments via Razorpay
-  
+
   Join thousands of users finding reliable household help!
   ```
 
 #### 2. App Category
+
 - [ ] **Primary Category**: Lifestyle
 - [ ] **Secondary Category**: Business (optional)
 
 #### 3. Target Audience
+
 - [ ] **Age Rating**: PEGI 12+ or Teen
   - Contains user-generated content
   - Communication features
@@ -58,12 +62,14 @@
 ## 🖼️ Graphics Assets (REQUIRED)
 
 ### Screenshots (CRITICAL - App will be rejected without these)
+
 - [ ] **Minimum 2 screenshots required** (Recommended: 4-8)
-- [ ] **Resolution**: 
+- [ ] **Resolution**:
   - Phone: 1080x1920 to 1080x2400 (16:9 to 9:16)
   - Tablet (if applicable): 1200x1920 to 1600x2560
-  
+
 **Recommended Screenshots**:
+
 1. Home screen with service provider listings
 2. Service provider profile with KYC badge
 3. User profile screen
@@ -72,17 +78,20 @@
 6. Chat/contact screen (if applicable)
 
 ### Feature Graphic (REQUIRED)
+
 - [ ] **Size**: 1024 x 500 pixels
 - [ ] **Format**: PNG or JPEG
 - [ ] **Design**: Showcase app name and key feature
 - [ ] **No borders**: Full bleed design
 
 ### App Icon (REQUIRED)
+
 - [ ] **Size**: 512 x 512 pixels
 - [ ] **Format**: PNG (32-bit with transparency)
 - [ ] **No rounded corners**: Google Play adds them automatically
 
 ### Optional Graphics
+
 - [ ] Promo Video (YouTube link)
 - [ ] Tablet screenshots (if supporting tablets)
 
@@ -91,6 +100,7 @@
 ## 📄 Required Policies & Links
 
 ### 1. Privacy Policy (MANDATORY)
+
 - [ ] Upload PRIVACY_POLICY.md to your website
 - [ ] Or host on GitHub Pages: `https://yourusername.github.io/privacy-policy`
 - [ ] Or use free hosting: Firebase Hosting, Netlify, Vercel
@@ -98,16 +108,19 @@
 - [ ] **Add Privacy Policy link IN APP**: Settings screen
 
 ### 2. Terms of Service (Optional but Recommended)
+
 - [ ] Create terms_of_service.md
 - [ ] Host publicly accessible URL
 - [ ] Link in app Settings
 
 ### 3. Support Email (REQUIRED)
+
 - [ ] Create: support@yourdomain.com or use Gmail
 - [ ] Add in Play Console
 - [ ] Monitor regularly for user issues
 
 ### 4. Website (Optional but Recommended)
+
 - [ ] Create simple landing page
 - [ ] Include: App description, features, download link
 - [ ] Can use GitHub Pages (free)
@@ -117,6 +130,7 @@
 ## 🔐 Content Rating Questionnaire
 
 ### Content Declaration
+
 Answer honestly in Play Console:
 
 1. **Violence**: No
@@ -141,6 +155,7 @@ Answer honestly in Play Console:
 ## 🔒 App Access & Testing
 
 ### Test Account Information (REQUIRED for Review)
+
 Provide in "App access" section:
 
 ```
@@ -174,6 +189,7 @@ INSTRUCTIONS:
 ```
 
 ### Special Access Instructions
+
 - [ ] Mention backend server needs to be running
 - [ ] Explain OTP retrieval process (console logs)
 - [ ] Provide sample KYC documents if needed
@@ -184,35 +200,40 @@ INSTRUCTIONS:
 ## ⚙️ Technical Requirements
 
 ### 1. Target API Level
+
 - [ ] **Target API 34** (Android 14) - Required as of August 2024
 - [ ] Update in app.json or app config
 
 ### 2. App Bundle
+
 - [ ] Use **.aab format** (not APK)
 - [ ] Enable App Signing by Google Play
 
 ### 3. Permissions
+
 Review and justify ALL permissions in app.json:
 
 ```json
 {
   "permissions": [
-    "INTERNET",              // API calls
-    "CAMERA",                // Profile photos, KYC docs
+    "INTERNET", // API calls
+    "CAMERA", // Profile photos, KYC docs
     "READ_EXTERNAL_STORAGE", // Photo selection
-    "WRITE_EXTERNAL_STORAGE",// Photo saving
-    "ACCESS_FINE_LOCATION",  // Service matching
+    "WRITE_EXTERNAL_STORAGE", // Photo saving
+    "ACCESS_FINE_LOCATION", // Service matching
     "ACCESS_COARSE_LOCATION" // Service matching
   ]
 }
 ```
 
 **Permission Declarations**:
+
 - [ ] Explain CAMERA: "Upload profile photos and KYC documents"
 - [ ] Explain LOCATION: "Find service providers near you"
 - [ ] Explain STORAGE: "Save and upload photos"
 
 ### 4. Sensitive Permissions (Extra Scrutiny)
+
 - [ ] **Location**: Declare in Data Safety + explain in description
 - [ ] **SMS/Phone**: OTP already handled (no direct SMS sending from app)
 - [ ] **Camera/Storage**: For photos only (explain in-app)
@@ -222,11 +243,13 @@ Review and justify ALL permissions in app.json:
 ## 🔔 Notifications & Ads
 
 ### Push Notifications
+
 - [ ] If implemented: Declare in Data Safety
 - [ ] Provide opt-out option in Settings
 - [ ] Don't send promotional notifications without consent
 
 ### Advertisements
+
 - [ ] If using ads: Declare all ad networks
 - [ ] Ensure ads comply with Google policies
 - [ ] No misleading ads
@@ -236,6 +259,7 @@ Review and justify ALL permissions in app.json:
 ## 💳 In-App Purchases / Subscriptions
 
 ### Subscription Declaration
+
 - [ ] **Product Name**: Premium Subscription
 - [ ] **Price**: ₹299/month (or your pricing)
 - [ ] **Features**:
@@ -247,6 +271,7 @@ Review and justify ALL permissions in app.json:
   ```
 
 ### Razorpay Integration
+
 - [ ] Ensure Razorpay is in test mode during review
 - [ ] Provide test payment instructions
 - [ ] Add "Powered by Razorpay" if required by their terms
@@ -256,48 +281,64 @@ Review and justify ALL permissions in app.json:
 ## 🚫 Common Rejection Reasons (MUST FIX)
 
 ### 1. ❌ Missing Privacy Policy
-**Fix**: 
+
+**Fix**:
+
 - [ ] Upload PRIVACY_POLICY.md to public URL
 - [ ] Add link in Play Console
 - [ ] Add link in app Settings
 
 ### 2. ❌ Incomplete Data Safety Form
-**Fix**: 
+
+**Fix**:
+
 - [ ] Fill GOOGLE_PLAY_DATA_SAFETY.md completely
 - [ ] Declare ALL data collection
 - [ ] Be accurate (they test the app!)
 
 ### 3. ❌ OTP Security Issue
-**Fix**: 
+
+**Fix**:
+
 - [ ] ✅ Already fixed! OTP not shown on screen
 - [ ] Verify DEBUG_OTP=false in production
 - [ ] Test OTP flow works with backend logs
 
 ### 4. ❌ Insufficient Screenshots
-**Fix**: 
+
+**Fix**:
+
 - [ ] Upload at least 4 high-quality screenshots
 - [ ] Show key features
 - [ ] Include KYC verification screen
 
 ### 5. ❌ Target Audience Wrong
-**Fix**: 
+
+**Fix**:
+
 - [ ] Set to 18+ (users can meet in person)
 - [ ] Declare user interaction features
 
 ### 6. ❌ KYC Document Handling
-**Fix**: 
+
+**Fix**:
+
 - [ ] Explain Aadhaar/PAN usage in Privacy Policy
 - [ ] Get explicit consent before collecting
 - [ ] Mention admin approval process
 
 ### 7. ❌ Payment Issues
-**Fix**: 
+
+**Fix**:
+
 - [ ] Use Google Play Billing OR clearly state using Razorpay
 - [ ] Provide test payment flow
 - [ ] Show pricing clearly
 
 ### 8. ❌ User-Generated Content
-**Fix**: 
+
+**Fix**:
+
 - [ ] Add reporting mechanism for inappropriate content
 - [ ] Add user blocking feature
 - [ ] Implement content moderation (admin panel)
@@ -307,18 +348,21 @@ Review and justify ALL permissions in app.json:
 ## 📝 Store Listing Copy
 
 ### App Title (30 chars max)
+
 ```
 My Kaam Wali Bai - Find Maids
 ```
 
 ### Short Description (80 chars)
+
 ```
 Find trusted household help. Verified maids, cooks & cleaners near you.
 ```
 
 ### App Tags (Keywords)
+
 ```
-maid service, household help, cleaning service, cook, domestic help, 
+maid service, household help, cleaning service, cook, domestic help,
 service provider, home services, verified maids, trusted help
 ```
 
@@ -327,17 +371,20 @@ service provider, home services, verified maids, trusted help
 ## 🧪 Pre-Launch Testing
 
 ### Device Testing (Play Console)
+
 - [ ] Enable Pre-launch Report
 - [ ] Review crash reports
 - [ ] Fix any critical issues
 
 ### Internal Testing Track
+
 - [ ] Upload to Internal Testing FIRST
 - [ ] Test with 5-10 real users
 - [ ] Fix any bugs found
 - [ ] Move to Closed Testing
 
 ### Closed Testing Requirements
+
 - [ ] Add test users via email
 - [ ] Minimum 14 days testing period recommended
 - [ ] Gather feedback
@@ -372,7 +419,7 @@ Thank you for reviewing our app. We have addressed the issues mentioned:
 4. Screenshots: Added 6 high-quality screenshots showing key features
 5. KYC Documents: Added explicit consent flow and usage explanation
 
-We have thoroughly tested these changes and believe the app now complies 
+We have thoroughly tested these changes and believe the app now complies
 with all Google Play policies.
 
 Please re-review the app. We are available for any clarification.

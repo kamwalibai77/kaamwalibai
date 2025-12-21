@@ -237,7 +237,7 @@ export default function KYCVerification(): any {
             await AsyncStorage.setItem("kycStatus", data.user.kycStatus);
         }
 
-        // Only redirect service providers to profile to see verified badge
+        // Only redirect service providers to profile to see submission status
         const finalRole = roleVal || (await AsyncStorage.getItem("userRole"));
         if (finalRole === "ServiceProvider") {
           navigation.navigate("Profile");

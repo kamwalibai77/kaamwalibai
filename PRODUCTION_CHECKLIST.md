@@ -3,6 +3,7 @@
 ## ✅ Security & Google Play Compliance
 
 ### OTP Security (CRITICAL)
+
 - [ ] `DEBUG_OTP` is **NOT** set in production environment variables
 - [ ] OTP is **NEVER** displayed on mobile app screen
 - [ ] OTP is **NOT** returned in API responses (backend)
@@ -12,6 +13,7 @@
 - [ ] Daily OTP limits are configured
 
 ### Backend Environment Variables (Production)
+
 ```env
 # Database
 DATABASE_URL=your_production_db_url
@@ -40,6 +42,7 @@ SMS_GATEWAY_KEY=your_api_key
 ```
 
 ### Mobile App
+
 - [ ] API base URL points to production backend
 - [ ] All console.logs reviewed (remove sensitive data)
 - [ ] Error handling is user-friendly (no stack traces shown)
@@ -47,14 +50,16 @@ SMS_GATEWAY_KEY=your_api_key
 - [ ] Permissions are properly declared in app.json
 
 ### Testing Before Deployment
+
 - [ ] Test OTP flow with real phone numbers
 - [ ] Test rate limiting works correctly
-- [ ] Test OTP expiry works correctly  
+- [ ] Test OTP expiry works correctly
 - [ ] Test SMS delivery (if using SMS gateway)
 - [ ] Test with slow/no internet connection
 - [ ] Test on both Android and iOS
 
 ### Google Play Store Requirements
+
 - [ ] App uses HTTPS for all API calls
 - [ ] Privacy Policy is accessible in-app
 - [ ] Data retention policy is documented
@@ -63,6 +68,7 @@ SMS_GATEWAY_KEY=your_api_key
 - [ ] Authentication is secure (no hardcoded credentials)
 
 ### Apple App Store Requirements
+
 - [ ] All network calls use HTTPS
 - [ ] Privacy manifest is included (if required)
 - [ ] SMS permission usage is explained
@@ -73,6 +79,7 @@ SMS_GATEWAY_KEY=your_api_key
 ## 🔍 Final Verification Commands
 
 ### Check Backend Logs Don't Expose Sensitive Data
+
 ```bash
 # Make sure no OTP appears in production logs where users can see
 # Only server-side console logs are acceptable
@@ -80,6 +87,7 @@ grep -r "otp" backend/
 ```
 
 ### Verify Mobile App Doesn't Display OTP
+
 ```bash
 # Search for any OTP display in mobile code
 grep -r "OTP is" mobile/app/
@@ -87,6 +95,7 @@ grep -r "json.otp" mobile/app/
 ```
 
 ### Test Production API
+
 ```bash
 # Test OTP sending (should NOT return OTP in response)
 curl -X POST https://your-api.com/api/auth/send-otp \
@@ -103,13 +112,15 @@ curl -X POST https://your-api.com/api/auth/send-otp \
 ## 📱 Store Submission
 
 ### Android (Google Play)
+
 1. Build release APK/AAB
 2. Update version code and name
 3. Test with internal testing track first
 4. Submit for review
 5. Respond to any policy questions about OTP/SMS usage
 
-### iOS (App Store)  
+### iOS (App Store)
+
 1. Build release IPA
 2. Update version and build number
 3. Submit via App Store Connect

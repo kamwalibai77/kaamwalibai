@@ -187,7 +187,7 @@ export const translations = {
     kyc: "KYC Verification",
     kycStatus: "KYC Status",
     pending: "Pending",
-    verified: "Verified",
+    verified: "ID Submitted",
     rejected: "Rejected",
     uploadDocuments: "Upload Documents",
     aadharCard: "Aadhar Card",

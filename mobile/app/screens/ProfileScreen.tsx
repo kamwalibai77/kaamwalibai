@@ -753,7 +753,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
 
-  // KYC Badge Styles - Instagram-style verified badge
+  // KYC Badge Styles - Identity document submission badge
   kycBadgeWrapper: {
     position: "absolute",
     bottom: 4,

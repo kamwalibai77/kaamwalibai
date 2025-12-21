@@ -25,10 +25,10 @@ When you request an OTP, it will be logged in the **backend server console**.
 1. Open your database management tool
 2. Query the `Otps` table:
    ```sql
-   SELECT otp_plain, phone, expires_at, createdAt 
-   FROM Otps 
-   WHERE phone = '+919876543210' 
-   ORDER BY createdAt DESC 
+   SELECT otp_plain, phone, expires_at, createdAt
+   FROM Otps
+   WHERE phone = '+919876543210'
+   ORDER BY createdAt DESC
    LIMIT 1;
    ```
 3. Use the `otp_plain` value
@@ -38,6 +38,7 @@ When you request an OTP, it will be logged in the **backend server console**.
 If you have configured an SMS gateway (Twilio, 2Factor, etc.), the OTP will be sent via SMS to the phone number.
 
 **Environment Variables for SMS:**
+
 - `SMS_GATEWAY_PROVIDER=twilio` (or `2factor`)
 - `TWILIO_ACCOUNT_SID=your_sid`
 - `TWILIO_AUTH_TOKEN=your_token`
@@ -106,6 +107,7 @@ DEBUG_OTP=false
 ## 📞 Support
 
 If you encounter issues with OTP:
+
 1. Check backend server logs
 2. Verify database connectivity
 3. Confirm SMS gateway credentials (if using SMS)
