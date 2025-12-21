@@ -319,7 +319,9 @@ export default function KYCVerification(): any {
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <ScrollView
         style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         <View style={styles.container}>
           {/* Header */}
@@ -605,6 +607,9 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 140,
   },
   container: {
     flex: 1,

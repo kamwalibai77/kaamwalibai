@@ -94,8 +94,10 @@ export default function LoginScreen({ navigation }: Props): any {
       if (json) {
         setStep("otp");
         setCooldown(60);
+        // ❌ SECURITY: Never display OTP on screen
+        // OTP is sent via SMS or can be viewed in backend console logs for testing
         setSnackbarMsg(
-          `OTP sent to +${COUNTRY_CODE}${phone} - OTP is ${json.otp}`
+          `OTP sent to +${COUNTRY_CODE}${phone}`
         );
         // persist phone locally so EditProfile can read it after redirect
         try {
@@ -276,25 +278,16 @@ export default function LoginScreen({ navigation }: Props): any {
                 </View>
               </View>
 
-              {/* Welcome Text with Icon */}
+              {/* Welcome Text */}
               <View style={styles.welcomeSection}>
-                <View style={styles.welcomeTitleRow}>
-                  <View style={styles.welcomeIconWrapper}>
-                    <Ionicons
-                      name={step === "phone" ? "call" : "shield-checkmark"}
-                      size={20}
-                      color="#667eea"
-                    />
-                  </View>
-                  <Text style={styles.welcomeTitle}>
-                    {step === "phone" ? "Welcome Back!" : "Verify OTP"}
-                  </Text>
-                </View>
-                <Text style={styles.welcomeSubtitle}>
-                  {step === "phone"
-                    ? "Enter your mobile number to get started"
-                    : `We've sent a verification code to\n+${COUNTRY_CODE} ${phone}`}
+                <Text style={styles.welcomeTitle}>
+                  {step === "phone" ? "Welcome" : "Verify OTP"}
                 </Text>
+                {step === "otp" && (
+                  <Text style={styles.welcomeSubtitle}>
+                    {`We've sent a verification code to\n+${COUNTRY_CODE} ${phone}`}
+                  </Text>
+                )}
               </View>
 
               {step === "phone" ? (
@@ -303,7 +296,7 @@ export default function LoginScreen({ navigation }: Props): any {
                   <View style={styles.inputWrapper}>
                     <Text style={styles.inputLabel}>
                       <Ionicons name="call-outline" size={14} color="#64748b" />{" "}
-                      Mobile Number
+                      • Mobile Number
                     </Text>
                     <View
                       style={[
@@ -672,7 +665,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 20,
     paddingTop: 60,
-    paddingBottom: 40,
+    paddingBottom: 120,
   },
   card: {
     backgroundColor: "#ffffff",
@@ -733,6 +726,7 @@ const styles = StyleSheet.create({
   },
   welcomeSection: {
     marginBottom: 32,
+    alignItems: "center",
   },
   welcomeTitleRow: {
     flexDirection: "row",
@@ -752,7 +746,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "800",
     color: "#1e293b",
-    flex: 1,
+    textAlign: "center",
   },
   welcomeSubtitle: {
     fontSize: 14,

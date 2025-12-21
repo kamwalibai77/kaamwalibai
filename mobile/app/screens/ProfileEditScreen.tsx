@@ -36,6 +36,7 @@ export default function ProfileEditScreen({ navigation, route }: Props): any {
   const [address, setAddress] = useState<string>("");
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isNewProfile, setIsNewProfile] = useState(false);
   const needsRole = (route?.params as any)?.needsRole === true;
 
   // Dropdown states
@@ -448,7 +449,10 @@ export default function ProfileEditScreen({ navigation, route }: Props): any {
           setPhoneNumber(phone.startsWith("+91") ? phone : `+91${phone}`);
         }
         const userId = await AsyncStorage.getItem("userId");
-        if (!userId) return;
+        if (!userId) {
+          setIsNewProfile(true);
+          return;
+        }
 
         const response = await api.get(`/users/${userId}`);
         const data = response.data;
@@ -508,7 +512,9 @@ export default function ProfileEditScreen({ navigation, route }: Props): any {
           >
             <Ionicons name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>{t("editProfile")}</Text>
+          <Text style={styles.headerTitle}>
+            {t(isNewProfile ? "createProfile" : "editProfile")}
+          </Text>
           <View style={{ width: 24 }} />
         </LinearGradient>
 

@@ -1,5 +1,5 @@
-import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
 import { API_BASE_URL } from "../utills/config";
 
 // Axios instance for the app. We add debug logging to help surface network
@@ -52,7 +52,7 @@ api.interceptors.response.use(
     );
     return res;
   },
-  (error) => {
+  async (error) => {
     // When network errors happen this gives a clearer trace in Metro.
     console.error("API error ->", error?.message || error);
     if (error?.config) {
@@ -66,6 +66,40 @@ api.interceptors.response.use(
         timeout: error.config.timeout,
       });
     }
+
+    // Handle 401 Unauthorized - token expired or invalid
+    if (error?.response?.status === 401) {
+      console.warn("Token expired or invalid. Logging out user...");
+
+      // Clear all auth data
+      try {
+        await AsyncStorage.multiRemove([
+          "token",
+          "userId",
+          "userRole",
+          "userData",
+          "profilePhoto",
+        ]);
+
+        // Import navigation dynamically to avoid circular dependencies
+        const { CommonActions } = await import("@react-navigation/native");
+        const navigationRef = (await import("../navigation/navigationRef"))
+          .navigationRef;
+
+        // Navigate to Login and reset navigation stack
+        if (navigationRef.isReady()) {
+          navigationRef.dispatch(
+            CommonActions.reset({
+              index: 0,
+              routes: [{ name: "Login" }],
+            })
+          );
+        }
+      } catch (logoutError) {
+        console.error("Error during auto-logout:", logoutError);
+      }
+    }
+
     return Promise.reject(error);
   }
 );

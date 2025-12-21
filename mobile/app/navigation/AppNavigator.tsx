@@ -18,6 +18,7 @@ import ProfileScreen from "../screens/ProfileScreen";
 import ReveiwFormScreen from "../screens/ReviewFormScreen";
 import SettingsScreen from "../screens/SettingsScreen";
 import SubscriptionScreen from "../screens/SubscriptionScreen";
+import { navigationRef } from "./navigationRef";
 
 export type RootStackParamList = {
   Index: undefined;
@@ -79,7 +80,10 @@ export default function AppNavigator() {
   if (loading) return null; // optional: show loader/spinner here
 
   return (
-    <NavigationContainer onStateChange={(s) => setNavigationState(s)}>
+    <NavigationContainer
+      ref={navigationRef}
+      onStateChange={(s) => setNavigationState(s)}
+    >
       <Breadcrumbs state={navigationState} />
       <Stack.Navigator
         initialRouteName="Index"

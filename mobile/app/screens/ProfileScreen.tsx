@@ -20,7 +20,17 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import BottomTab from "../../components/BottomTabs";
 import { RootStackParamList } from "../navigation/AppNavigator";
 import { API_BASE_URL } from "../utills/config";
+
 const PlaceholderImg = require("../../assets/images/default.png");
+const MaleAvatarImg = require("../../assets/images/male avatar.jpg");
+
+// Helper function to get gender-specific placeholder
+const getPlaceholderImage = (gender: string | null | undefined) => {
+  if (gender && gender.toLowerCase() === "male") {
+    return MaleAvatarImg;
+  }
+  return PlaceholderImg;
+};
 
 type Props = NativeStackScreenProps<RootStackParamList, "Profile">;
 
@@ -48,7 +58,11 @@ export default function ProfileScreen({ navigation }: Props): any {
     try {
       setLoading(true);
       const userId = await AsyncStorage.getItem("userId");
-      if (!userId) return;
+      if (!userId) {
+        // No userId means not logged in, redirect to login
+        navigation.replace("Login");
+        return;
+      }
 
       // Load saved language preference
       const savedLanguageCode = await AsyncStorage.getItem("appLanguageCode");
@@ -67,6 +81,7 @@ export default function ProfileScreen({ navigation }: Props): any {
 
       // Add cache-busting timestamp to prevent stale data
       const timestamp = new Date().getTime();
+      const token = await AsyncStorage.getItem("token");
       const response = await fetch(
         `${API_BASE_URL}/users/${userId}?_t=${timestamp}`,
         {
@@ -74,9 +89,29 @@ export default function ProfileScreen({ navigation }: Props): any {
             "Cache-Control": "no-cache, no-store, must-revalidate",
             Pragma: "no-cache",
             Expires: "0",
+            ...(token && { Authorization: `Bearer ${token}` }),
           },
         }
       );
+
+      // Handle token expiration or unauthorized access
+      if (response.status === 401) {
+        console.warn("Token expired, logging out...");
+        await AsyncStorage.multiRemove([
+          "token",
+          "userId",
+          "userRole",
+          "userData",
+          "profilePhoto",
+        ]);
+        navigation.replace("Login");
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
       const data = await response.json();
       console.log("Fresh user data from API:", data);
       setUser(data);
@@ -85,11 +120,16 @@ export default function ProfileScreen({ navigation }: Props): any {
       // Update cache with fresh data
       await AsyncStorage.setItem("userData", JSON.stringify(data));
     } catch (err) {
-      console.log(err);
+      console.error("Error fetching user:", err);
+      // Only redirect to login if there's no cached data at all
+      const cachedUserData = await AsyncStorage.getItem("userData");
+      if (!cachedUserData) {
+        navigation.replace("Login");
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [navigation, i18n]);
 
   // Refetch user data whenever screen comes into focus
   useFocusEffect(
@@ -115,7 +155,14 @@ export default function ProfileScreen({ navigation }: Props): any {
   }
 
   const handleLogout = async () => {
-    await AsyncStorage.removeItem("userId");
+    // Clear all auth-related data
+    await AsyncStorage.multiRemove([
+      "token",
+      "userId",
+      "userRole",
+      "userData",
+      "profilePhoto",
+    ]);
     navigation.replace("Login");
   };
 
@@ -180,7 +227,7 @@ export default function ProfileScreen({ navigation }: Props): any {
                         uri: `${user.profilePhoto}?t=${new Date().getTime()}`,
                         cache: "reload",
                       }
-                    : PlaceholderImg
+                    : getPlaceholderImage(user.gender)
                 }
                 style={styles.profileImage}
                 onError={(error) => {

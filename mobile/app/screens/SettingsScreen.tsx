@@ -43,8 +43,16 @@ export default function SettingsScreen({ navigation }: Props) {
         {
           text: t("yesDelete"),
           style: "destructive",
-          onPress: () => {
-            deleteAccount();
+          onPress: async () => {
+            await deleteAccount();
+            // Clear all auth data after account deletion
+            await AsyncStorage.multiRemove([
+              "token",
+              "userId",
+              "userRole",
+              "userData",
+              "profilePhoto",
+            ]);
             navigation.replace("Login");
           },
         },
@@ -203,8 +211,16 @@ export default function SettingsScreen({ navigation }: Props) {
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[styles.confirmBtn, styles.confirmBtnDelete]}
-                      onPress={() => {
-                        deleteAccount();
+                      onPress={async () => {
+                        await deleteAccount();
+                        // Clear all auth data after account deletion
+                        await AsyncStorage.multiRemove([
+                          "token",
+                          "userId",
+                          "userRole",
+                          "userData",
+                          "profilePhoto",
+                        ]);
                         navigation.replace("Login");
                       }}
                     >

@@ -2,6 +2,16 @@
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
+## 🔐 OTP Testing
+
+**IMPORTANT**: For security and Google Play compliance, OTP codes are **NOT displayed on screen**.
+
+To get OTP during testing:
+1. Check the **backend server console logs** - OTP will be printed there
+2. Or query the database `Otps` table for the `otp_plain` column
+
+📖 See [../TESTING_INSTRUCTIONS.md](../TESTING_INSTRUCTIONS.md) for detailed instructions.
+
 ## Get started
 
 1. Install dependencies

@@ -30,7 +30,9 @@ import providersApi from "../services/serviceProviders";
 import serviceTypesApi from "../services/serviceTypes";
 import userApi from "../services/user";
 import { SOCKET_URL } from "../utills/config";
+
 const PlaceholderImg = require("../../assets/images/default.png");
+const MaleAvatarImg = require("../../assets/images/male avatar.jpg");
 
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/AppNavigator";
@@ -558,7 +560,7 @@ export default function HomeScreen({ navigation }: Props) {
     }
   };
 
-  const getProfileSource = (profilePhoto: string | null | undefined) => {
+  const getProfileSource = (profilePhoto: string | null | undefined, gender?: string | null) => {
     if (profilePhoto && profilePhoto.trim() !== "") {
       // Ensure HTTPS for iOS compatibility
       const cleanUrl = profilePhoto.trim();
@@ -570,6 +572,10 @@ export default function HomeScreen({ navigation }: Props) {
         uri: secureUrl,
         cache: "force-cache", // Better caching for iOS
       };
+    }
+    // Return gender-specific placeholder
+    if (gender && gender.toLowerCase() === "male") {
+      return MaleAvatarImg;
     }
     return PlaceholderImg;
   };
@@ -601,10 +607,10 @@ export default function HomeScreen({ navigation }: Props) {
       >
         <View style={styles.providerImageContainer}>
           <Image
-            source={getProfileSource(item.provider.profilePhoto)}
+            source={getProfileSource(item.provider.profilePhoto, item.provider.gender)}
             style={styles.providerImage}
             resizeMode="cover"
-            defaultSource={PlaceholderImg}
+            defaultSource={item.provider.gender && item.provider.gender.toLowerCase() === "male" ? MaleAvatarImg : PlaceholderImg}
             onError={() => {
               console.log("Image failed to load:", item.provider.profilePhoto);
             }}
@@ -1102,10 +1108,11 @@ export default function HomeScreen({ navigation }: Props) {
                     <View style={styles.modalImageWrapper}>
                       <Image
                         source={getProfileSource(
-                          selectedProvider.provider.profilePhoto
+                          selectedProvider.provider.profilePhoto,
+                          selectedProvider.provider.gender
                         )}
                         style={styles.providerModalImage}
-                        defaultSource={PlaceholderImg}
+                        defaultSource={selectedProvider.provider.gender && selectedProvider.provider.gender.toLowerCase() === "male" ? MaleAvatarImg : PlaceholderImg}
                         onError={() => {
                           console.log(
                             "Modal image failed to load:",

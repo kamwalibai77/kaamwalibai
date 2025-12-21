@@ -19,7 +19,9 @@
     },
     "android": {
       "package": "com.vrdata.kaamwalibai.app",
-      "versionCode": 7,
+      "versionCode": 8,
+      "compileSdkVersion": 34,
+      "targetSdkVersion": 34,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/logo.png",
         "backgroundColor": "#ffffff"
@@ -30,17 +32,14 @@
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES"
+      ],
+      "blockedPermissions": [
         "CALL_PHONE",
-        "RECEIVE_SMS",
         "READ_SMS",
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION",
-        "CAMERA",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE",
-        "CALL_PHONE",
         "RECEIVE_SMS",
-        "READ_SMS"
+        "SEND_SMS",
+        "READ_PHONE_STATE"
       ],
       "edgeToEdgeEnabled": true
     },
