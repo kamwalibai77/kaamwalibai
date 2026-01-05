@@ -100,6 +100,71 @@ export function initSocket(server) {
       }
     });
 
+    // Contact Request - User requests service provider's contact
+    socket.on("contactRequest", async (data) => {
+      try {
+        const { requesterId, providerId, requesterName, timestamp } = data;
+        const pid = String(providerId);
+        
+        console.log("📞 Contact request from", requesterId, "to", providerId);
+
+        // Get requester name from database
+        try {
+          const db = await import("../models/index.js");
+          const User = db.default.User;
+          const requester = await User.findByPk(requesterId);
+          
+          const requestData = {
+            requesterId,
+            providerId,
+            requesterName: requester?.name || "A user",
+            timestamp,
+          };
+
+          // Send request to provider
+          io.to(pid).emit("contactRequest", requestData);
+          console.log("✅ Contact request sent to provider", providerId);
+        } catch (e) {
+          console.error("Error fetching requester details:", e);
+          // Send anyway with provided name
+          io.to(pid).emit("contactRequest", data);
+        }
+      } catch (err) {
+        console.error("contactRequest handler error:", err);
+      }
+    });
+
+    // Contact Request Response - Provider approves/rejects
+    socket.on("contactRequestResponse", async (data) => {
+      try {
+        const { requesterId, providerId, approved } = data;
+        const rid = String(requesterId);
+        
+        console.log(
+          "📞 Contact request response:",
+          approved ? "approved" : "rejected",
+          "from",
+          providerId,
+          "to",
+          requesterId
+        );
+
+        if (approved) {
+          io.to(rid).emit("contactRequestApproved", {
+            requesterId,
+            providerId,
+          });
+        } else {
+          io.to(rid).emit("contactRequestRejected", {
+            requesterId,
+            providerId,
+          });
+        }
+      } catch (err) {
+        console.error("contactRequestResponse handler error:", err);
+      }
+    });
+
     // Disconnect
     socket.on("disconnect", () => {
       console.log("❌ Disconnected:", socket.id);

@@ -174,8 +174,8 @@ export default function BottomTabs() {
           </Text>
         </TouchableOpacity>
 
-        {/* Subscriptions */}
-        <TouchableOpacity
+        {/* Subscriptions - COMMENTED OUT FOR GOOGLE PLAY COMPLIANCE */}
+        {/* <TouchableOpacity
           style={styles.tabItem}
           onPress={() => navigation.navigate("Subscription")}
         >
@@ -199,7 +199,7 @@ export default function BottomTabs() {
           >
             {t("plans")}
           </Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
 
         {/* My Services (for Service Providers only) */}
         {isServiceProvider && (

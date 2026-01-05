@@ -69,9 +69,31 @@ export default function ChatBoxScreen() {
   const [profileUser, setProfileUser] = useState<any | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [templateModalVisible, setTemplateModalVisible] = useState(false);
+  const [contactRequestSent, setContactRequestSent] = useState(false);
+  const [contactRequestApproved, setContactRequestApproved] = useState(false);
+  const [pendingContactRequest, setPendingContactRequest] = useState<any>(null);
+  const [contactApprovalModalVisible, setContactApprovalModalVisible] = useState(false);
   const socketRef = useRef<any>(null);
   const flatListRef = useRef<FlatList>(null);
   const processedMessageIds = useRef<Set<string>>(new Set());
+
+  // Message templates for users
+  const messageTemplates = [
+    "Are you available for work?",
+    "What are your working hours?",
+    "Can you work on weekends?",
+    "What is your experience?",
+    "Are you available full-time or part-time?",
+    "Can you start immediately?",
+    "What services do you provide?",
+    "Can we discuss the work details?",
+    "Can you share your contact number?",
+  ];
+
+  // Yes/No responses for service providers
+  const yesNoResponses = ["Yes", "No"];
 
   const params = route.params;
   const userId = params?.userId;
@@ -192,11 +214,14 @@ export default function ChatBoxScreen() {
       try {
         const storedId = await AsyncStorage.getItem("userId");
         const storedToken = await AsyncStorage.getItem("token");
+        const storedRole = await AsyncStorage.getItem("userRole");
         console.log(
           "👤 Fetched user from storage - ID:",
           storedId,
           "Token:",
-          storedToken ? "exists" : "missing"
+          storedToken ? "exists" : "missing",
+          "Role:",
+          storedRole
         );
 
         if (!storedId || !storedToken) {
@@ -212,6 +237,7 @@ export default function ChatBoxScreen() {
 
         setMyId(storedId);
         setToken(storedToken);
+        setUserRole(storedRole);
       } catch (error) {
         console.error("❌ Error fetching user from storage:", error);
         Alert.alert(
@@ -311,6 +337,39 @@ export default function ChatBoxScreen() {
           "Chat removed",
           "This conversation is no longer available.",
           [{ text: "OK", onPress: () => navigation.goBack() }]
+        );
+      }
+    });
+
+    // Listen for incoming contact requests (for service providers)
+    socket.on("contactRequest", (data: any) => {
+      console.log("📞 Contact request received:", data);
+      if (String(data.providerId) === String(myId)) {
+        setPendingContactRequest(data);
+        setContactApprovalModalVisible(true);
+      }
+    });
+
+    // Listen for contact request approval (for users)
+    socket.on("contactRequestApproved", (data: any) => {
+      console.log("✅ Contact request approved:", data);
+      if (String(data.requesterId) === String(myId)) {
+        setContactRequestApproved(true);
+        Alert.alert(
+          "Request Approved",
+          "The service provider has approved your contact request. You can now call them."
+        );
+      }
+    });
+
+    // Listen for contact request rejection (for users)
+    socket.on("contactRequestRejected", (data: any) => {
+      console.log("❌ Contact request rejected:", data);
+      if (String(data.requesterId) === String(myId)) {
+        setContactRequestSent(false);
+        Alert.alert(
+          "Request Declined",
+          "The service provider has declined your contact request."
         );
       }
     });
@@ -618,33 +677,83 @@ export default function ChatBoxScreen() {
                 </Text>
                 <Text style={styles.headerStatus}>Active now</Text>
               </View>
-              <TouchableOpacity
+              {/* Call button hidden as per requirements */}
+              {/* <TouchableOpacity
                 style={styles.callButton}
                 onPress={async () => {
-                  try {
-                    const token = await AsyncStorage.getItem("token");
-                    const headers = token
-                      ? { Authorization: `Bearer ${token}` }
-                      : undefined;
-                    const res = await api.get(`/users/${userId}`, { headers });
-                    const phone =
-                      res?.data?.user?.phoneNumber || res?.data?.phoneNumber;
-                    if (phone) {
-                      Linking.openURL(`tel:${phone}`);
-                    } else {
-                      Alert.alert(
-                        "No phone number",
-                        "This user's phone number is not available."
-                      );
+                  if (contactRequestApproved) {
+                    // If approved, make the call
+                    try {
+                      const token = await AsyncStorage.getItem("token");
+                      const headers = token
+                        ? { Authorization: `Bearer ${token}` }
+                        : undefined;
+                      const res = await api.get(`/users/${userId}`, { headers });
+                      const phone =
+                        res?.data?.user?.phoneNumber || res?.data?.phoneNumber;
+                      if (phone) {
+                        Linking.openURL(`tel:${phone}`);
+                      } else {
+                        Alert.alert(
+                          "No phone number",
+                          "This user's phone number is not available."
+                        );
+                      }
+                    } catch (e) {
+                      console.warn("Failed to get phone number", e);
+                      Alert.alert("Error", "Unable to get phone number");
                     }
-                  } catch (e) {
-                    console.warn("Failed to get phone number", e);
-                    Alert.alert("Error", "Unable to get phone number");
+                  } else if (contactRequestSent) {
+                    // Request already sent
+                    Alert.alert(
+                      "Request Pending",
+                      "Your contact request is waiting for approval."
+                    );
+                  } else {
+                    // Send contact request
+                    Alert.alert(
+                      "Request Contact",
+                      "Do you want to request this service provider's contact number?",
+                      [
+                        { text: "Cancel", style: "cancel" },
+                        {
+                          text: "Request",
+                          onPress: async () => {
+                            try {
+                              const token = await AsyncStorage.getItem("token");
+                              const senderId = await AsyncStorage.getItem("userId");
+                              
+                              // Send contact request via socket
+                              const requestData = {
+                                requesterId: senderId,
+                                providerId: userId,
+                                requesterName: "User", // Will be replaced by backend
+                                timestamp: new Date().toISOString(),
+                              };
+                              
+                              socketRef.current?.emit("contactRequest", requestData);
+                              setContactRequestSent(true);
+                              Alert.alert(
+                                "Request Sent",
+                                "Your contact request has been sent. You'll be notified when approved."
+                              );
+                            } catch (e) {
+                              console.error("Failed to send contact request", e);
+                              Alert.alert("Error", "Unable to send request");
+                            }
+                          },
+                        },
+                      ]
+                    );
                   }
                 }}
               >
-                <Ionicons name="call" size={22} color="#fff" />
-              </TouchableOpacity>
+                <Ionicons 
+                  name={contactRequestApproved ? "call" : contactRequestSent ? "time" : "call-outline"} 
+                  size={22} 
+                  color="#fff" 
+                />
+              </TouchableOpacity> */}
               <TouchableOpacity
                 style={styles.menuButton}
                 onPress={() => setActionModalVisible(true)}
@@ -773,31 +882,165 @@ export default function ChatBoxScreen() {
               },
             ]}
           >
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.input}
-                placeholder="Type a message..."
-                placeholderTextColor="#94a3b8"
-                value={input}
-                onChangeText={setInput}
-                returnKeyType="send"
-                onSubmitEditing={sendMessage}
-                multiline
-                editable={!isSending}
-              />
-              <TouchableOpacity
-                style={[styles.sendButton, isSending && { opacity: 0.5 }]}
-                onPress={sendMessage}
-                disabled={isSending}
-              >
-                <Ionicons
-                  name={editingMessage ? "checkmark" : "send"}
-                  size={20}
-                  color="#fff"
-                />
-              </TouchableOpacity>
-            </View>
+            {userRole === "serviceProvider" ? (
+              // Service providers see Yes/No buttons
+              <View style={styles.yesNoContainer}>
+                <TouchableOpacity
+                  style={[styles.yesButton, isSending && { opacity: 0.5 }]}
+                  onPress={() => {
+                    setInput("Yes");
+                    setTimeout(() => sendMessage(), 50);
+                  }}
+                  disabled={isSending}
+                >
+                  <Text style={styles.yesNoText}>✓ Yes</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.noButton, isSending && { opacity: 0.5 }]}
+                  onPress={() => {
+                    setInput("No");
+                    setTimeout(() => sendMessage(), 50);
+                  }}
+                  disabled={isSending}
+                >
+                  <Text style={styles.yesNoText}>✗ No</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              // Users see template button
+              <View style={styles.inputWrapper}>
+                <TouchableOpacity
+                  style={styles.templateButton}
+                  onPress={() => setTemplateModalVisible(true)}
+                  disabled={isSending}
+                >
+                  <Ionicons name="list" size={20} color="#6366f1" />
+                  <Text style={styles.templateButtonText}>
+                    Choose a message
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
+          {/* Template Selection Modal for Users */}
+          <Modal
+            visible={templateModalVisible}
+            transparent
+            animationType="slide"
+            onRequestClose={() => setTemplateModalVisible(false)}
+          >
+            <View style={styles.actionModalOverlay}>
+              <View style={[styles.actionModalBox, { maxHeight: "70%" }]}>
+                <Text
+                  style={{
+                    fontSize: 18,
+                    fontWeight: "700",
+                    marginBottom: 16,
+                    textAlign: "center",
+                    color: "#1f2937",
+                  }}
+                >
+                  Choose a Message
+                </Text>
+                <FlatList
+                  data={messageTemplates}
+                  keyExtractor={(item, index) => index.toString()}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={styles.templateItem}
+                      onPress={() => {
+                        setInput(item);
+                        setTemplateModalVisible(false);
+                        setTimeout(() => sendMessage(), 100);
+                      }}
+                    >
+                      <Text style={styles.templateItemText}>{item}</Text>
+                    </TouchableOpacity>
+                  )}
+                />
+                <TouchableOpacity
+                  style={[styles.actionItem, { marginTop: 12 }]}
+                  onPress={() => setTemplateModalVisible(false)}
+                >
+                  <Text style={styles.actionText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+
+          {/* Contact Approval Modal for Service Providers */}
+          <Modal
+            visible={contactApprovalModalVisible}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setContactApprovalModalVisible(false)}
+          >
+            <View style={styles.actionModalOverlay}>
+              <View style={styles.actionModalBox}>
+                <View style={{ alignItems: "center", marginBottom: 20 }}>
+                  <Ionicons name="call" size={48} color="#6366f1" />
+                  <Text
+                    style={{
+                      fontSize: 18,
+                      fontWeight: "700",
+                      marginTop: 12,
+                      textAlign: "center",
+                      color: "#1f2937",
+                    }}
+                  >
+                    Contact Request
+                  </Text>
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      marginTop: 8,
+                      textAlign: "center",
+                      color: "#6b7280",
+                    }}
+                  >
+                    {pendingContactRequest?.requesterName || "A user"} wants to request your contact number
+                  </Text>
+                </View>
+                <View style={{ flexDirection: "row", gap: 12 }}>
+                  <TouchableOpacity
+                    style={[styles.approvalButton, styles.rejectButton]}
+                    onPress={() => {
+                      if (pendingContactRequest) {
+                        socketRef.current?.emit("contactRequestResponse", {
+                          ...pendingContactRequest,
+                          approved: false,
+                        });
+                      }
+                      setContactApprovalModalVisible(false);
+                      setPendingContactRequest(null);
+                    }}
+                  >
+                    <Text style={styles.approvalButtonText}>Decline</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.approvalButton, styles.approveButton]}
+                    onPress={() => {
+                      if (pendingContactRequest) {
+                        socketRef.current?.emit("contactRequestResponse", {
+                          ...pendingContactRequest,
+                          approved: true,
+                        });
+                        Alert.alert(
+                          "Approved",
+                          "Contact request approved. The user can now call you."
+                        );
+                      }
+                      setContactApprovalModalVisible(false);
+                      setPendingContactRequest(null);
+                    }}
+                  >
+                    <Text style={styles.approvalButtonText}>Approve</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
+
           {/* Action modal for Give rating / Block / Report */}
           <Modal
             visible={actionModalVisible}
@@ -1088,5 +1331,102 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     textAlign: "center",
     color: "#1e293b",
+  },
+
+  // Template Selection Styles
+  templateButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f8fafc",
+    borderRadius: 24,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    gap: 8,
+  },
+  templateButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#6366f1",
+  },
+  templateItem: {
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
+    backgroundColor: "#fafafa",
+    marginVertical: 4,
+    borderRadius: 8,
+  },
+  templateItemText: {
+    fontSize: 15,
+    color: "#1e293b",
+    fontWeight: "500",
+  },
+
+  // Yes/No Button Styles
+  yesNoContainer: {
+    flexDirection: "row",
+    gap: 12,
+    paddingVertical: 8,
+  },
+  yesButton: {
+    flex: 1,
+    backgroundColor: "#10b981",
+    borderRadius: 24,
+    paddingVertical: 14,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#10b981",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  noButton: {
+    flex: 1,
+    backgroundColor: "#ef4444",
+    borderRadius: 24,
+    paddingVertical: 14,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#ef4444",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  yesNoText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#ffffff",
+  },
+
+  // Contact Approval Modal Styles
+  approvalButton: {
+    flex: 1,
+    borderRadius: 12,
+    paddingVertical: 14,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  approveButton: {
+    backgroundColor: "#10b981",
+  },
+  rejectButton: {
+    backgroundColor: "#ef4444",
+  },
+  approvalButtonText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#ffffff",
   },
 });

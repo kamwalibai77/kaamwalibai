@@ -17,7 +17,7 @@ import ProfileEditScreen from "../screens/ProfileEditScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import ReveiwFormScreen from "../screens/ReviewFormScreen";
 import SettingsScreen from "../screens/SettingsScreen";
-import SubscriptionScreen from "../screens/SubscriptionScreen";
+// import SubscriptionScreen from "../screens/SubscriptionScreen"; // COMMENTED OUT FOR GOOGLE PLAY COMPLIANCE
 import { navigationRef } from "./navigationRef";
 
 export type RootStackParamList = {
@@ -28,7 +28,7 @@ export type RootStackParamList = {
   EditProfile: undefined;
   MyServices?: undefined;
   Chat: undefined;
-  Subscription: undefined;
+  // Subscription: undefined; // COMMENTED OUT FOR GOOGLE PLAY COMPLIANCE
   KYC: undefined;
   Settings: undefined;
   ChatBox: { userId: string; name: string; profilePhoto?: string }; // ✅ Added profilePhoto
@@ -94,7 +94,7 @@ export default function AppNavigator() {
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="Profile" component={ProfileScreen} />
         <Stack.Screen name="EditProfile" component={ProfileEditScreen} />
-        <Stack.Screen name="Subscription" component={SubscriptionScreen} />
+        {/* COMMENTED OUT FOR GOOGLE PLAY COMPLIANCE - <Stack.Screen name="Subscription" component={SubscriptionScreen} /> */}
         <Stack.Screen name="Chat" component={ChatScreen} />
         <Stack.Screen name="KYC" component={KYCScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />

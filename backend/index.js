@@ -13,14 +13,14 @@ import chatRoutes from "./routes/chatRoutes.js";
 import debugRoutes from "./routes/debugRoutes.js";
 import faqRoutes from "./routes/faqRoutes.js";
 import otpRoutes from "./routes/otpRoutes.js";
-import paymentsRoutes from "./routes/payments.js";
-import plansRoutes from "./routes/plans.js";
+// import paymentsRoutes from "./routes/payments.js"; // COMMENTED OUT FOR GOOGLE PLAY COMPLIANCE
+// import plansRoutes from "./routes/plans.js"; // COMMENTED OUT FOR GOOGLE PLAY COMPLIANCE
 import profileRoutes from "./routes/profile.js";
 import ratingRoutes from "./routes/ratingRoutes.js";
 import serviceTypeRoutes from "./routes/serviceTypeRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import userServicesRoutes from "./routes/userServicesRoutes.js";
-import webhookRoutes from "./routes/webhook.js";
+// import webhookRoutes from "./routes/webhook.js"; // COMMENTED OUT FOR GOOGLE PLAY COMPLIANCE
 
 dotenv.config();
 
@@ -68,7 +68,7 @@ app.use((req, res, next) => {
   res.setHeader("Referrer-Policy", "no-referrer-when-downgrade");
   next();
 });
-app.use("/api/webhook", webhookRoutes); // must be before express.json
+// app.use("/api/webhook", webhookRoutes); // COMMENTED OUT FOR GOOGLE PLAY COMPLIANCE
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
@@ -82,14 +82,14 @@ app.use("/api/chat", chatRoutes);
 app.use("/api/service-types", serviceTypeRoutes);
 app.use("/api/service-provider", userServicesRoutes);
 app.use("/api/service-provider/availability", availabilityRoutes);
-app.use("/api/payments", paymentsRoutes);
+// app.use("/api/payments", paymentsRoutes); // COMMENTED OUT FOR GOOGLE PLAY COMPLIANCE
 app.use("/api/rating", ratingRoutes);
 // Dev-only debug routes
 if (process.env.NODE_ENV !== "production") {
   app.use("/api/_debug", debugRoutes);
 }
 app.use("/api/faqs", faqRoutes);
-app.use("/api/plans", plansRoutes);
+// app.use("/api/plans", plansRoutes); // COMMENTED OUT FOR GOOGLE PLAY COMPLIANCE
 
 // Test route
 app.get("/", (req, res) => res.send("Server running"));

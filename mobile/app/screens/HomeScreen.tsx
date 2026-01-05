@@ -278,36 +278,34 @@ export default function HomeScreen({ navigation }: Props) {
       }
 
       await fetchProviders(true, coords?.lat ?? null, coords?.lng ?? null, 10);
-      // Fetch user's subscription details to enforce contact limits
-      try {
-        const token = await AsyncStorage.getItem("token");
-        if (token) {
-          const me = await api.get("/payments/me", {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (me && me.data && me.data.subscription) {
-            const sub = me.data.subscription;
-            // If backend returns remaining contacts as numberOfContacts, use that.
-            const remaining =
-              typeof sub.numberOfContacts !== "undefined" &&
-              sub.numberOfContacts !== null
-                ? Number(sub.numberOfContacts)
-                : null;
-            const limit =
-              remaining !== null
-                ? remaining
-                : sub.plan && sub.plan.contacts
-                ? Number(sub.plan.contacts)
-                : null;
-            setSubscriptionRemaining(remaining);
-            setSubscriptionLimit(limit);
-            // consider the existence of a subscription as subscribed
-            setIsSubscribed(true);
-          }
-        }
-      } catch (e) {
-        // ignore; subscription info not critical here
-      }
+      // COMMENTED OUT FOR GOOGLE PLAY COMPLIANCE - No subscription restrictions
+      // try {
+      //   const token = await AsyncStorage.getItem("token");
+      //   if (token) {
+      //     const me = await api.get("/payments/me", {
+      //       headers: { Authorization: `Bearer ${token}` },
+      //     });
+      //     if (me && me.data && me.data.subscription) {
+      //       const sub = me.data.subscription;
+      //       const remaining =
+      //         typeof sub.numberOfContacts !== "undefined" &&
+      //         sub.numberOfContacts !== null
+      //           ? Number(sub.numberOfContacts)
+      //           : null;
+      //       const limit =
+      //         remaining !== null
+      //           ? remaining
+      //           : sub.plan && sub.plan.contacts
+      //           ? Number(sub.plan.contacts)
+      //           : null;
+      //       setSubscriptionRemaining(remaining);
+      //       setSubscriptionLimit(limit);
+      //       setIsSubscribed(true);
+      //     }
+      //   }
+      // } catch (e) {
+      //   // ignore
+      // }
     };
     init();
     fetchServiceTypes();
@@ -408,83 +406,83 @@ export default function HomeScreen({ navigation }: Props) {
       return;
     }
 
-    // If user has a subscription with remaining count and it's zero, block access
-    if (
-      isSubscribed &&
-      subscriptionRemaining !== null &&
-      subscriptionRemaining <= 0
-    ) {
-      Alert.alert(
-        "Subscription limit reached",
-        "You have reached your contact limit. Buy a new subscription to contact more providers.",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Buy Subscription",
-            onPress: () => navigation.navigate("Subscription"),
-          },
-        ]
-      );
-      return;
-    }
+    // COMMENTED OUT FOR GOOGLE PLAY COMPLIANCE - No subscription restrictions
+    // if (
+    //   isSubscribed &&
+    //   subscriptionRemaining !== null &&
+    //   subscriptionRemaining <= 0
+    // ) {
+    //   Alert.alert(
+    //     "Subscription limit reached",
+    //     "You have reached your contact limit. Buy a new subscription to contact more providers.",
+    //     [
+    //       { text: "Cancel", style: "cancel" },
+    //       {
+    //         text: "Buy Subscription",
+    //         onPress: () => navigation.navigate("Subscription"),
+    //       },
+    //     ]
+    //   );
+    //   return;
+    // }
 
     setSelectedProvider(provider);
 
-    if (!isSubscribed) {
-      setSubscriptionModalVisible(true);
-      return;
-    }
+    // if (!isSubscribed) {
+    //   setSubscriptionModalVisible(true);
+    //   return;
+    // }
 
-    // If already consumed for this provider (viewed), just open modal
-    const pid = provider?.provider?.id ?? provider?.id;
-    if (pid && consumedProviderIds.includes(pid)) {
-      setModalVisible(true);
-      return;
-    }
+    // COMMENTED OUT FOR GOOGLE PLAY COMPLIANCE - No contact consumption/restrictions
+    // const pid = provider?.provider?.id ?? provider?.id;
+    // if (pid && consumedProviderIds.includes(pid)) {
+    //   setModalVisible(true);
+    //   return;
+    // }
 
-    // Otherwise attempt to consume one 'view' contact before showing details
-    if (contactLoading) return; // avoid parallel consumes
-    setContactLoading(true);
-    try {
-      const token = await AsyncStorage.getItem("token");
-      const resp = await api.post(
-        "/payments/consume",
-        { provider_id: pid, action: "view" },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+    // Just show modal directly without consume API call
+    setModalVisible(true);
+    
+    // if (contactLoading) return;
+    // setContactLoading(true);
+    // try {
+    //   const token = await AsyncStorage.getItem("token");
+    //   const resp = await api.post(
+    //     "/payments/consume",
+    //     { provider_id: pid, action: "view" },
+    //     { headers: { Authorization: `Bearer ${token}` } }
+    //   );
 
-      // update remaining count from server response when present
-      const remaining = resp?.data?.remaining;
-      setSubscriptionRemaining((prev) =>
-        typeof remaining !== "undefined" ? remaining : prev
-      );
+    //   const remaining = resp?.data?.remaining;
+    //   setSubscriptionRemaining((prev) =>
+    //     typeof remaining !== "undefined" ? remaining : prev
+    //   );
 
-      // mark this provider as consumed so subsequent Call/Message won't double-consume
-      if (pid) setConsumedProviderIds((prev) => [...prev, pid]);
+    //   if (pid) setConsumedProviderIds((prev) => [...prev, pid]);
 
-      setModalVisible(true);
-    } catch (e) {
-      const errMsg =
-        (e as any)?.response?.data?.error || "Unable to consume contact";
-      if (errMsg === "Subscription contact limit reached") {
-        Alert.alert(
-          "Subscription limit reached",
-          "You have reached your contact limit. Buy a new subscription to contact more providers.",
-          [
-            { text: "Cancel", style: "cancel" },
-            {
-              text: "Buy Subscription",
-              onPress: () => navigation.navigate("Subscription"),
-            },
-          ]
-        );
-      } else {
-        console.warn("consume error on view", e);
-        Alert.alert("Subscription", errMsg);
-      }
-    } finally {
-      setContactLoading(false);
-    }
+    //   setModalVisible(true);
+    // } catch (e) {
+    //   const errMsg =
+    //     (e as any)?.response?.data?.error || "Unable to consume contact";
+    //   if (errMsg === "Subscription contact limit reached") {
+    //     Alert.alert(
+    //       "Subscription limit reached",
+    //       "You have reached your contact limit. Buy a new subscription to contact more providers.",
+    //       [
+    //         { text: "Cancel", style: "cancel" },
+    //         {
+    //           text: "Buy Subscription",
+    //           onPress: () => navigation.navigate("Subscription"),
+    //         },
+    //       ]
+    // //     );
+    //   } else {
+    //     console.warn("consume error on view", e);
+    //     Alert.alert("Subscription", errMsg);
+    //   }
+    // } finally {
+    //   setContactLoading(false);
+    // }
   };
 
   // When modal opens fetch average rating for the provider (if available)
@@ -508,21 +506,22 @@ export default function HomeScreen({ navigation }: Props) {
     fetchAvg();
   }, [modalVisible, selectedProvider]);
 
-  const handleSubscribe = async () => {
-    try {
-      const res = await userApi.subscribe();
-      if (res.data.success) {
-        await AsyncStorage.setItem("isSubscribed", "true");
-        setIsSubscribed(true);
-        setSubscriptionModalVisible(false);
-        Alert.alert("✅ Success", "You are now subscribed!");
-        setModalVisible(true);
-      }
-    } catch (err) {
-      console.log("❌ Subscription error:", err);
-      Alert.alert("Error", "Unable to subscribe. Please try again.");
-    }
-  };
+  // COMMENTED OUT FOR GOOGLE PLAY COMPLIANCE
+  // const handleSubscribe = async () => {
+  //   try {
+  //     const res = await userApi.subscribe();
+  //     if (res.data.success) {
+  //       await AsyncStorage.setItem("isSubscribed", "true");
+  //       setIsSubscribed(true);
+  //       setSubscriptionModalVisible(false);
+  //       Alert.alert("✅ Success", "You are now subscribed!");
+  //       setModalVisible(true);
+  //     }
+  //   } catch (err) {
+  //     console.log("❌ Subscription error:", err);
+  //     Alert.alert("Error", "Unable to subscribe. Please try again.");
+  //   }
+  // };
 
   const fetchSuggestions = async (text: string) => {
     if (text.length < 2) {
@@ -916,11 +915,12 @@ export default function HomeScreen({ navigation }: Props) {
                   <Text style={styles.offerHeaderText}>
                     {t("specialOffers")}
                   </Text>
-                  <TouchableOpacity
+                  {/* COMMENTED OUT FOR GOOGLE PLAY COMPLIANCE */}
+                  {/* <TouchableOpacity
                     onPress={() => navigation.navigate("Subscription")}
                   >
                     <Text style={styles.viewAllText}>{t("viewAll")} →</Text>
-                  </TouchableOpacity>
+                  </TouchableOpacity> */}
                 </View>
                 <ScrollView
                   ref={scrollViewRef}
@@ -1057,8 +1057,8 @@ export default function HomeScreen({ navigation }: Props) {
           }
         />
 
-        {/* SUBSCRIPTION MODAL */}
-        <Modal
+        {/* SUBSCRIPTION MODAL - COMMENTED OUT FOR GOOGLE PLAY COMPLIANCE */}
+        {/* <Modal
           visible={subscriptionModalVisible}
           transparent
           animationType="fade"
@@ -1085,7 +1085,7 @@ export default function HomeScreen({ navigation }: Props) {
               </TouchableOpacity>
             </View>
           </View>
-        </Modal>
+        </Modal> */}
 
         {/* PROVIDER INFO MODAL */}
         {selectedProvider && (
@@ -1341,7 +1341,8 @@ export default function HomeScreen({ navigation }: Props) {
 
                     {/* Action Buttons */}
                     <View style={styles.providerModalActions}>
-                      <TouchableOpacity
+                      {/* Call button hidden as per requirements */}
+                      {/* <TouchableOpacity
                         style={styles.actionButton}
                         disabled={contactLoading}
                         onPress={async () => {
@@ -1388,7 +1389,7 @@ export default function HomeScreen({ navigation }: Props) {
                             {contactLoading ? "Processing..." : "Call Now"}
                           </Text>
                         </LinearGradient>
-                      </TouchableOpacity>
+                      </TouchableOpacity> */}
 
                       <TouchableOpacity
                         style={styles.actionButton}
