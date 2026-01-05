@@ -105,7 +105,7 @@ export function initSocket(server) {
       try {
         const { requesterId, providerId, requesterName, timestamp } = data;
         const pid = String(providerId);
-        
+
         console.log("📞 Contact request from", requesterId, "to", providerId);
 
         // Get requester name from database
@@ -113,7 +113,7 @@ export function initSocket(server) {
           const db = await import("../models/index.js");
           const User = db.default.User;
           const requester = await User.findByPk(requesterId);
-          
+
           const requestData = {
             requesterId,
             providerId,
@@ -137,23 +137,67 @@ export function initSocket(server) {
     // Contact Request Response - Provider approves/rejects
     socket.on("contactRequestResponse", async (data) => {
       try {
+        console.log("📞 Received contactRequestResponse data:", data);
         const { requesterId, providerId, approved } = data;
         const rid = String(requesterId);
-        
+        const pid = String(providerId);
+
         console.log(
           "📞 Contact request response:",
           approved ? "approved" : "rejected",
-          "from",
-          providerId,
-          "to",
-          requesterId
+          "from provider",
+          pid,
+          "to requester",
+          rid
         );
 
         if (approved) {
-          io.to(rid).emit("contactRequestApproved", {
-            requesterId,
-            providerId,
-          });
+          // Fetch provider's phone number to send with approval
+          try {
+            const db = await import("../models/index.js");
+            const User = db.default.User;
+            
+            console.log("🔍 Fetching provider with ID:", pid);
+            const provider = await User.findByPk(pid);
+            
+            if (!provider) {
+              console.error("❌ Provider not found with ID:", pid);
+              io.to(rid).emit("contactRequestApproved", {
+                requesterId: rid,
+                providerId: pid,
+                providerPhone: "Not available",
+                providerName: "Service Provider",
+              });
+              return;
+            }
+            
+            console.log("📱 Provider found:", {
+              id: provider.id,
+              name: provider.name,
+              phoneNumber: provider.phoneNumber,
+              role: provider.role,
+              hasPhone: !!provider.phoneNumber
+            });
+            
+            const phoneToSend = provider.phoneNumber || provider.phone || "Not available";
+            
+            io.to(rid).emit("contactRequestApproved", {
+              requesterId: rid,
+              providerId: pid,
+              providerPhone: phoneToSend,
+              providerName: provider.name || "Service Provider",
+            });
+            
+            console.log("✅ Sent approval with phone:", phoneToSend);
+          } catch (e) {
+            console.error("Error fetching provider details:", e.message, e.stack);
+            // Send without phone number if DB fetch fails
+            io.to(rid).emit("contactRequestApproved", {
+              requesterId: rid,
+              providerId: pid,
+              providerPhone: "Not available",
+            });
+          }
         } else {
           io.to(rid).emit("contactRequestRejected", {
             requesterId,

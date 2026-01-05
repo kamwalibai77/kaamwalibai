@@ -75,76 +75,102 @@ export const sendOtp = async (req, res) => {
 
     const phoneDigits = String(phone).replace(/\D/g, "");
     let providerResponse = null;
-    try {
-      // Allow explicit 'twilio' provider or automatic use when TWILIO_AUTH_TOKEN is set
-      const twilioToken =
-        process.env.TWILIO_AUTH_TOKEN || process.env.TWILIO_SECRET;
-      const twilioSid = process.env.TWILIO_ACCOUNT_SID;
-      const twilioFrom = process.env.TWILIO_FROM;
 
-      if (provider === "twilio" || (twilioToken && twilioSid && twilioFrom)) {
-        if (!twilioSid || !twilioToken || !twilioFrom) {
-          console.warn(
-            "[otp] Twilio configured but missing TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, or TWILIO_FROM"
-          );
-        } else {
-          const toNumber = phoneDigits.startsWith("+")
-            ? phoneDigits
-            : `+${phoneDigits}`;
-          const url = `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`;
-          const params = new URLSearchParams();
-          params.append("To", toNumber);
-          params.append("From", twilioFrom);
-          params.append("Body", `Your OTP is ${otp}`);
-          const auth = Buffer.from(`${twilioSid}:${twilioToken}`).toString(
-            "base64"
-          );
-          const r = await fetch(url, {
-            method: "POST",
-            headers: {
-              Authorization: `Basic ${auth}`,
-              "Content-Type": "application/x-www-form-urlencoded",
-            },
-            body: params.toString(),
-          });
+    // Send SMS in background with timeout to prevent blocking API response
+    const sendSmsInBackground = async () => {
+      try {
+        // Allow explicit 'twilio' provider or automatic use when TWILIO_AUTH_TOKEN is set
+        const twilioToken =
+          process.env.TWILIO_AUTH_TOKEN || process.env.TWILIO_SECRET;
+        const twilioSid = process.env.TWILIO_ACCOUNT_SID;
+        const twilioFrom = process.env.TWILIO_FROM;
+
+        if (provider === "twilio" || (twilioToken && twilioSid && twilioFrom)) {
+          if (!twilioSid || !twilioToken || !twilioFrom) {
+            console.warn(
+              "[otp] Twilio configured but missing TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, or TWILIO_FROM"
+            );
+          } else {
+            const toNumber = phoneDigits.startsWith("+")
+              ? phoneDigits
+              : `+${phoneDigits}`;
+            const url = `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`;
+            const params = new URLSearchParams();
+            params.append("To", toNumber);
+            params.append("From", twilioFrom);
+            params.append("Body", `Your OTP is ${otp}`);
+            const auth = Buffer.from(`${twilioSid}:${twilioToken}`).toString(
+              "base64"
+            );
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
+            const r = await fetch(url, {
+              method: "POST",
+              headers: {
+                Authorization: `Basic ${auth}`,
+                "Content-Type": "application/x-www-form-urlencoded",
+              },
+              body: params.toString(),
+              signal: controller.signal,
+            });
+            clearTimeout(timeoutId);
+            try {
+              providerResponse = await r.json();
+            } catch (e) {
+              providerResponse = { status: r.status };
+            }
+            console.log("[otp] twilio provider response:", providerResponse);
+          }
+        } else if (provider === "2factor") {
+          const smsUrl = `https://2factor.in/API/V1/${apiKey}/SMS/${phoneDigits}/${otp}`;
+
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
+          const r = await fetch(smsUrl, { signal: controller.signal });
+          clearTimeout(timeoutId);
           try {
             providerResponse = await r.json();
           } catch (e) {
             providerResponse = { status: r.status };
           }
-          console.log("[otp] twilio provider response:", providerResponse);
-        }
-      } else if (provider === "2factor") {
-        const smsUrl = `https://2factor.in/API/V1/${apiKey}/SMS/${phoneDigits}/${otp}`;
-        // Node 18+ has global fetch; wrap in try/catch
-        const r = await fetch(smsUrl);
-        try {
-          providerResponse = await r.json();
-        } catch (e) {
-          providerResponse = { status: r.status };
-        }
-        console.log("[otp] sms provider response:", providerResponse);
-      } else {
-        // Generic POST interface (if you set SMS_GATEWAY_PROVIDER to 'generic')
-        const url = process.env.SMS_GATEWAY_URL;
-        if (url) {
-          const r = await fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ apiKey, phone: phoneDigits, otp }),
-          });
-          try {
-            providerResponse = await r.json();
-          } catch (e) {
-            providerResponse = { status: r.status };
-          }
+          console.log("[otp] sms provider response:", providerResponse);
         } else {
-          console.warn("[otp] No SMS_GATEWAY_URL set for generic provider");
+          // Generic POST interface (if you set SMS_GATEWAY_PROVIDER to 'generic')
+          const url = process.env.SMS_GATEWAY_URL;
+          if (url) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
+            const r = await fetch(url, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ apiKey, phone: phoneDigits, otp }),
+              signal: controller.signal,
+            });
+            clearTimeout(timeoutId);
+            try {
+              providerResponse = await r.json();
+            } catch (e) {
+              providerResponse = { status: r.status };
+            }
+          } else {
+            console.warn("[otp] No SMS_GATEWAY_URL set for generic provider");
+          }
+        }
+      } catch (err) {
+        if (err.name === "AbortError") {
+          console.warn("[otp] SMS gateway request timed out after 10s");
+        } else {
+          console.warn("[otp] Failed to send OTP via SMS gateway:", err);
         }
       }
-    } catch (err) {
-      console.warn("[otp] Failed to send OTP via SMS gateway:", err);
-    }
+    };
+
+    // Start SMS sending but don't wait for it
+    sendSmsInBackground();
 
     // Log OTP to server console for local dev (still kept for debugging)
     console.log(`[otp] sent OTP for ${phone}: ${otp} (stored in DB otp_plain)`);

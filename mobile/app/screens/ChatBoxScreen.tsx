@@ -37,6 +37,7 @@ import io from "socket.io-client";
 import Snackbar from "../../components/Snackbar";
 import { RootStackParamList } from "../navigation/AppNavigator";
 import api from "../services/api";
+import serviceTypesApi from "../services/serviceTypes";
 import { SOCKET_URL } from "../utills/config";
 
 type ChatBoxRouteProp = RouteProp<RootStackParamList, "ChatBox">;
@@ -74,7 +75,24 @@ export default function ChatBoxScreen() {
   const [contactRequestSent, setContactRequestSent] = useState(false);
   const [contactRequestApproved, setContactRequestApproved] = useState(false);
   const [pendingContactRequest, setPendingContactRequest] = useState<any>(null);
-  const [contactApprovalModalVisible, setContactApprovalModalVisible] = useState(false);
+  const [contactApprovalModalVisible, setContactApprovalModalVisible] =
+    useState(false);
+  const [lastReceivedQuestion, setLastReceivedQuestion] = useState<
+    string | null
+  >(null);
+  const [hasRespondedToQuestion, setHasRespondedToQuestion] = useState(false);
+  const [availabilitySlots, setAvailabilitySlots] = useState<string[]>([]);
+  const [workingHoursModalVisible, setWorkingHoursModalVisible] =
+    useState(false);
+  const [experienceModalVisible, setExperienceModalVisible] = useState(false);
+  const [experienceInput, setExperienceInput] = useState("");
+  const [fullTimePartTimeModalVisible, setFullTimePartTimeModalVisible] =
+    useState(false);
+  const [servicesModalVisible, setServicesModalVisible] = useState(false);
+  const [servicesList, setServicesList] = useState<any[]>([]);
+  const [selectedServices, setSelectedServices] = useState<number[]>([]);
+  const [phoneNumberModalVisible, setPhoneNumberModalVisible] = useState(false);
+  const [phoneNumberInput, setPhoneNumberInput] = useState("");
   const socketRef = useRef<any>(null);
   const flatListRef = useRef<FlatList>(null);
   const processedMessageIds = useRef<Set<string>>(new Set());
@@ -94,6 +112,56 @@ export default function ChatBoxScreen() {
 
   // Yes/No responses for service providers
   const yesNoResponses = ["Yes", "No"];
+
+  // Helper to get display label for time slots
+  const getTimeSlotLabel = (slot: string) => {
+    const labels: { [key: string]: string } = {
+      morning: "🌅 Morning",
+      afternoon: "☀️ Afternoon",
+      evening: "🌇 Evening",
+      night: "🌙 Night",
+    };
+    return labels[slot] || slot;
+  };
+
+  // Check if last question is about working hours
+  const isWorkingHoursQuestion = () => {
+    return (
+      lastReceivedQuestion?.toLowerCase().includes("working hours") ||
+      lastReceivedQuestion?.toLowerCase().includes("work hours")
+    );
+  };
+
+  // Check if last question is about experience
+  const isExperienceQuestion = () => {
+    return lastReceivedQuestion?.toLowerCase().includes("experience");
+  };
+
+  // Check if last question is about full-time/part-time
+  const isFullTimePartTimeQuestion = () => {
+    return (
+      lastReceivedQuestion?.toLowerCase().includes("full-time") ||
+      lastReceivedQuestion?.toLowerCase().includes("part-time") ||
+      lastReceivedQuestion?.toLowerCase().includes("full time") ||
+      lastReceivedQuestion?.toLowerCase().includes("part time")
+    );
+  };
+
+  // Check if last question is about services
+  const isServicesQuestion = () => {
+    return (
+      lastReceivedQuestion?.toLowerCase().includes("services do you provide") ||
+      lastReceivedQuestion?.toLowerCase().includes("what services")
+    );
+  };
+
+  // Check if last question is about contact number
+  const isContactNumberQuestion = () => {
+    return (
+      lastReceivedQuestion?.toLowerCase().includes("contact number") ||
+      lastReceivedQuestion?.toLowerCase().includes("phone number")
+    );
+  };
 
   const params = route.params;
   const userId = params?.userId;
@@ -238,6 +306,22 @@ export default function ChatBoxScreen() {
         setMyId(storedId);
         setToken(storedToken);
         setUserRole(storedRole);
+
+        // Set all available time slots for service providers
+        if (storedRole === "serviceProvider") {
+          // Always show all time slot options, not just configured ones
+          setAvailabilitySlots(["morning", "afternoon", "evening", "night"]);
+          console.log("📅 Loaded availability slots: morning, afternoon, evening, night");
+        }
+
+        // Fetch service types list for all users (needed for question 7)
+        try {
+          const servicesRes = await serviceTypesApi.getAll();
+          setServicesList(servicesRes.data || []);
+          console.log("📋 Loaded services list:", servicesRes.data?.length);
+        } catch (err) {
+          console.warn("Failed to load services list", err);
+        }
       } catch (error) {
         console.error("❌ Error fetching user from storage:", error);
         Alert.alert(
@@ -292,6 +376,12 @@ export default function ChatBoxScreen() {
 
       console.log("✅ Adding new message to state");
       setMessages((prev) => [...prev, msg]);
+
+      // Track last received question for service providers
+      if (String(msg.receiverId) === String(myId)) {
+        setLastReceivedQuestion(msg.message);
+        setHasRespondedToQuestion(false); // Reset response flag for new question
+      }
     });
 
     // If server notifies that a message was blocked, show user feedback
@@ -355,9 +445,24 @@ export default function ChatBoxScreen() {
       console.log("✅ Contact request approved:", data);
       if (String(data.requesterId) === String(myId)) {
         setContactRequestApproved(true);
+        
+        // Add notification message in chat with phone number
+        const phoneNumber = data.providerPhone || "Not available";
+        const providerName = data.providerName || "Service Provider";
+        const notificationMsg: Message = {
+          id: `notification-${Date.now()}`,
+          senderId: "system",
+          receiverId: myId,
+          message: `✅ Contact request approved!\n\n${providerName}'s Contact Number:\n📞 ${phoneNumber}\n\nYou can now call the service provider.`,
+          createdAt: new Date().toISOString(),
+          read: true,
+          liked: false,
+        };
+        setMessages((prev) => [...prev, notificationMsg]);
+        
         Alert.alert(
           "Request Approved",
-          "The service provider has approved your contact request. You can now call them."
+          `The service provider has approved your contact request.\n\nContact: ${phoneNumber}`
         );
       }
     });
@@ -367,6 +472,19 @@ export default function ChatBoxScreen() {
       console.log("❌ Contact request rejected:", data);
       if (String(data.requesterId) === String(myId)) {
         setContactRequestSent(false);
+        
+        // Add notification message in chat
+        const notificationMsg: Message = {
+          id: `notification-${Date.now()}`,
+          senderId: "system",
+          receiverId: myId,
+          message: "❌ Contact request declined by service provider.",
+          createdAt: new Date().toISOString(),
+          read: true,
+          liked: false,
+        };
+        setMessages((prev) => [...prev, notificationMsg]);
+        
         Alert.alert(
           "Request Declined",
           "The service provider has declined your contact request."
@@ -443,20 +561,122 @@ export default function ChatBoxScreen() {
     try {
       (navigation as any).setOptions({
         headerRight: () => (
-          <TouchableOpacity
-            onPress={() => {
-              setActionModalVisible(true);
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              paddingHorizontal: wp(3),
             }}
-            style={{ paddingHorizontal: wp(3) }}
           >
-            <Ionicons name="ellipsis-vertical" size={hp(3)} color="#fff" />
-          </TouchableOpacity>
+            {/* Call Icon for Contact Request (Users only) */}
+            {userRole === "user" && (
+              <TouchableOpacity
+                onPress={async () => {
+                  if (contactRequestApproved) {
+                    // If approved, directly call
+                    try {
+                      const token = await AsyncStorage.getItem("token");
+                      const headers = token
+                        ? { Authorization: `Bearer ${token}` }
+                        : undefined;
+                      const res = await api.get(`/users/${userId}`, {
+                        headers,
+                      });
+                      const phone =
+                        res?.data?.user?.phoneNumber || res?.data?.phoneNumber;
+                      if (phone) {
+                        Linking.openURL(`tel:${phone}`);
+                      } else {
+                        Alert.alert(
+                          "No phone number",
+                          "This user's phone number is not available."
+                        );
+                      }
+                    } catch (e) {
+                      console.warn("Failed to get phone number", e);
+                      Alert.alert("Error", "Unable to get phone number");
+                    }
+                  } else if (contactRequestSent) {
+                    Alert.alert(
+                      "Request Pending",
+                      "Your contact request is waiting for approval."
+                    );
+                  } else {
+                    // Send contact request
+                    Alert.alert(
+                      "Request Contact",
+                      "Do you want to request this service provider's contact number?",
+                      [
+                        { text: "Cancel", style: "cancel" },
+                        {
+                          text: "Request",
+                          onPress: () => {
+                            socketRef.current?.emit("contactRequest", {
+                              requesterId: myId,
+                              providerId: userId,
+                              userName: name,
+                            });
+                            setContactRequestSent(true);
+                            
+                            // Add notification message in chat
+                            const notificationMsg: Message = {
+                              id: `notification-${Date.now()}`,
+                              senderId: "system",
+                              receiverId: myId,
+                              message: "📞 Contact request sent. Waiting for approval...",
+                              createdAt: new Date().toISOString(),
+                              read: true,
+                              liked: false,
+                            };
+                            setMessages((prev) => [...prev, notificationMsg]);
+                            
+                            Alert.alert(
+                              "Request Sent",
+                              "Waiting for service provider approval."
+                            );
+                          },
+                        },
+                      ]
+                    );
+                  }
+                }}
+                style={{ marginRight: 12 }}
+              >
+                <Ionicons
+                  name={
+                    contactRequestApproved
+                      ? "call"
+                      : contactRequestSent
+                      ? "time-outline"
+                      : "call-outline"
+                  }
+                  size={hp(2.8)}
+                  color="#fff"
+                />
+              </TouchableOpacity>
+            )}
+            {/* Three dots menu */}
+            <TouchableOpacity
+              onPress={() => {
+                setActionModalVisible(true);
+              }}
+            >
+              <Ionicons name="ellipsis-vertical" size={hp(3)} color="#fff" />
+            </TouchableOpacity>
+          </View>
         ),
       });
     } catch (err) {
       // ignore setOptions errors on older navigators
     }
-  }, [navigation, token, userId]);
+  }, [
+    navigation,
+    token,
+    userId,
+    userRole,
+    contactRequestSent,
+    contactRequestApproved,
+  ]);
 
   // Modal actions implementations
   const handleBlockUser = async () => {
@@ -527,6 +747,45 @@ export default function ChatBoxScreen() {
     }
   };
 
+  const sendMessageDirect = async (messageText: string) => {
+    if (!messageText.trim() || !token || !myId || isSending) return;
+
+    if (containsRestrictedWords(messageText)) {
+      Alert.alert("⚠️ Warning", "Your message contains inappropriate words.");
+      return;
+    }
+
+    setIsSending(true);
+
+    const newMessage: Message = {
+      id: Math.random().toString(),
+      senderId: myId,
+      receiverId: userId,
+      message: messageText.trim(),
+      createdAt: new Date().toISOString(),
+      read: false,
+      liked: false,
+    };
+    console.log("📤 Sending message:", newMessage);
+
+    // Mark this message as already processed to prevent duplicate when server echoes back
+    const messageKey = `${newMessage.senderId}-${newMessage.receiverId}-${newMessage.message}-${newMessage.createdAt}`;
+    processedMessageIds.current.add(messageKey);
+    processedMessageIds.current.add(newMessage.id);
+
+    // Add message to local state immediately (optimistic update)
+    setMessages((prev) => [...prev, newMessage]);
+
+    socketRef.current?.emit("sendMessage", newMessage);
+
+    // Mark that provider has responded to the question
+    if (userRole === "serviceProvider") {
+      setHasRespondedToQuestion(true);
+    }
+
+    setIsSending(false);
+  };
+
   const sendMessage = async () => {
     if (!input.trim() || !token || !myId || isSending) return;
 
@@ -581,6 +840,11 @@ export default function ChatBoxScreen() {
 
       socketRef.current?.emit("sendMessage", newMessage);
 
+      // Mark that provider has responded to the question
+      if (userRole === "serviceProvider") {
+        setHasRespondedToQuestion(true);
+      }
+
       // rely on socket to persist and emit the saved message; stop sending POST to avoid duplicate emits
       setIsSending(false);
     }
@@ -594,6 +858,31 @@ export default function ChatBoxScreen() {
 
   const renderMessage = ({ item }: { item: Message }) => {
     const isMe = String(item.senderId) === String(myId);
+    const isSystemNotification = item.senderId === "system";
+    
+    // Render system notifications differently
+    if (isSystemNotification) {
+      return (
+        <View style={[styles.messageWrapper, { alignSelf: "center", maxWidth: "90%" }]}>
+          <View
+            style={[
+              styles.messageBubble,
+              {
+                backgroundColor: "#f0fdf4",
+                borderWidth: 1,
+                borderColor: "#86efac",
+                borderRadius: 12,
+              },
+            ]}
+          >
+            <Text style={[styles.messageText, { color: "#166534", textAlign: "center", fontSize: 14 }]}>
+              {item.message}
+            </Text>
+          </View>
+        </View>
+      );
+    }
+    
     return (
       <TouchableOpacity
         onLongPress={() => {
@@ -883,29 +1172,94 @@ export default function ChatBoxScreen() {
             ]}
           >
             {userRole === "serviceProvider" ? (
-              // Service providers see Yes/No buttons
-              <View style={styles.yesNoContainer}>
-                <TouchableOpacity
-                  style={[styles.yesButton, isSending && { opacity: 0.5 }]}
-                  onPress={() => {
-                    setInput("Yes");
-                    setTimeout(() => sendMessage(), 50);
-                  }}
-                  disabled={isSending}
-                >
-                  <Text style={styles.yesNoText}>✓ Yes</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.noButton, isSending && { opacity: 0.5 }]}
-                  onPress={() => {
-                    setInput("No");
-                    setTimeout(() => sendMessage(), 50);
-                  }}
-                  disabled={isSending}
-                >
-                  <Text style={styles.yesNoText}>✗ No</Text>
-                </TouchableOpacity>
-              </View>
+              // Service providers see different options based on question
+              isWorkingHoursQuestion() && availabilitySlots.length > 0 ? (
+                // Show time slot selection for working hours question
+                <View style={styles.inputWrapper}>
+                  <TouchableOpacity
+                    style={styles.templateButton}
+                    onPress={() => setWorkingHoursModalVisible(true)}
+                    disabled={isSending}
+                  >
+                    <Ionicons name="time-outline" size={20} color="#6366f1" />
+                    <Text style={styles.templateButtonText}>
+                      Select Working Hours
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : isExperienceQuestion() ? (
+                // Show experience input for experience question
+                <View style={styles.inputWrapper}>
+                  <TouchableOpacity
+                    style={styles.templateButton}
+                    onPress={() => setExperienceModalVisible(true)}
+                    disabled={isSending}
+                  >
+                    <Ionicons name="medal-outline" size={20} color="#6366f1" />
+                    <Text style={styles.templateButtonText}>
+                      Enter Experience
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : isFullTimePartTimeQuestion() && !hasRespondedToQuestion ? (
+                // Show Full-time/Part-time buttons for availability type question
+                <View style={styles.yesNoContainer}>
+                  <TouchableOpacity
+                    style={[styles.yesButton, isSending && { opacity: 0.5 }]}
+                    onPress={() => sendMessageDirect("Full-time")}
+                    disabled={isSending}
+                  >
+                    <Text style={styles.yesNoText}>⏰ Full-time</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.noButton, isSending && { opacity: 0.5 }]}
+                    onPress={() => sendMessageDirect("Part-time")}
+                    disabled={isSending}
+                  >
+                    <Text style={styles.yesNoText}>🕐 Part-time</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : isServicesQuestion() && servicesList.length > 0 ? (
+                // Show services selection for services question
+                <View style={styles.inputWrapper}>
+                  <TouchableOpacity
+                    style={styles.templateButton}
+                    onPress={() => {
+                      setSelectedServices([]);
+                      setServicesModalVisible(true);
+                    }}
+                    disabled={isSending}
+                  >
+                    <Ionicons name="list-outline" size={20} color="#6366f1" />
+                    <Text style={styles.templateButtonText}>
+                      Select Services
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : lastReceivedQuestion && !hasRespondedToQuestion ? (
+                // Show Yes/No buttons for other questions (only if hasn't responded)
+                <View style={styles.yesNoContainer}>
+                  <TouchableOpacity
+                    style={[styles.yesButton, isSending && { opacity: 0.5 }]}
+                    onPress={() => sendMessageDirect("Yes")}
+                    disabled={isSending}
+                  >
+                    <Text style={styles.yesNoText}>✓ Yes</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.noButton, isSending && { opacity: 0.5 }]}
+                    onPress={() => sendMessageDirect("No")}
+                    disabled={isSending}
+                  >
+                    <Text style={styles.yesNoText}>✗ No</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                // No question pending - show nothing for service provider
+                <View style={{ padding: 20, alignItems: "center" }}>
+                  <Text style={{ color: "#94a3b8", fontSize: 14 }}>Waiting for a question...</Text>
+                </View>
+              )
             ) : (
               // Users see template button
               <View style={styles.inputWrapper}>
@@ -949,9 +1303,53 @@ export default function ChatBoxScreen() {
                     <TouchableOpacity
                       style={styles.templateItem}
                       onPress={() => {
-                        setInput(item);
-                        setTemplateModalVisible(false);
-                        setTimeout(() => sendMessage(), 100);
+                        // Special handling for contact number question
+                        if (
+                          item.toLowerCase().includes("contact number") ||
+                          item.toLowerCase().includes("phone number")
+                        ) {
+                          setTemplateModalVisible(false);
+                          // Trigger contact request instead of sending as message
+                          Alert.alert(
+                            "Request Contact",
+                            "Do you want to request this service provider's contact number?",
+                            [
+                              { text: "Cancel", style: "cancel" },
+                              {
+                                text: "Request",
+                                onPress: () => {
+                                  socketRef.current?.emit("contactRequest", {
+                                    requesterId: myId,
+                                    providerId: userId,
+                                    userName: name,
+                                  });
+                                  setContactRequestSent(true);
+                                  
+                                  // Add notification message in chat
+                                  const notificationMsg: Message = {
+                                    id: `notification-${Date.now()}`,
+                                    senderId: "system",
+                                    receiverId: myId,
+                                    message: "📞 Contact request sent. Waiting for approval...",
+                                    createdAt: new Date().toISOString(),
+                                    read: true,
+                                    liked: false,
+                                  };
+                                  setMessages((prev) => [...prev, notificationMsg]);
+                                  
+                                  Alert.alert(
+                                    "Request Sent",
+                                    "Waiting for service provider approval."
+                                  );
+                                },
+                              },
+                            ]
+                          );
+                        } else {
+                          // Regular template message - use direct send
+                          setTemplateModalVisible(false);
+                          sendMessageDirect(item);
+                        }
                       }}
                     >
                       <Text style={styles.templateItemText}>{item}</Text>
@@ -961,6 +1359,249 @@ export default function ChatBoxScreen() {
                 <TouchableOpacity
                   style={[styles.actionItem, { marginTop: 12 }]}
                   onPress={() => setTemplateModalVisible(false)}
+                >
+                  <Text style={styles.actionText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+
+          {/* Working Hours Selection Modal for Service Providers */}
+          <Modal
+            visible={workingHoursModalVisible}
+            transparent
+            animationType="slide"
+            onRequestClose={() => setWorkingHoursModalVisible(false)}
+          >
+            <View style={styles.actionModalOverlay}>
+              <View style={[styles.actionModalBox, { maxHeight: "60%" }]}>
+                <Text
+                  style={{
+                    fontSize: 18,
+                    fontWeight: "700",
+                    marginBottom: 16,
+                    textAlign: "center",
+                    color: "#1f2937",
+                  }}
+                >
+                  🕐 Select Your Working Hours
+                </Text>
+                <Text
+                  style={{
+                    fontSize: 13,
+                    marginBottom: 16,
+                    textAlign: "center",
+                    color: "#6b7280",
+                  }}
+                >
+                  Tap one or multiple time slots to send
+                </Text>
+                <FlatList
+                  data={availabilitySlots}
+                  keyExtractor={(item, index) => index.toString()}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={[styles.templateItem, styles.timeSlotItem]}
+                      onPress={() => {
+                        const message = `I work in the ${item}`;
+                        sendMessageDirect(message);
+                        // Don't close modal - allow multiple selections
+                      }}
+                    >
+                      <Text style={styles.templateItemText}>
+                        {getTimeSlotLabel(item)}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                />
+                <TouchableOpacity
+                  style={[styles.actionItem, { marginTop: 12 }]}
+                  onPress={() => setWorkingHoursModalVisible(false)}
+                >
+                  <Text style={styles.actionText}>Done</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+
+          {/* Experience Input Modal for Service Providers */}
+          <Modal
+            visible={experienceModalVisible}
+            transparent
+            animationType="slide"
+            onRequestClose={() => setExperienceModalVisible(false)}
+          >
+            <View style={styles.actionModalOverlay}>
+              <View style={[styles.actionModalBox, { maxHeight: "40%" }]}>
+                <Text
+                  style={{
+                    fontSize: 18,
+                    fontWeight: "700",
+                    marginBottom: 16,
+                    textAlign: "center",
+                    color: "#1f2937",
+                  }}
+                >
+                  🏅 Enter Your Experience
+                </Text>
+                <Text
+                  style={{
+                    fontSize: 13,
+                    marginBottom: 16,
+                    textAlign: "center",
+                    color: "#6b7280",
+                  }}
+                >
+                  Enter years of experience (e.g., 5)
+                </Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    {
+                      borderWidth: 1,
+                      borderColor: "#e2e8f0",
+                      borderRadius: 12,
+                      paddingHorizontal: 16,
+                      paddingVertical: 12,
+                      fontSize: 16,
+                      backgroundColor: "#ffffff",
+                      color: "#1e293b",
+                      textAlign: "center",
+                      fontWeight: "600",
+                    },
+                  ]}
+                  placeholder="e.g., 5"
+                  placeholderTextColor="#94a3b8"
+                  keyboardType="numeric"
+                  value={experienceInput}
+                  onChangeText={setExperienceInput}
+                  maxLength={2}
+                  autoFocus
+                />
+                <TouchableOpacity
+                  style={[styles.yesButton, { marginTop: 16 }]}
+                  onPress={() => {
+                    if (experienceInput.trim()) {
+                      sendMessageDirect(`${experienceInput} years of experience`);
+                      setExperienceModalVisible(false);
+                      setExperienceInput("");
+                    } else {
+                      Alert.alert(
+                        "Required",
+                        "Please enter your experience in years"
+                      );
+                    }
+                  }}
+                >
+                  <Text style={styles.yesNoText}>Send</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionItem, { marginTop: 12 }]}
+                  onPress={() => {
+                    setExperienceModalVisible(false);
+                    setExperienceInput("");
+                  }}
+                >
+                  <Text style={styles.actionText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+
+          {/* Services Selection Modal for Service Providers */}
+          <Modal
+            visible={servicesModalVisible}
+            transparent
+            animationType="slide"
+            onRequestClose={() => setServicesModalVisible(false)}
+          >
+            <View style={styles.actionModalOverlay}>
+              <View style={[styles.actionModalBox, { maxHeight: "70%" }]}>
+                <Text
+                  style={{
+                    fontSize: 18,
+                    fontWeight: "700",
+                    marginBottom: 16,
+                    textAlign: "center",
+                    color: "#1f2937",
+                  }}
+                >
+                  🛠️ Select Your Services
+                </Text>
+                <Text
+                  style={{
+                    fontSize: 13,
+                    marginBottom: 16,
+                    textAlign: "center",
+                    color: "#6b7280",
+                  }}
+                >
+                  Tap one or multiple services, then tap Done
+                </Text>
+                <FlatList
+                  data={servicesList}
+                  keyExtractor={(item) => item.id.toString()}
+                  renderItem={({ item }) => {
+                    const isSelected = selectedServices.includes(item.id);
+                    return (
+                      <TouchableOpacity
+                        style={[
+                          styles.templateItem,
+                          isSelected && styles.timeSlotItem,
+                        ]}
+                        onPress={() => {
+                          setSelectedServices((prev) =>
+                            prev.includes(item.id)
+                              ? prev.filter((id) => id !== item.id)
+                              : [...prev, item.id]
+                          );
+                        }}
+                      >
+                        <View
+                          style={{ flexDirection: "row", alignItems: "center" }}
+                        >
+                          <Ionicons
+                            name={isSelected ? "checkbox" : "square-outline"}
+                            size={24}
+                            color={isSelected ? "#6366f1" : "#94a3b8"}
+                            style={{ marginRight: 12 }}
+                          />
+                          <Text style={styles.templateItemText}>
+                            {item.name}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  }}
+                />
+                <TouchableOpacity
+                  style={[styles.yesButton, { marginTop: 16 }]}
+                  onPress={() => {
+                    if (selectedServices.length > 0) {
+                      const serviceNames = servicesList
+                        .filter((s) => selectedServices.includes(s.id))
+                        .map((s) => s.name)
+                        .join(", ");
+                      sendMessageDirect(`I provide: ${serviceNames}`);
+                      setServicesModalVisible(false);
+                    } else {
+                      Alert.alert(
+                        "Required",
+                        "Please select at least one service"
+                      );
+                    }
+                  }}
+                >
+                  <Text style={styles.yesNoText}>
+                    Send ({selectedServices.length} selected)
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionItem, { marginTop: 12 }]}
+                  onPress={() => {
+                    setServicesModalVisible(false);
+                    setSelectedServices([]);
+                  }}
                 >
                   <Text style={styles.actionText}>Cancel</Text>
                 </TouchableOpacity>
@@ -998,7 +1639,8 @@ export default function ChatBoxScreen() {
                       color: "#6b7280",
                     }}
                   >
-                    {pendingContactRequest?.requesterName || "A user"} wants to request your contact number
+                    {pendingContactRequest?.requesterName || "A user"} wants to
+                    request your contact number
                   </Text>
                 </View>
                 <View style={{ flexDirection: "row", gap: 12 }}>
@@ -1365,6 +2007,13 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#1e293b",
     fontWeight: "500",
+  },
+
+  // Time slot specific styling
+  timeSlotItem: {
+    backgroundColor: "#eff6ff",
+    borderLeftWidth: 4,
+    borderLeftColor: "#6366f1",
   },
 
   // Yes/No Button Styles

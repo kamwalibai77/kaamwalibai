@@ -28,7 +28,6 @@ import { translations } from "../i18n/translations";
 import api from "../services/api";
 import providersApi from "../services/serviceProviders";
 import serviceTypesApi from "../services/serviceTypes";
-import userApi from "../services/user";
 import { SOCKET_URL } from "../utills/config";
 
 const PlaceholderImg = require("../../assets/images/default.png");
@@ -442,7 +441,7 @@ export default function HomeScreen({ navigation }: Props) {
 
     // Just show modal directly without consume API call
     setModalVisible(true);
-    
+
     // if (contactLoading) return;
     // setContactLoading(true);
     // try {
@@ -1393,38 +1392,15 @@ export default function HomeScreen({ navigation }: Props) {
 
                       <TouchableOpacity
                         style={styles.actionButton}
-                        disabled={contactLoading}
                         onPress={async () => {
-                          if (contactLoading) return;
-                          setContactLoading(true);
-                          try {
-                            const token = await AsyncStorage.getItem("token");
-                            await api.post(
-                              "/payments/consume",
-                              {
-                                provider_id: selectedProvider.provider.id,
-                                action: "message",
-                              },
-                              { headers: { Authorization: `Bearer ${token}` } }
-                            );
-                            setModalVisible(false);
-                            navigation.navigate("ChatBox", {
-                              userId: selectedProvider.provider.id,
-                              name: selectedProvider.provider.name,
-                            });
-                            setSubscriptionRemaining((prev) =>
-                              prev !== null ? prev - 1 : null
-                            );
-                          } catch (e) {
-                            console.warn("consume error", e);
-                            Alert.alert(
-                              "Subscription",
-                              (e as any)?.response?.data?.error ||
-                                "Unable to consume contact"
-                            );
-                          } finally {
-                            setContactLoading(false);
-                          }
+                          // Subscription removed - direct navigation to chat
+                          setModalVisible(false);
+                          navigation.navigate("ChatBox", {
+                            userId: selectedProvider.provider.id,
+                            name: selectedProvider.provider.name,
+                            profilePhoto:
+                              selectedProvider.provider.profilePhoto,
+                          });
                         }}
                       >
                         <LinearGradient

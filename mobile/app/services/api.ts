@@ -53,23 +53,9 @@ api.interceptors.response.use(
     return res;
   },
   async (error) => {
-    // When network errors happen this gives a clearer trace in Metro.
-    console.error("API error ->", error?.message || error);
-    if (error?.config) {
-      console.error("API error config ->", {
-        method: error.config.method,
-        url: `${API_BASE_URL.replace(/\/$/, "")}${
-          error.config.url?.startsWith("/")
-            ? error.config.url
-            : `/${error.config.url}`
-        }`,
-        timeout: error.config.timeout,
-      });
-    }
-
-    // Handle 401 Unauthorized - token expired or invalid
+    // Handle 401 Unauthorized - token expired or invalid (suppress detailed error logging)
     if (error?.response?.status === 401) {
-      console.warn("Token expired or invalid. Logging out user...");
+      console.log("⚠️ Session expired. Redirecting to login...");
 
       // Clear all auth data
       try {
@@ -97,6 +83,20 @@ api.interceptors.response.use(
         }
       } catch (logoutError) {
         console.error("Error during auto-logout:", logoutError);
+      }
+    } else {
+      // Log other API errors (non-401) with full details
+      console.error("API error ->", error?.message || error);
+      if (error?.config) {
+        console.error("API error config ->", {
+          method: error.config.method,
+          url: `${API_BASE_URL.replace(/\/$/, "")}${
+            error.config.url?.startsWith("/")
+              ? error.config.url
+              : `/${error.config.url}`
+          }`,
+          timeout: error.config.timeout,
+        });
       }
     }
 

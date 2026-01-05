@@ -87,9 +87,11 @@ export default function LoginScreen({ navigation }: Props): any {
     setPhoneError("");
     setLoading(true);
     try {
+      console.log("📤 Sending OTP request for:", `+${COUNTRY_CODE}${phone}`);
       const resp = await api.post(`/auth/send-otp`, {
         phone: `+${COUNTRY_CODE}${phone}`,
       });
+      console.log("✅ OTP response received:", resp.status);
       let json = resp.data;
       if (json) {
         setStep("otp");
@@ -110,8 +112,29 @@ export default function LoginScreen({ navigation }: Props): any {
       } else {
         setSnackbarMsg(json?.error || "Failed to send OTP");
       }
-    } catch (e) {
-      setSnackbarMsg("Failed to send OTP");
+    } catch (e: any) {
+      console.error("❌ OTP send error:", e?.message);
+      console.error("Error details:", {
+        status: e?.response?.status,
+        data: e?.response?.data,
+        message: e?.message,
+      });
+
+      // Check if it's a rate limit error
+      if (e?.response?.status === 429) {
+        const errorMsg =
+          e?.response?.data?.error ||
+          "Too many requests. Please wait and try again.";
+        setSnackbarMsg(errorMsg);
+      } else if (e?.message === "Network Error") {
+        setSnackbarMsg(
+          "Network error. Please check your connection and try again."
+        );
+      } else {
+        setSnackbarMsg(
+          e?.response?.data?.error || "Failed to send OTP. Please try again."
+        );
+      }
     } finally {
       setLoading(false);
     }
