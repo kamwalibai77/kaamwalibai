@@ -156,10 +156,10 @@ export function initSocket(server) {
           try {
             const db = await import("../models/index.js");
             const User = db.default.User;
-            
+
             console.log("🔍 Fetching provider with ID:", pid);
             const provider = await User.findByPk(pid);
-            
+
             if (!provider) {
               console.error("❌ Provider not found with ID:", pid);
               io.to(rid).emit("contactRequestApproved", {
@@ -170,27 +170,32 @@ export function initSocket(server) {
               });
               return;
             }
-            
+
             console.log("📱 Provider found:", {
               id: provider.id,
               name: provider.name,
               phoneNumber: provider.phoneNumber,
               role: provider.role,
-              hasPhone: !!provider.phoneNumber
+              hasPhone: !!provider.phoneNumber,
             });
-            
-            const phoneToSend = provider.phoneNumber || provider.phone || "Not available";
-            
+
+            const phoneToSend =
+              provider.phoneNumber || provider.phone || "Not available";
+
             io.to(rid).emit("contactRequestApproved", {
               requesterId: rid,
               providerId: pid,
               providerPhone: phoneToSend,
               providerName: provider.name || "Service Provider",
             });
-            
+
             console.log("✅ Sent approval with phone:", phoneToSend);
           } catch (e) {
-            console.error("Error fetching provider details:", e.message, e.stack);
+            console.error(
+              "Error fetching provider details:",
+              e.message,
+              e.stack
+            );
             // Send without phone number if DB fetch fails
             io.to(rid).emit("contactRequestApproved", {
               requesterId: rid,

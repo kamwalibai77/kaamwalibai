@@ -311,7 +311,9 @@ export default function ChatBoxScreen() {
         if (storedRole === "serviceProvider") {
           // Always show all time slot options, not just configured ones
           setAvailabilitySlots(["morning", "afternoon", "evening", "night"]);
-          console.log("📅 Loaded availability slots: morning, afternoon, evening, night");
+          console.log(
+            "📅 Loaded availability slots: morning, afternoon, evening, night"
+          );
         }
 
         // Fetch service types list for all users (needed for question 7)
@@ -445,7 +447,7 @@ export default function ChatBoxScreen() {
       console.log("✅ Contact request approved:", data);
       if (String(data.requesterId) === String(myId)) {
         setContactRequestApproved(true);
-        
+
         // Add notification message in chat with phone number
         const phoneNumber = data.providerPhone || "Not available";
         const providerName = data.providerName || "Service Provider";
@@ -459,7 +461,7 @@ export default function ChatBoxScreen() {
           liked: false,
         };
         setMessages((prev) => [...prev, notificationMsg]);
-        
+
         Alert.alert(
           "Request Approved",
           `The service provider has approved your contact request.\n\nContact: ${phoneNumber}`
@@ -472,7 +474,7 @@ export default function ChatBoxScreen() {
       console.log("❌ Contact request rejected:", data);
       if (String(data.requesterId) === String(myId)) {
         setContactRequestSent(false);
-        
+
         // Add notification message in chat
         const notificationMsg: Message = {
           id: `notification-${Date.now()}`,
@@ -484,7 +486,7 @@ export default function ChatBoxScreen() {
           liked: false,
         };
         setMessages((prev) => [...prev, notificationMsg]);
-        
+
         Alert.alert(
           "Request Declined",
           "The service provider has declined your contact request."
@@ -568,93 +570,89 @@ export default function ChatBoxScreen() {
               paddingHorizontal: wp(3),
             }}
           >
-            {/* Call Icon for Contact Request (Users only) */}
-            {userRole === "user" && (
-              <TouchableOpacity
-                onPress={async () => {
-                  if (contactRequestApproved) {
-                    // If approved, directly call
-                    try {
-                      const token = await AsyncStorage.getItem("token");
-                      const headers = token
-                        ? { Authorization: `Bearer ${token}` }
-                        : undefined;
-                      const res = await api.get(`/users/${userId}`, {
-                        headers,
-                      });
-                      const phone =
-                        res?.data?.user?.phoneNumber || res?.data?.phoneNumber;
-                      if (phone) {
-                        Linking.openURL(`tel:${phone}`);
-                      } else {
-                        Alert.alert(
-                          "No phone number",
-                          "This user's phone number is not available."
-                        );
-                      }
-                    } catch (e) {
-                      console.warn("Failed to get phone number", e);
-                      Alert.alert("Error", "Unable to get phone number");
+            {/* Call Icon for Contact Request (Both roles can request) */}
+            <TouchableOpacity
+              onPress={async () => {
+                if (contactRequestApproved) {
+                  // If approved, directly call
+                  try {
+                    const token = await AsyncStorage.getItem("token");
+                    const headers = token
+                      ? { Authorization: `Bearer ${token}` }
+                      : undefined;
+                    const res = await api.get(`/users/${userId}`, {
+                      headers,
+                    });
+                    const phone =
+                      res?.data?.user?.phoneNumber || res?.data?.phoneNumber;
+                    if (phone) {
+                      Linking.openURL(`tel:${phone}`);
+                    } else {
+                      Alert.alert(
+                        "No phone number",
+                        "This user's phone number is not available."
+                      );
                     }
-                  } else if (contactRequestSent) {
-                    Alert.alert(
-                      "Request Pending",
-                      "Your contact request is waiting for approval."
-                    );
-                  } else {
-                    // Send contact request
-                    Alert.alert(
-                      "Request Contact",
-                      "Do you want to request this service provider's contact number?",
-                      [
-                        { text: "Cancel", style: "cancel" },
-                        {
-                          text: "Request",
-                          onPress: () => {
-                            socketRef.current?.emit("contactRequest", {
-                              requesterId: myId,
-                              providerId: userId,
-                              userName: name,
-                            });
-                            setContactRequestSent(true);
-                            
-                            // Add notification message in chat
-                            const notificationMsg: Message = {
-                              id: `notification-${Date.now()}`,
-                              senderId: "system",
-                              receiverId: myId,
-                              message: "📞 Contact request sent. Waiting for approval...",
-                              createdAt: new Date().toISOString(),
-                              read: true,
-                              liked: false,
-                            };
-                            setMessages((prev) => [...prev, notificationMsg]);
-                            
-                            Alert.alert(
-                              "Request Sent",
-                              "Waiting for service provider approval."
-                            );
-                          },
+                  } catch (e) {
+                    console.warn("Failed to get phone number", e);
+                    Alert.alert("Error", "Unable to get phone number");
+                  }
+                } else if (contactRequestSent) {
+                  Alert.alert(
+                    "Request Pending",
+                    "Your contact request is waiting for approval."
+                  );
+                } else {
+                  // Send contact request
+                  Alert.alert(
+                    "Request Contact",
+                    `Do you want to request ${name}'s contact number?`,
+                    [
+                      { text: "Cancel", style: "cancel" },
+                      {
+                        text: "Request",
+                        onPress: () => {
+                          socketRef.current?.emit("contactRequest", {
+                            requesterId: myId,
+                            providerId: userId,
+                            userName: name,
+                          });
+                          setContactRequestSent(true);
+
+                          // Add notification message in chat
+                          const notificationMsg: Message = {
+                            id: `notification-${Date.now()}`,
+                            senderId: "system",
+                            receiverId: myId,
+                            message:
+                              "📞 Contact request sent. Waiting for approval...",
+                            createdAt: new Date().toISOString(),
+                            read: true,
+                            liked: false,
+                          };
+                          setMessages((prev) => [...prev, notificationMsg]);
+
+                          Alert.alert("Request Sent", "Waiting for approval.");
                         },
-                      ]
-                    );
-                  }
-                }}
-                style={{ marginRight: 12 }}
-              >
-                <Ionicons
-                  name={
-                    contactRequestApproved
-                      ? "call"
-                      : contactRequestSent
-                      ? "time-outline"
-                      : "call-outline"
-                  }
-                  size={hp(2.8)}
-                  color="#fff"
-                />
-              </TouchableOpacity>
-            )}
+                      },
+                    ]
+                  );
+                }
+              }}
+              style={{ marginRight: 12 }}
+            >
+              <Ionicons
+                name={
+                  contactRequestApproved
+                    ? "call"
+                    : contactRequestSent
+                    ? "time-outline"
+                    : "call-outline"
+                }
+                size={hp(2.8)}
+                color="#fff"
+              />
+            </TouchableOpacity>
             {/* Three dots menu */}
             <TouchableOpacity
               onPress={() => {
@@ -673,6 +671,8 @@ export default function ChatBoxScreen() {
     navigation,
     token,
     userId,
+    myId,
+    name,
     userRole,
     contactRequestSent,
     contactRequestApproved,
@@ -859,11 +859,16 @@ export default function ChatBoxScreen() {
   const renderMessage = ({ item }: { item: Message }) => {
     const isMe = String(item.senderId) === String(myId);
     const isSystemNotification = item.senderId === "system";
-    
+
     // Render system notifications differently
     if (isSystemNotification) {
       return (
-        <View style={[styles.messageWrapper, { alignSelf: "center", maxWidth: "90%" }]}>
+        <View
+          style={[
+            styles.messageWrapper,
+            { alignSelf: "center", maxWidth: "90%" },
+          ]}
+        >
           <View
             style={[
               styles.messageBubble,
@@ -875,14 +880,19 @@ export default function ChatBoxScreen() {
               },
             ]}
           >
-            <Text style={[styles.messageText, { color: "#166534", textAlign: "center", fontSize: 14 }]}>
+            <Text
+              style={[
+                styles.messageText,
+                { color: "#166534", textAlign: "center", fontSize: 14 },
+              ]}
+            >
               {item.message}
             </Text>
           </View>
         </View>
       );
     }
-    
+
     return (
       <TouchableOpacity
         onLongPress={() => {
@@ -1097,34 +1107,15 @@ export default function ChatBoxScreen() {
                         ? `Gender: ${profileUser.gender}`
                         : ""}
                     </Text>
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        width: "100%",
-                        justifyContent: "space-around",
-                      }}
+                    <TouchableOpacity
+                      style={[
+                        styles.actionItem,
+                        { width: "100%", marginTop: 8 },
+                      ]}
+                      onPress={() => setProfileModalVisible(false)}
                     >
-                      <TouchableOpacity
-                        style={[styles.actionItem, { flex: 1, marginRight: 6 }]}
-                        onPress={() => {
-                          const phone =
-                            profileUser.phoneNumber ||
-                            profileUser.phone ||
-                            null;
-                          if (phone) Linking.openURL(`tel:${phone}`);
-                        }}
-                      >
-                        <Text style={[styles.actionText, { color: "#065f46" }]}>
-                          Call
-                        </Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.actionItem, { flex: 1, marginLeft: 6 }]}
-                        onPress={() => setProfileModalVisible(false)}
-                      >
-                        <Text style={styles.actionText}>Close</Text>
-                      </TouchableOpacity>
-                    </View>
+                      <Text style={styles.actionText}>Close</Text>
+                    </TouchableOpacity>
                   </View>
                 ) : (
                   <View style={{ alignItems: "center" }}>
@@ -1257,7 +1248,9 @@ export default function ChatBoxScreen() {
               ) : (
                 // No question pending - show nothing for service provider
                 <View style={{ padding: 20, alignItems: "center" }}>
-                  <Text style={{ color: "#94a3b8", fontSize: 14 }}>Waiting for a question...</Text>
+                  <Text style={{ color: "#94a3b8", fontSize: 14 }}>
+                    Waiting for a question...
+                  </Text>
                 </View>
               )
             ) : (
@@ -1324,19 +1317,23 @@ export default function ChatBoxScreen() {
                                     userName: name,
                                   });
                                   setContactRequestSent(true);
-                                  
+
                                   // Add notification message in chat
                                   const notificationMsg: Message = {
                                     id: `notification-${Date.now()}`,
                                     senderId: "system",
                                     receiverId: myId,
-                                    message: "📞 Contact request sent. Waiting for approval...",
+                                    message:
+                                      "📞 Contact request sent. Waiting for approval...",
                                     createdAt: new Date().toISOString(),
                                     read: true,
                                     liked: false,
                                   };
-                                  setMessages((prev) => [...prev, notificationMsg]);
-                                  
+                                  setMessages((prev) => [
+                                    ...prev,
+                                    notificationMsg,
+                                  ]);
+
                                   Alert.alert(
                                     "Request Sent",
                                     "Waiting for service provider approval."
@@ -1482,7 +1479,9 @@ export default function ChatBoxScreen() {
                   style={[styles.yesButton, { marginTop: 16 }]}
                   onPress={() => {
                     if (experienceInput.trim()) {
-                      sendMessageDirect(`${experienceInput} years of experience`);
+                      sendMessageDirect(
+                        `${experienceInput} years of experience`
+                      );
                       setExperienceModalVisible(false);
                       setExperienceInput("");
                     } else {
