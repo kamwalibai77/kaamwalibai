@@ -2,8 +2,7 @@ import axios from "axios";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./AdminLogin.css";
-
-const API_BASE_URL = "http://172.20.10.11:5000/api";
+import { API_BASE_URL } from "../config";
 
 export default function AdminLogin() {
   const [phone, setPhone] = useState("");

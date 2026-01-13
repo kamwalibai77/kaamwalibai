@@ -2,8 +2,7 @@ import axios from "axios";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Dashboard.css";
-
-const API_BASE_URL = "http://172.20.10.11:5000/api";
+import { API_BASE_URL } from "../config";
 
 export default function SuperAdminDashboard() {
   const navigate = useNavigate();
